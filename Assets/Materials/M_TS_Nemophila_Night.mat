@@ -1,0 +1,256 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_TS_Nemophila_Night
+  m_Shader: {fileID: 4800000, guid: a067e58570dd4b64bb7879110e0ce010, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - ENABLE_BOTTOM_GRAD
+  - ENABLE_COLOR_VARIATION
+  - ENABLE_EMISSION
+  - ENABLE_HEIGHT_VARIATION
+  - ENABLE_LIGHTPROBE
+  - ENABLE_SHADOW
+  m_InvalidKeywords:
+  - ENABLE_FAR_MODE
+  m_LightmapFlags: 0
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmiTex:
+        m_Texture: {fileID: 2800000, guid: 61b0b1b98bce0bb49a20f25a591c445c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionTex:
+        m_Texture: {fileID: 2800000, guid: a7306a982a3d1ea49a41afd4c543e2bd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HeiTex:
+        m_Texture: {fileID: 2800000, guid: a82c5ea07a75ccc46bc372ab5b16a058, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HeightNoiseTex:
+        m_Texture: {fileID: 2800000, guid: a82c5ea07a75ccc46bc372ab5b16a058, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 993d815913ee1c64d85c23a83b3a3c57, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _PackedTex:
+        m_Texture: {fileID: 2800000, guid: 9a8fd9c43c0ab674ab1c54ec816ee00d, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RndTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _STex:
+        m_Texture: {fileID: 2800000, guid: a82c5ea07a75ccc46bc372ab5b16a058, type: 3}
+        m_Scale: {x: 10, y: 10}
+        m_Offset: {x: 0, y: 0}
+    - _ShaTex:
+        m_Texture: {fileID: 2800000, guid: a82c5ea07a75ccc46bc372ab5b16a058, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ShadowTex:
+        m_Texture: {fileID: 2800000, guid: a82c5ea07a75ccc46bc372ab5b16a058, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Tex:
+        m_Texture: {fileID: 2800000, guid: 3d1a2b23c8e5cb34fbb6d55fc53c5f9a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _VarTex:
+        m_Texture: {fileID: 2800000, guid: 460c50fc1727d9e40b512299b1447131, type: 3}
+        m_Scale: {x: 0.05, y: 0.05}
+        m_Offset: {x: 0, y: 0}
+    - _VariationNoiseTex:
+        m_Texture: {fileID: 2800000, guid: de92290a7058eac47a2fcf1bace54f39, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaCutoff: 0.5
+    - _AnimDist: 30
+    - _AvdRad: 2
+    - _AvdStr: 2
+    - _BackBrightness: 1
+    - _BlendOp: 0
+    - _BtmHgt: 0.5
+    - _BumpScale: 1
+    - _CMode: 0
+    - _CameraFadingEnabled: 0
+    - _CameraFarFadeDistance: 2
+    - _CameraNearFadeDistance: 1
+    - _Clump: 0.6
+    - _ClumpSize: 0.9
+    - _ColonyMix: 0
+    - _ColonyScale: 0.01
+    - _Con: 1
+    - _Cull: 2
+    - _CullMode: 0
+    - _Cut: 0.2
+    - _Cutoff: 0.5
+    - _DetailNormalMapScale: 1
+    - _DistortionBlend: 0.5
+    - _DistortionEnabled: 0
+    - _DistortionStrength: 1
+    - _DistortionStrengthScaled: 0
+    - _DstBlend: 0
+    - _EmiInt: 0.6
+    - _EmissionEnabled: 0
+    - _EnaAtlas: 0
+    - _EnaAvd: 0
+    - _EnaBtm: 1
+    - _EnaColAdj: 0
+    - _EnaEmi: 1
+    - _EnaFar: 1
+    - _EnaHei: 1
+    - _EnaLgt: 0
+    - _EnaLgtPrb: 1
+    - _EnaRnd: 0
+    - _EnaSel: 0
+    - _EnaSha: 1
+    - _EnaVar: 1
+    - _EnableAtlas: 0
+    - _EnableColorVariation: 1
+    - _EnableEmission: 1
+    - _EnableHeightVariation: 1
+    - _EnableShadow: 1
+    - _EndFadeDist: 60
+    - _FDens: 1
+    - _FadeE: 60
+    - _FadeS: 30
+    - _FixRoots: 0
+    - _FlipBackUV: 0
+    - _FlipbookMode: 0
+    - _FlowerDensity: 0.506
+    - _GlossMapScale: 1
+    - _Glossiness: 0.5
+    - _GlossyReflections: 1
+    - _Growth: 1
+    - _Grw: 1
+    - _Header_Kihon: 0
+    - _Hue: 0
+    - _Info: 0
+    - _LVI: 1
+    - _LgtInt: 1
+    - _LgtVol: 0
+    - _LightVolumes: 0
+    - _LightVolumesIntensity: 1
+    - _LightingEnabled: 1
+    - _MCon: 1
+    - _Metallic: 0
+    - _MinHei: 0.7
+    - _MinHeightPercent: 0.5
+    - _Mode: 0
+    - _OcclusionStrength: 1
+    - _PAvdRad: 0.04
+    - _PAvdStr: 0.01
+    - _Parallax: 0.02
+    - _Rad: 50
+    - _Radius: 100
+    - _Sat: 1
+    - _SmoothnessTextureChannel: 0
+    - _SoftParticlesEnabled: 0
+    - _SoftParticlesFarFadeDistance: 1
+    - _SoftParticlesNearFadeDistance: 0
+    - _SpecularHighlights: 1
+    - _SrcBlend: 1
+    - _StartFadeDist: 30
+    - _UVPad: 0
+    - _UVSec: 0
+    - _VariationHue: 0
+    - _VariationScale: 0.01
+    - _VariationStrength: 1
+    - _WMin: 1
+    - _WScale: 0.5
+    - _WSpd: 1.15
+    - _WStr: 0.3
+    - _WWav: 0.1
+    - _WindSpeed: 1
+    - _WindStrength: 0.2
+    - _WindWaveScale: 0.4
+    - _ZWrite: 1
+    m_Colors:
+    - _AtlasGrid: {r: 2, g: 2, b: 0, a: 0}
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _BtmCol: {r: 0, g: 0.027810492, b: 0.3207547, a: 1}
+    - _BtmColor: {r: 0, g: 0.022521181, b: 0.3018868, a: 1}
+    - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
+    - _Center: {r: 0, g: 0, b: 0, a: 0}
+    - _Col: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Ctr: {r: 0, g: 0, b: 0, a: 0}
+    - _EmiCol: {r: 1.5660377, g: 1.5660377, b: 1.5660377, a: 0}
+    - _EmiColor: {r: 0.9883373, g: 0.9883373, b: 0.9883373, a: 1}
+    - _EmissionColor: {r: 0.6854237, g: 0.9623886, b: 1.4980394, a: 1}
+    - _HeiTex_ST: {r: 1, g: 1, b: 0, a: 0}
+    - _MainCol: {r: 1, g: 1, b: 1, a: 1}
+    - _MainColor: {r: 0.745283, g: 0.745283, b: 0.745283, a: 1}
+    - _MainTexColor: {r: 1, g: 1, b: 1, a: 1}
+    - _PPos: {r: 0, g: -1000, b: 0, a: 0}
+    - _SSpd: {r: 0.02, g: 0.02, b: 0, a: 0}
+    - _ShaCol: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _ShaColor: {r: 0.5518868, g: 0.7030152, b: 1, a: 1}
+    - _ShaSpd: {r: 0.1, g: 0.1, b: 0, a: 0}
+    - _ShadowColor: {r: 0.6226415, g: 0.6226415, b: 0.6226415, a: 1}
+    - _ShadowSpeed: {r: 0.05, g: 0.05, b: 0, a: 0}
+    - _SoftParticleFadeParams: {r: 0, g: 0, b: 0, a: 0}
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
+    - _VarCol: {r: 0.16509432, g: 0.41349876, b: 1, a: 1}
+    - _VarColor: {r: 0.4069509, g: 0.46378112, b: 0.5566038, a: 1}
+    - _VarTex_ST: {r: 0.07, g: 0.07, b: 0, a: 0}
+    - _VariationColor: {r: 0.2, g: 0.5, b: 1, a: 1}
+    - _WDir: {r: 1, g: 1, b: 0, a: 0}
+  m_BuildTextureStacks: []

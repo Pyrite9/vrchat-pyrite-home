@@ -1,0 +1,29 @@
+# 줄바꿈은 저장소 안에서 LF 로 통일
+* text=auto
+
+# Unity YAML
+*.unity      text eol=lf
+*.prefab     text eol=lf
+*.mat        text eol=lf
+*.meta       text eol=lf
+*.anim       text eol=lf
+*.controller text eol=lf
+*.cs         text diff=csharp
+*.shader     text
+*.cginc      text
+
+# 바이너리 — 줄바꿈 변환·텍스트 diff 금지
+*.png  binary
+*.jpg  binary
+*.tga  binary
+*.psd  binary
+*.exr  binary
+*.hdr  binary
+*.wav  binary
+*.fbx  binary
+*.bin  binary
+*.raw  binary
+*.ttf  binary
+*.otf  binary
+*.pdf  binary
+**/LightingData.asset binary
