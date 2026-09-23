@@ -163,6 +163,7 @@ public class PyriteDayCycle : UdonSharpBehaviour
 
     // 읽기 전용 상태 (설정 UI 용)
     [HideInInspector] public float currentHour;
+    [HideInInspector] public float soundScale = 1f;   // 설정 UI 의 자연 소리 배율 (로컬, 동기화 안 함)
     [HideInInspector] public float sunElNow;
     [HideInInspector] public float moonElNow;
 
@@ -222,6 +223,12 @@ public class PyriteDayCycle : UdonSharpBehaviour
         float h = CurrentHour();
         hourAtSync = h; syncStamp = Networking.GetServerTimeInSeconds(); dayMinutes = m;
         RequestSerialization();
+    }
+
+    public void SetSoundScale(float v)
+    {
+        soundScale = Mathf.Clamp(v, 0f, 2f);
+        EvaluateAt(CurrentHour());
     }
 
     private void TakeOwner()
@@ -482,8 +489,8 @@ public class PyriteDayCycle : UdonSharpBehaviour
         for (int k = 0; k < campLights.Length; k++) if (campLights[k] != null) campLights[k].intensity = baseCampLight[k] * cm;
         float am = F(ambienceMul);
         float nm = F(nightAmbienceMul);
-        for (int k = 0; k < ambience.Length; k++) if (ambience[k] != null) ambience[k].volume = baseAmbience[k] * am;
-        for (int k = 0; k < nightAmbience.Length; k++) if (nightAmbience[k] != null) nightAmbience[k].volume = baseNightAmbience[k] * nm;
+        for (int k = 0; k < ambience.Length; k++) if (ambience[k] != null) ambience[k].volume = baseAmbience[k] * am * soundScale;
+        for (int k = 0; k < nightAmbience.Length; k++) if (nightAmbience[k] != null) nightAmbience[k].volume = baseNightAmbience[k] * nm * soundScale;
 
         Color nt = C(nightTint);
         Color ct = C(campTint);

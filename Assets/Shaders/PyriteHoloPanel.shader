@@ -17,7 +17,7 @@ Shader "Pyrite/HoloPanel"
     {
         Tags { "Queue" = "Transparent+10" "RenderType" = "Transparent" "IgnoreProjector" = "True" }
         Blend SrcAlpha OneMinusSrcAlpha
-        ZWrite Off
+        ZWrite On      // 뒤의 호수(반투명, 나중에 그림)가 유리 위를 덮지 않게 깊이를 쓴다. 둥근 모서리 밖은 clip
         Cull Off
         Pass
         {
@@ -45,6 +45,7 @@ Shader "Pyrite/HoloPanel"
                 half top = lerp(1.0, 1.35, smoothstep(0.2, 1.0, i.uv.y));   // 위쪽 살짝 밝게
                 half3 col = _Glass.rgb * top * scan + _Border.rgb * (outer + inner + glow);
                 half a = saturate(_Glass.a * inside + outer + inner + glow) * _Fade;
+                clip(a - 0.02);
                 return half4(col, a);
             }
             ENDCG

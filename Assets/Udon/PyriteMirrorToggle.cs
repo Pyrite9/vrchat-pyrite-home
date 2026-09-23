@@ -21,6 +21,10 @@ public class PyriteMirrorToggle : UdonSharpBehaviour
 
     public override void Interact() { on = !on; Apply(); }
 
+    // 설정 UI 가 부른다
+    public void SetOn(bool v) { on = v; Apply(); }
+    public bool IsOn() { return on; }
+
     private void Apply()
     {
         if (mirror != null) mirror.SetActive(on);
