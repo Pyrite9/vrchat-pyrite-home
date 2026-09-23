@@ -43,6 +43,8 @@ public static class PyriteNightTools
     public static readonly float[] CRYSTAL_MATCAP       = { 1.00f, 0.35f, 0.75f };   // 밤엔 달빛 받은 정도로만
     // [A] MatCap 환경색 — 밤엔 하늘색을 곱해 노랑×청 = 차분한 청동
     public static readonly Color[] CRYSTAL_MATCAP_TINT  = { Color.white, new Color(0.50f, 0.62f, 1.00f), Color.white };
+    // [B] 밤엔 smoothness 를 낮춰 반딧불 점광원 하이라이트가 면에 넓게 번지게 (0.86 → 0.62)
+    public static readonly float[] CRYSTAL_GLOSS_MUL    = { 1.00f, 0.72f, 1.00f };
 
     // 꽃 밤 — 에셋 팩의 _Night 는 emission 이 켜진 "빛나는 꽃"이라 쓰지 않는다. Day 복사본을 어둡게.
     static readonly Color FLOWER_NIGHT = new Color(0.145f, 0.165f, 0.240f, 1f);
@@ -193,6 +195,14 @@ public static class PyriteNightTools
         // 결정
         tod.crystalMatcap         = (float[])CRYSTAL_MATCAP.Clone();
         tod.crystalMatcapTint     = (Color[])CRYSTAL_MATCAP_TINT.Clone();
+        tod.crystalGlossMul       = (float[])CRYSTAL_GLOSS_MUL.Clone();
+        if (tod.crystalMats != null)
+            tod.crystalBaseGloss = tod.crystalMats.Select(cm =>
+            {
+                if (cm == null) return 0.8f;
+                foreach (var p in PYRITE) if (p.name == cm.name) return p.smooth;
+                return cm.HasProperty("_Glossiness") ? cm.GetFloat("_Glossiness") : 0.8f;
+            }).ToArray();
         tod.crystalEmissionMul    = (float[])CRYSTAL_EMISSION_MUL.Clone();
         tod.crystalLightIntensity = (float[])CRYSTAL_LIGHT.Clone();
 

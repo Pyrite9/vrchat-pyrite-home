@@ -42,6 +42,13 @@ public static class PyriteViews
         if (cam == null) { Debug.LogError("[Y9] Main Camera 없음"); return; }
         var t = Terrain.activeTerrain;
 
+        // ToD 는 첫 Apply 때 반딧불·캠프 조명 기준값을 캐시한다. 배열을 바꾼 뒤엔 캐시를 비워야 한다.
+        // (캡처는 항상 노을(0)로 끝나므로, 여기 들어올 때 씬은 기준 상태다)
+        if (tod != null)
+        {
+            var f = typeof(PyriteTimeOfDay).GetField("ready", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (f != null) f.SetValue(tod, false);
+        }
         var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
         var tt = cam.targetTexture; float n0 = cam.nearClipPlane, fa0 = cam.farClipPlane;
         try
@@ -49,6 +56,10 @@ public static class PyriteViews
             foreach (int i in presets)
             {
                 if (tod != null) { tod.index = i; tod.Apply(); }
+                // 에디터에선 파티클이 재생되지 않는다 — 몇 초 진행시켜 반딧불이 찍히게
+                foreach (var ps in Object.FindObjectsOfType<ParticleSystem>())
+                    if (ps.emission.enabled && ps.emission.rateOverTime.constantMax > 0.001f) ps.Simulate(8f, true, true, true);
+                    else ps.Clear(true);
                 foreach (var v in Views)
                 {
                     if (only != null && !only.Contains(v.n)) continue;

@@ -54,6 +54,14 @@ public static class PyriteTune
                         if (m != null) { m.SetFloat("_SpecNoTint", f[0]); EditorUtility.SetDirty(m); }
                     }
                     break;
+                case "gloss":   // 황철석 4종 smoothness 를 직접 지정 (순서: Pyrite, Cliff, Tarnish, Iris)
+                    for (int gi = 0; gi < PYRITE.Length && gi < f.Length; gi++)
+                    {
+                        var gm = AssetDatabase.FindAssets(PYRITE[gi] + " t:Material").Select(AssetDatabase.GUIDToAssetPath)
+                                   .Select(AssetDatabase.LoadAssetAtPath<Material>).FirstOrDefault(x => x != null && x.name == PYRITE[gi]);
+                        if (gm != null) { gm.SetFloat("_Glossiness", f[gi]); EditorUtility.SetDirty(gm); }
+                    }
+                    break;
                 case "views":   views = v; break;
                 case "presets": presets = f.Select(x => (int)x).ToArray(); break;
             }
