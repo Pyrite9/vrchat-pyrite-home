@@ -67,8 +67,6 @@ public static class PyriteCarryLantern
         log.Append("lantern size=").Append(b.size.ToString("F2")).Append(" | ");
 
         // 비정적 (Camp 는 Static Everything)
-        foreach (var t in root.GetComponentsInChildren<Transform>(true))
-            GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
 
         // 쥐는 점 = 손잡이 꼭대기 → 손에 매달린 모양
         var grip = new GameObject("Grip").transform;
@@ -76,9 +74,16 @@ public static class PyriteCarryLantern
         grip.position = new Vector3(b.center.x, b.max.y - 0.02f, b.center.z);
         grip.rotation = root.transform.rotation;
 
+        // 몸체 피벗 = 손잡이 꼭대기. 들린 동안 Udon 이 이걸 세로로 세운다 (PC 손 방향 보정)
+        var body = new GameObject("Body").transform;
+        body.SetParent(root.transform, false);
+        body.position = grip.position;
+        body.rotation = root.transform.rotation;
+        vis.transform.SetParent(body, true);
+
         // 빛 — 실시간, 그림자 없음 (움직이므로 Mixed/Baked 금지)
         var lgo = new GameObject("Light");
-        lgo.transform.SetParent(root.transform, false);
+        lgo.transform.SetParent(body, false);
         lgo.transform.position = new Vector3(b.center.x, b.min.y + b.size.y * 0.45f, b.center.z);
         var l = lgo.AddComponent<Light>();
         l.type = LightType.Point;
@@ -113,9 +118,14 @@ public static class PyriteCarryLantern
         hook.SetParent(stand, true);
         hook.SetPositionAndRotation(root.transform.position, root.transform.rotation);
 
+        // 비정적 (Camp 는 Static Everything)
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
+            GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
+
         var hb = UdonSharpUndo.AddComponent<PyriteLanternHook>(root);
         hb.hook = hook;
         hb.snapRadius = 0.8f;
+        hb.body = body;
         UdonSharpEditorUtility.CopyProxyToUdon(hb);
 
         // ── 3. 시간대 조명 배수에 편입 ─────────────────────────────
