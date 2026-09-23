@@ -241,7 +241,7 @@ public static class PyriteDayCycleSetup
             catch (System.Exception e) { sb.AppendLine("AddComponent 실패 (H 로 프로그램 에셋 먼저): " + e.Message); Flush(sb, false); return; }
         }
         sb.AppendLine("DayCycle host: " + string.Join(", ", host.GetComponents<Component>().Select(c => c.GetType().Name)));
-        cyc.startHour = 21f; cyc.hourAtSync = 21f; cyc.dayMinutes = 12f; cyc.autoFlow = false; cyc.syncStamp = 0;
+        cyc.startHour = 21f; cyc.hourAtSync = 21f; cyc.dayMinutes = 12f; cyc.autoFlow = true;   // 2026-09-24 관리자: 자동 흐름 기본 cyc.syncStamp = 0;
         cyc.keyHour = keys.Select(k => k.hour).ToArray();
         cyc.keyCubeSet = keys.Select(k => k.cube).ToArray();
         cyc.sky = skyM;

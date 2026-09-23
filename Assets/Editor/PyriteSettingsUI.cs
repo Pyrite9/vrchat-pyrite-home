@@ -131,7 +131,7 @@ public static class PyriteSettingsUI
         var timeSlider = Sld(cTime, "TimeSlider", 32, 212, 489, 0f, 1439f, 1260f, true, "OnTime");
         Txt(cTime, "Min", 32, 254, 150, 28, "00:00", 20, GREY);
         Txt(cTime, "Max", 371, 254, 150, 28, "24:00", 20, GREY, TextAlignmentOptions.Right);
-        var (autoT, autoL) = Tgl(cTime, "Auto", 32, 282, 489, false, "OnAuto"); L(autoL, S["auto"]);
+        var (autoT, autoL) = Tgl(cTime, "Auto", 32, 282, 489, true, "OnAuto"); L(autoL, S["auto"]);
         L(Txt(cTime, "Note", 32, 334, 489, 28, "", 20, GREY), S["timeNote"]);
 
         // 화면
@@ -196,6 +196,8 @@ public static class PyriteSettingsUI
         var campMirror = toggles.FirstOrDefault(m => m != lakeMirror);
         sb.AppendLine("mirror toggles: " + string.Join(", ", toggles.Select(m => m.name + "→" + (m.mirror ? m.mirror.name : "null") + " startOn " + m.startOn)));
 
+        // 자동 흐름 기본 켬 (2026-09-24 관리자) — 동기화 필드 기본값. 방장 입장 시 21:00 부터 흐른다
+        cyc.autoFlow = true; UdonSharpEditorUtility.CopyProxyToUdon(cyc); EditorUtility.SetDirty(cyc);
         st.cycle = cyc; st.projector = pj;
         st.timeSlider = timeSlider; st.timeText = timeText; st.autoToggle = autoT;
         st.brightSlider = brightSlider; st.ppBright = vBright; st.ppDark = vDark; st.bloomToggle = bloomT; st.ppNoBloom = vNoBloom;
@@ -273,8 +275,8 @@ public static class PyriteSettingsUI
         ["title"] = ("PYRITE LAKE", "파이라이트 호수"),
         ["subtitle"] = ("Settings", "설정"),
         ["time"] = ("TIME", "시간"),
-        ["auto"] = ("Auto flow", "자동 흐름"),
-        ["timeNote"] = ("Shared with everyone · 1 day = 12 min", "모두에게 공유 · 하루 = 12분"),
+        ["auto"] = ("Time flows", "시간 흐름"),
+        ["timeNote"] = ("Shared with everyone · 1 day = 12 min", "모두 함께 흐름 · 하루 = 12분"),
         ["view"] = ("VIEW", "화면"),
         ["bright"] = ("Brightness", "밝기"),
         ["darker"] = ("Darker", "어둡게"),
@@ -293,7 +295,7 @@ public static class PyriteSettingsUI
         ["perfNote"] = ("Turn these off if your frame rate drops.", "프레임이 떨어지면 꺼 보세요."),
         ["about"] = ("ABOUT", "정보"),
         ["world"] = ("Pyrite Lake", "파이라이트 호수"),
-        ["aboutBody"] = ("Pyrite, lake, and basalt columns.\nA lakeside camp in a basin of columnar\ncliffs, with nemophila fields and\nfireflies drifting around the crystals.", "황철석과 호수와 주상절리.\n기둥 절벽에 둘러싸인 호숫가 캠프,\n네모필라 꽃밭과\n결정 곁을 떠도는 반딧불이."),
+        ["aboutBody"] = ("Pyrite, lake, and basalt columns.\nA lakeside camp ringed by columnar cliffs,\nnemophila fields, and fireflies.\nA full day passes every 12 minutes.", "황철석과 호수와 주상절리.\n기둥 절벽에 둘러싸인 호숫가 캠프,\n네모필라 꽃밭과 반딧불이.\n12분마다 하루가 흐릅니다."),
         ["assets"] = ("Used assets", "사용한 에셋"),
         ["assetsTitle"] = ("USED ASSETS", "사용한 에셋"),
         ["aFlowers"] = ("Flowers & grass", "꽃 · 풀"),
