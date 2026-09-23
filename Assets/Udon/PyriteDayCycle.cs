@@ -106,6 +106,11 @@ public class PyriteDayCycle : UdonSharpBehaviour
     public Color[] crystalMatcapTint;
     public Light[] crystalLights;
     public float[] crystalLightIntensity;
+    // 밤 보강 (Pyrite/PyriteMetal 림·달 반짝임·미세 반짝이) — 키프레임별
+    public float[] crystalRim;
+    public float[] crystalSparkle;
+    public float[] crystalGlint;
+    public float[] crystalMcNormal;
 
     [Header("캠프 조명·환경음")]
     public Light[] campLights;
@@ -440,6 +445,31 @@ public class PyriteDayCycle : UdonSharpBehaviour
             m.SetColor("_MatCapTint", mct);
             m.SetFloat("_Glossiness", crystalBaseGloss[k] * gm);
         }
+        if (crystalRim != null && crystalRim.Length == keyHour.Length)
+        {
+            float rim = F(crystalRim);
+            float spk = F(crystalSparkle);
+            float gl = F(crystalGlint);
+            float mcn = F(crystalMcNormal);
+            Vector3 md = Dir(mEl, mAz);
+            Vector4 md4 = new Vector4(md.x, md.y, md.z, 0f);
+            Color rimC = new Color(1f, 0.78f, 0.42f, 1f) * rim;
+            Color glC = new Color(0.85f, 0.9f, 1f, 1f) * gl;
+            for (int k = 0; k < crystalMats.Length; k++)
+            {
+                Material m = crystalMats[k];
+                if (m == null) continue;
+                m.SetColor("_RimColor", rimC);
+                m.SetFloat("_RimPower", 5f);
+                m.SetColor("_GlintColor", glC);
+                m.SetVector("_GlintDir", md4);
+                m.SetFloat("_GlintSharp", 40f);
+                m.SetFloat("_SparkleStrength", spk);
+                m.SetFloat("_SparkleScale", 28f);
+                m.SetFloat("_MatCapNormal", mcn);
+            }
+        }
+
         float cl = F(crystalLightIntensity);
         for (int k = 0; k < crystalLights.Length; k++)
         {

@@ -98,9 +98,9 @@ Material:
     - _CampTint: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 0.66, g: 0.58, b: 0.38, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
-    - _GlintColor: {r: 0, g: 0, b: 0, a: 1}
-    - _GlintDir: {r: -0.00000008076811, g: 0.38268346, b: -0.9238795, a: 0}
+    - _GlintColor: {r: 0, g: 0, b: 0, a: 0}
+    - _GlintDir: {r: -0.49240404, g: -0.17364818, b: 0.85286844, a: 0}
     - _MatCapTint: {r: 1, g: 1, b: 1, a: 1}
     - _NightTint: {r: 1, g: 1, b: 1, a: 1}
-    - _RimColor: {r: 0, g: 0, b: 0, a: 1}
+    - _RimColor: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []

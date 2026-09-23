@@ -39,6 +39,7 @@ public static class PyriteDayCycleSetup
         public float camp, amb, nightAmb;
         public Color nightTint, campTint, nAmbSky, nAmbGr;
         public float ppDay, ppNight;
+        public float crRim, crSpk, crGlint, crMcN = 1f;
         public K Clone(string n, float h, int c) { var k = (K)MemberwiseClone(); k.name = n; k.hour = h; k.cube = c; return k; }
     }
 
@@ -161,6 +162,13 @@ public static class PyriteDayCycleSetup
         foreach (var kv in flowerMul) { var c = kv.Key.flower * kv.Value; c.a = 1f; kv.Key.flower = c; }
         sb.AppendLine("flower: dusk " + Fmt(dusk.flower) + " noon " + Fmt(noon.flower) + " night " + Fmt(night.flower));
 
+        // 결정 밤 보강 (Z21a 비교 → 관리자: 림 + 미세 반짝이). 밤 MatCap 색조를 파랑→따뜻한 금색 ("색칠한 깍두기" 해소)
+        var warm = RGB(0.62f, 0.52f, 0.38f);
+        foreach (var k in new[] { night, predawn }) { k.crRim = 0.35f; k.crSpk = 4f; k.crGlint = 2.5f; k.crMcN = 0.45f; k.crTint = warm; k.crMatcap = 0.30f; }
+        blue.crRim = 0.25f; blue.crSpk = 3f; blue.crGlint = 1.8f; blue.crMcN = 0.6f; blue.crTint = RGB(0.75f, 0.68f, 0.55f);
+        sunset.crRim = 0.1f; sunset.crSpk = 1f; sunset.crGlint = 0.8f; sunset.crMcN = 0.85f;
+        dawn.crRim = 0.1f; dawn.crSpk = 1f; dawn.crGlint = 0.5f; dawn.crMcN = 0.85f;
+
         // 후처리 볼륨 weight (노을 프로필 위에 섞음)
         night.ppDay = 0f; night.ppNight = 1f;
         predawn.ppDay = 0f; predawn.ppNight = 0.7f;
@@ -278,6 +286,10 @@ public static class PyriteDayCycleSetup
         cyc.crystalGlossMul = keys.Select(k => k.crGloss).ToArray();
         cyc.crystalMatcapTint = keys.Select(k => k.crTint).ToArray();
         cyc.crystalLights = tod.crystalLights; cyc.crystalLightIntensity = keys.Select(k => k.crLight).ToArray();
+        cyc.crystalRim = keys.Select(k => k.crRim).ToArray();
+        cyc.crystalSparkle = keys.Select(k => k.crSpk).ToArray();
+        cyc.crystalGlint = keys.Select(k => k.crGlint).ToArray();
+        cyc.crystalMcNormal = keys.Select(k => k.crMcN).ToArray();
         cyc.campLights = tod.campLights; cyc.campLightMul = keys.Select(k => k.camp).ToArray();
         cyc.ambience = tod.ambience; cyc.ambienceMul = keys.Select(k => k.amb).ToArray();
         cyc.nightAmbience = tod.nightAmbience; cyc.nightAmbienceMul = keys.Select(k => k.nightAmb).ToArray();
@@ -368,6 +380,7 @@ public static class PyriteDayCycleSetup
         new V{ n="camp_lake",   eye=new Vector3(-10.0f, 1.7f, 47.0f), look=new Vector3(-10.0f, 3.0f, -40.0f), fov=70f },
         new V{ n="far_to_camp", eye=new Vector3(  5.0f, 1.7f, -40.0f), look=new Vector3( -5.0f, 6.0f, 78.0f), fov=70f },
         new V{ n="tent_side",   eye=new Vector3( -4.0f, 1.7f, 58.0f), look=new Vector3(-16.0f, 1.5f, 56.0f), fov=70f },
+        new V{ n="crystal_r",   eye=new Vector3(-40.0f, 1.7f, 42.0f), look=new Vector3(-52.0f, 3.0f, 26.0f), fov=50f },
     };
 
     [MenuItem("Tools/Pyrite/Z18d. Day Cycle Sweep Render", false, 43)]
