@@ -16,7 +16,8 @@ Shader "Pyrite/WaterMirror"
         [HideInInspector] _ReflectionTex1("", 2D) = "black" {}
         [NoScaleOffset] _NormalMap("Ripple Normal (optional)", 2D) = "bump" {}
         _MirrorStrength("Mirror Strength", Range(0, 1)) = 0.9
-        _Distort("Reflection Distortion", Range(0, 0.2)) = 0.06
+        _Distort("Reflection Distortion", Range(0, 0.2)) = 0.03
+        _RippleDistort("Ripple Share of Distortion", Range(0, 1)) = 0.2
         _FresnelPower("Fresnel Power", Range(0.1, 10)) = 3
         _FresnelMin("Fresnel Min", Range(0, 1)) = 0.04
         _NormalScale("Ripple Strength", Range(0, 1)) = 0.35
@@ -71,7 +72,7 @@ Shader "Pyrite/WaterMirror"
             };
 
             sampler2D _ReflectionTex0, _ReflectionTex1, _NormalMap;
-            float _MirrorStrength, _Distort, _FresnelPower, _FresnelMin;
+            float _MirrorStrength, _Distort, _RippleDistort, _FresnelPower, _FresnelMin;
             float _NormalScale, _WaveSpeed, _RippleFar, _WaveHeight, _WaveTime, _WaveNormal;
             float _DepthMax, _ShoreFade, _ShoreAlpha, _SwellFade, _Lift;
 
@@ -139,6 +140,8 @@ Shader "Pyrite/WaterMirror"
                 float far = saturate(1.0 - i.depth / max(_RippleFar, 1.0));
                 rip *= _NormalScale * lerp(0.4, 1.0, far) * lerp(0.5, 1.0, shore);
 
+                // [Z12] 잔물결은 반사 좌표를 잘게 찢어 별이 긁힌 선처럼 보였다 → 흔들림·프레넬엔 잔물결 몫을 줄인 면을 쓴다
+                rip *= _RippleDistort;
                 float3 n = normalize(float3(rip.x - g.x * swellK, 1.0, rip.y - g.y * swellK));
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
 

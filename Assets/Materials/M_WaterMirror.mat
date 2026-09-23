@@ -42,12 +42,13 @@ Material:
     m_Ints: []
     m_Floats:
     - _DepthMax: 4
-    - _Distort: 0.06
+    - _Distort: 0.03
     - _FresnelMin: 0.04
     - _FresnelPower: 3
     - _Lift: 0.003
     - _MirrorStrength: 0.9
     - _NormalScale: 0.35
+    - _RippleDistort: 0.2
     - _RippleFar: 90
     - _ShoreAlpha: 0.25
     - _ShoreFade: 0.6
