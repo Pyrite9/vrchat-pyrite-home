@@ -179,6 +179,11 @@ public static class PyriteDayCycleSetup
         dusk.ppDay = 0f; dusk.ppNight = 0f;
         sunset.ppDay = 0f; sunset.ppNight = 0.2f;
         blue.ppDay = 0f; blue.ppNight = 0.6f;
+        // 낮 다듬기 (Z23b 격자 → 관리자: 절벽 0.30, 구름 0.5). Sorafield _CloudCoverage 는 낮출수록 흐려진다(0.2 = 회색 하늘)
+        { var c = dusk.cliff * (0.30f / 0.227f); c.a = 1f; noon.cliff = c; afternoon.cliff = c; var m = dusk.cliff * (0.28f / 0.227f); m.a = 1f; morning.cliff = m; }
+        noon.skyCloud = 0.5f; afternoon.skyCloud = 0.5f; morning.skyCloud = 0.45f;
+        sb.AppendLine("day: cliff " + Fmt(noon.cliff) + " cloud " + noon.skyCloud);
+
         // 낮 반사 세트(Z23a)가 있으면 아침 3 / 정오 4 / 오후 5
         if (tod.probes != null && tod.probeCubes != null && tod.probeCubes.Length >= 6 * tod.probes.Length) { morning.cube = 3; noon.cube = 4; afternoon.cube = 5; }
         var keys = new List<K> { night, night.Clone("night", 4.3f, 1), predawn, dawn, morning, noon, afternoon, dusk, sunset, blue, night.Clone("night", 20.3f, 1) };
