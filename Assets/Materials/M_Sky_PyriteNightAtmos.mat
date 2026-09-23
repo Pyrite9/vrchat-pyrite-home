@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: M_Sky_PyriteDawn
+  m_Name: M_Sky_PyriteNightAtmos
   m_Shader: {fileID: 4800000, guid: 3bcf0d0bff74f424a9ffc58d75ae6e0b, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -26,14 +26,14 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _CloudCoverage: 0.3
-    - _CloudSpeed: 0.03
-    - _Exposure: 1.05
-    - _HorizonHaze: 2.7
+    - _CloudCoverage: 0.55
+    - _CloudSpeed: 0.008
+    - _Exposure: 3.4
+    - _HorizonHaze: 0.3
     - _InShaderTonemap: 1
-    - _MieG: 0.85
-    - _MieStrength: 1.9
-    - _SunAzimuth: 184
-    - _SunElevation: 0.14
+    - _MieG: 0.8
+    - _MieStrength: 0.6
+    - _SunAzimuth: 205
+    - _SunElevation: -0.25
     m_Colors: []
   m_BuildTextureStacks: []

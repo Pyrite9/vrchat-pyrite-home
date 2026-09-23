@@ -168,7 +168,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _CloudCoverage: 0.4
-    - _CloudSpeed: 0.012
+    - _CloudSpeed: 0.03
     - _Exposure: 1.1
     - _HorizonHaze: 1.5
     - _InShaderTonemap: 1
