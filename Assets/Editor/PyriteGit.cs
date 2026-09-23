@@ -90,6 +90,7 @@ public static class PyriteGit
     {
         new Regex(@"^Assets/つきのすとあ/"),
         new Regex(@"^Assets/Noagami/"),
+        new Regex(@"^Assets/WoodBoat(/|\.meta$)"),
         new Regex(@"^Assets/Sorafield Procedural Skies - VRChat Addon/"),
         new Regex(@"^Assets/Flora/Generated/"),
         new Regex(@"_dusk\.png(\.meta)?$"),
@@ -101,6 +102,7 @@ public static class PyriteGit
         if (Forbidden.Any(r => r.IsMatch(f))) return false;
         if (f.StartsWith("Assets/Sakana-Water") || f.StartsWith("Assets/Sorafield")) return false;
         if (f.StartsWith("Assets/つきのすとあ") || f.StartsWith("Assets/Noagami")) return false;
+        if (f.StartsWith("Assets/WoodBoat")) return false;          // ootwn 木製ボート (재배포 금지)
         return true;
     }
 
@@ -164,7 +166,7 @@ public static class PyriteGit
         var histBad = hist.Where(f => !Allowed(f)).ToList();
         log.AppendLine("history paths: " + hist.Count + ", forbidden in history: " + histBad.Count);
         foreach (var b in histBad) log.AppendLine("HISTORY FORBIDDEN: " + b);
-        Git("ls-files -- \"Assets/Sakana-Water*\" \"Assets/Sorafield*\" \"Assets/Noagami*\" \"Assets/Flora/Generated*\"", out o);
+        Git("ls-files -- \"Assets/Sakana-Water*\" \"Assets/Sorafield*\" \"Assets/Noagami*\" \"Assets/WoodBoat*\" \"Assets/Flora/Generated*\"", out o);
         log.AppendLine("paid-path ls-files lines: " + o.Split('\n').Count(l => l.Trim().Length > 0));
         log.AppendLine("RESULT: COMMITTED");
         End();
