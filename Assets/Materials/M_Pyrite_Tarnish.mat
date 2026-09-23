@@ -72,8 +72,9 @@ Material:
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
+    - _GlintSharp: 40
     - _GlossMapScale: 1
-    - _Glossiness: 0.62
+    - _Glossiness: 0.8
     - _GlossyReflections: 1
     - _MatCapBoost: 1.5
     - _MatCapNormal: 1
@@ -82,7 +83,10 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _RimPower: 5
     - _SmoothnessTextureChannel: 0
+    - _SparkleScale: 28
+    - _SparkleStrength: 0
     - _SpecNoTint: 1
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -92,8 +96,11 @@ Material:
     m_Colors:
     - _CampCenter: {r: -10.5, g: 0, b: 54.5, a: 0}
     - _CampTint: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.66, g: 0.46, b: 0.3, a: 1}
+    - _Color: {r: 0.96, g: 0.91, b: 0.7, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
+    - _GlintColor: {r: 0, g: 0, b: 0, a: 1}
+    - _GlintDir: {r: -0.00000008076811, g: 0.38268346, b: -0.9238795, a: 0}
     - _MatCapTint: {r: 1, g: 1, b: 1, a: 1}
     - _NightTint: {r: 1, g: 1, b: 1, a: 1}
+    - _RimColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

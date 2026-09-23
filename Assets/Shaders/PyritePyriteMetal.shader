@@ -10,6 +10,11 @@
 //
 //  평평한 큐브 면은 법선이 하나라 MatCap 한 점만 찍혀 단색이 된다.
 //  조선(줄무늬) 노멀맵으로 법선을 흔들어야 면 위에 반사 띠가 생긴다 → MatCap 전용 노멀 세기를 따로 둔다.
+//
+//  2026-09-23 밤 보강 (기본값 0 = 이전과 같음) — 밤엔 결정이 "색칠한 깍두기"로 보였다
+//   _RimColor/_RimPower     : 가장자리 금빛 (1-N·V)^p — 실루엣이 금속으로 읽히게
+//   _GlintDir/_GlintColor/_GlintSharp : 지정 방향(달) 가짜 반사 하이라이트 — 방향광 세기(0.04)와 무관하게 달빛이 모서리에 맺힌다
+//   _SparkleStrength/_SparkleScale    : 월드 격자 셀마다 임의 법선 → 보는 각도에 따라 반짝이는 작은 점
 Shader "Pyrite/PyriteMetal"
 {
     Properties
@@ -29,6 +34,14 @@ Shader "Pyrite/PyriteMetal"
         _MatCapBoost ("MatCap Boost", Float) = 1.5
         _MatCapTint ("MatCap Env Tint (프리셋별 — 밤엔 하늘색)", Color) = (1,1,1,1)
         _SpecNoTint ("Reflection: skip night tint", Float) = 1
+
+        [HDR] _RimColor ("Rim Color", Color) = (0,0,0,1)
+        _RimPower ("Rim Power", Float) = 3
+        _GlintDir ("Glint Dir (world, toward light)", Vector) = (0,1,0,0)
+        [HDR] _GlintColor ("Glint Color", Color) = (0,0,0,1)
+        _GlintSharp ("Glint Sharpness", Float) = 60
+        _SparkleStrength ("Sparkle Strength", Float) = 0
+        _SparkleScale ("Sparkle Cells / m", Float) = 6
 
         // 밤 어둠 — 결정도 정적이라 노을 라이트맵을 받는다. 지형과 같은 색조를 곱한다.
         _NightTint ("Night Tint (캠프 밖)", Color) = (1,1,1,1)
@@ -59,11 +72,14 @@ Shader "Pyrite/PyriteMetal"
         half4 _EmissionColor;
         half _MatCapStrength, _MatCapBoost;
         half4 _MatCapTint;
+        half4 _RimColor, _GlintColor, _GlintDir;
+        half _RimPower, _GlintSharp, _SparkleStrength, _SparkleScale;
 
         struct Input
         {
             float2 uv_MainTex;
             float3 worldNormal;
+            float3 worldPos;
             INTERNAL_DATA
         };
 
@@ -84,6 +100,24 @@ Shader "Pyrite/PyriteMetal"
             half3 mc = tex2D(_MatCap, vn.xy * 0.49 + 0.5).rgb;
 
             o.Emission = _EmissionColor.rgb + mc * c.rgb * _MatCapTint.rgb * (_MatCapStrength * _MatCapBoost);
+
+            // 밤 보강 — 월드 공간
+            float3 V = normalize(_WorldSpaceCameraPos - IN.worldPos);
+            float3 wnL = normalize(WorldNormalVector(IN, UnpackScaleNormal(nt, _BumpScale)));
+            half ndv = saturate(dot(wnL, V));
+            o.Emission += _RimColor.rgb * c.rgb * pow(1.0 - ndv, _RimPower);
+            float3 R = reflect(-V, wn);
+            float3 gd = normalize(_GlintDir.xyz + 1e-4);
+            o.Emission += _GlintColor.rgb * c.rgb * pow(saturate(dot(R, gd)), _GlintSharp);
+            if (_SparkleStrength > 0)
+            {
+                float3 cell = floor(IN.worldPos * _SparkleScale);
+                float3 h = frac(sin(float3(dot(cell, float3(127.1, 311.7, 74.7)), dot(cell, float3(269.5, 183.3, 246.1)), dot(cell, float3(113.5, 271.9, 124.6)))) * 43758.5453);
+                float3 fn = normalize(wn + (h - 0.5) * 1.2);           // 셀마다 기울어진 미세 결정면
+                float3 Rs = reflect(-V, fn);
+                half sp = pow(saturate(dot(Rs, gd)), 400) + pow(saturate(dot(Rs, normalize(float3(h.y - 0.5, 0.6, h.z - 0.5)))), 900) * 0.5;
+                o.Emission += sp * _SparkleStrength * c.rgb * _GlintColor.rgb;
+            }
             o.Alpha = 1;
         }
         ENDCG
