@@ -4,7 +4,9 @@
 //   [S2] 하늘 원반 3개 (Pyrite/SkyDisc — 카메라 기준 방향 빌보드, 시차 없음, 지형 뒤로 가려짐)
 //        노을 해 빛무리 / 달(지름 3°) / 새벽 해 빛무리. ToD 가 프리셋마다 하나만 켠다
 //   [S3] 방향광을 프리셋마다 보이는 해·달 쪽으로 (ToD.sunEuler). 씬에는 노을 각도로 둔다(라이트맵 굽는 각도)
-//  재실행 안전. 텍스처는 코드로 만든다(저장소에서 재현 가능).
+//   [S4] 그림자: 빛 고도 22°(보이는 해와 분리), 노을 하늘빛 1.6→1.2, 지형 라이트맵 배율 0.128
+//  재실행 안전. 텍스처는 코드로 만든다(저장소에서 재현 가능). ⚠ J(Setup Time Of Day)를 다시 돌리면 ambIntensity 가 1.6 으로 돌아간다 → Z3 다시
+//  라이트맵을 다시 구워야 그림자 방향·해상도가 반영된다.
 #if UNITY_EDITOR
 using System.IO;
 using System.Linq;
@@ -22,6 +24,12 @@ public static class PyriteSkyDiscTools
     public const float DUSK_E = 0.17f, DUSK_AZ = 184f;     // Sorafield _SunElevation 은 sin(고도)
     public const float DAWN_E = 0.14f, DAWN_AZ = 184f;     // 방위는 노을과 같게 — 혼합조명이 Shadowmask 라 정적 그림자는 구운 각도에 고정된다
     public const float MOON_EL = 22f,  MOON_AZ = 205f;     // 캠프에서 호수 정면(180°) 조금 오른쪽
+    // [S4] 그림자 가독성 — 빛은 보이는 해보다 높은 각도에서 (방위는 같게).
+    //      9.8° 로 비추면 바닥이 받는 햇빛이 17% 뿐이라 그림자가 하늘빛에 묻혔다. 22° → 37%.
+    public const float LIGHT_EL = 22f;
+    public const float DUSK_AMB = 1.2f;                    // 노을 하늘빛 세기 (전 1.6) — 그림자 대비
+    // 지형 라이트맵 배율: 0.0256 = 1텍셀/m 라 의자·테이블 그림자가 번져 사라졌다. 200m 를 1024 한 장에 = 0.128 (5텍셀/m)
+    public const float TERRAIN_LM = 0.128f;
 
     const string TEX_SUN = "Assets/Textures/T_SkySunGlow.png";
     const string TEX_MOON = "Assets/Textures/T_SkyMoon.png";
@@ -82,13 +90,21 @@ public static class PyriteSkyDiscTools
         // ── [S3] 방향광
         tod.sunEuler = new[]
         {
-            new Vector3(ElOfSin(DUSK_E), DUSK_AZ - 180f, 0f),
-            new Vector3(MOON_EL,         MOON_AZ - 180f, 0f),
-            new Vector3(ElOfSin(DAWN_E), DAWN_AZ - 180f, 0f),
+            new Vector3(LIGHT_EL, DUSK_AZ - 180f, 0f),
+            new Vector3(MOON_EL,  MOON_AZ - 180f, 0f),
+            new Vector3(LIGHT_EL, DAWN_AZ - 180f, 0f),
         };
         tod.skyObjects = new[] { gDusk, gMoon, gDawn };
         Undo.RecordObject(tod.sun.transform, "sun rot");
         tod.sun.transform.rotation = Quaternion.Euler(tod.sunEuler[0]);
+        if (tod.ambIntensity != null && tod.ambIntensity.Length > 0) { log.Append("ambIntensity[0] ").Append(tod.ambIntensity[0]).Append("→").Append(DUSK_AMB).Append(" | "); tod.ambIntensity[0] = DUSK_AMB; }
+        var terr = Terrain.activeTerrain;
+        if (terr != null)
+        {
+            var so = new SerializedObject(terr); var p = so.FindProperty("m_ScaleInLightmap");
+            log.Append("terrainLM ").Append(p.floatValue).Append("→").Append(TERRAIN_LM).Append(" | ");
+            p.floatValue = TERRAIN_LM; so.ApplyModifiedProperties();
+        }
         log.Append("sunEuler ").Append(string.Join(" ", tod.sunEuler.Select(v => v.ToString("F2")))).Append(" | ");
 
         var f = typeof(PyriteTimeOfDay).GetField("ready", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
