@@ -83,6 +83,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _SmoothnessTextureChannel: 0
+    - _SpecNoTint: 1
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _StriationTile: 1
@@ -93,5 +94,6 @@ Material:
     - _CampTint: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 0.8, g: 0.71, b: 0.46, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
+    - _MatCapTint: {r: 1, g: 1, b: 1, a: 1}
     - _NightTint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

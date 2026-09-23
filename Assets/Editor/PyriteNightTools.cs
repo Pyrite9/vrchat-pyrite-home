@@ -38,9 +38,11 @@ public static class PyriteNightTools
     static readonly Color SUN_DUSK_C = new Color(1.000f, 0.690f, 0.439f);
     const float SUN_DUSK_I = 1.25f;
 
-    public static readonly float[] CRYSTAL_EMISSION_MUL = { 0.00f, 0.03f, 0.00f };
+    public static readonly float[] CRYSTAL_EMISSION_MUL = { 0.00f, 0.00f, 0.00f };   // [A] 밤 노란 자체발광 제거
     public static readonly float[] CRYSTAL_LIGHT        = { 0f, 0f, 0f };
-    public static readonly float[] CRYSTAL_MATCAP       = { 1.00f, 0.10f, 0.75f };   // 밤엔 달빛 받은 정도로만
+    public static readonly float[] CRYSTAL_MATCAP       = { 1.00f, 0.35f, 0.75f };   // 밤엔 달빛 받은 정도로만
+    // [A] MatCap 환경색 — 밤엔 하늘색을 곱해 노랑×청 = 차분한 청동
+    public static readonly Color[] CRYSTAL_MATCAP_TINT  = { Color.white, new Color(0.50f, 0.62f, 1.00f), Color.white };
 
     // 꽃 밤 — 에셋 팩의 _Night 는 emission 이 켜진 "빛나는 꽃"이라 쓰지 않는다. Day 복사본을 어둡게.
     static readonly Color FLOWER_NIGHT = new Color(0.145f, 0.165f, 0.240f, 1f);
@@ -68,6 +70,7 @@ public static class PyriteNightTools
         if (tod != null)
         {
             tod.crystalMatcap         = (float[])CRYSTAL_MATCAP.Clone();
+        tod.crystalMatcapTint     = (Color[])CRYSTAL_MATCAP_TINT.Clone();
             tod.crystalEmissionMul    = (float[])CRYSTAL_EMISSION_MUL.Clone();
             tod.crystalLightIntensity = (float[])CRYSTAL_LIGHT.Clone();
             tod.index = 0; tod.Apply();
@@ -111,6 +114,8 @@ public static class PyriteNightTools
             if (mcap != null) m.SetTexture("_MatCap", mcap);
             m.SetFloat("_MatCapStrength", CRYSTAL_MATCAP[0]);
             m.SetFloat("_MatCapBoost", 1.5f);
+            m.SetColor("_MatCapTint", Color.white);
+            m.SetFloat("_SpecNoTint", 1f);   // [A] 반사는 프리셋별 큐브맵 그대로
             m.SetColor("_EmissionColor", emis);
             m.SetColor("_NightTint", Color.white);
             m.SetColor("_CampTint",  Color.white);
@@ -123,7 +128,7 @@ public static class PyriteNightTools
             EditorUtility.SetDirty(m);
             n++;
         }
-        Debug.Log("[METAL] 황철석 " + n + "개 → Pyrite/PyriteMetal (MatCap 노을 1.0 · 밤 0.10 · 새벽 0.75 / 베벨+볼록면 노멀 / 밤 색조)");
+        Debug.Log("[METAL] 황철석 " + n + "개 → Pyrite/PyriteMetal (MatCap 노을 1.0 · 밤 0.35 하늘색 · 새벽 0.75 / 반사는 색조 제외)");
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -187,6 +192,7 @@ public static class PyriteNightTools
 
         // 결정
         tod.crystalMatcap         = (float[])CRYSTAL_MATCAP.Clone();
+        tod.crystalMatcapTint     = (Color[])CRYSTAL_MATCAP_TINT.Clone();
         tod.crystalEmissionMul    = (float[])CRYSTAL_EMISSION_MUL.Clone();
         tod.crystalLightIntensity = (float[])CRYSTAL_LIGHT.Clone();
 

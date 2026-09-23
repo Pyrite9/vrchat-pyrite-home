@@ -42,6 +42,9 @@ public static class PyriteTune
                 case "ambSky":    tod.nightAmbSky    = Ensure(tod.nightAmbSky);    tod.nightAmbSky[1]    = new Color(f[0], f[1], f[2]); break;
                 case "ambGround": tod.nightAmbGround = Ensure(tod.nightAmbGround); tod.nightAmbGround[1] = new Color(f[0], f[1], f[2]); break;
                 case "matcap":    tod.crystalMatcap = new[] { f[0], f[1], f[2] }; break;
+                case "matcapTint":
+                    tod.crystalMatcapTint = (tod.crystalMatcapTint != null && tod.crystalMatcapTint.Length >= 3) ? tod.crystalMatcapTint : new[] { Color.white, Color.white, Color.white };
+                    tod.crystalMatcapTint[1] = new Color(f[0], f[1], f[2]); break;
                 case "emis":      tod.crystalEmissionMul = new[] { f[0], f[1], f[2] }; break;
                 case "specNoTint":
                     foreach (var n in PYRITE)

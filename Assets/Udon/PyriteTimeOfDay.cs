@@ -66,6 +66,7 @@ public class PyriteTimeOfDay : UdonSharpBehaviour
     public Light[] crystalLights;         // 밤에만 켜는 실시간 포인트 라이트
     public float[] crystalLightIntensity; // 프리셋별 절대 강도
     public float[] crystalMatcap;         // 프리셋별 MatCap 세기 (Pyrite/PyriteMetal 의 _MatCapStrength)
+    public Color[] crystalMatcapTint;     // 프리셋별 MatCap 환경색 (_MatCapTint) — 밤엔 하늘색
 
     [Header("캠프 조명 — 기준값에 배수")]
     public Light[] campLights;
@@ -253,6 +254,8 @@ public class PyriteTimeOfDay : UdonSharpBehaviour
             crystalMats[k].SetColor("_EmissionColor", e);
             if (crystalMatcap != null && i < crystalMatcap.Length)
                 crystalMats[k].SetFloat("_MatCapStrength", crystalMatcap[i]);
+            if (crystalMatcapTint != null && i < crystalMatcapTint.Length)
+                crystalMats[k].SetColor("_MatCapTint", crystalMatcapTint[i]);
         }
         for (int k = 0; k < crystalLights.Length; k++)
         {

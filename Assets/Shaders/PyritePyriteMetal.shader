@@ -4,6 +4,9 @@
 //  어두운 절벽과 호수뿐이라 어두운 황동 = 카키/나무결로 읽혔다.
 //  MatCap 은 보는 방향 기준으로 가짜 환경을 붙여서, 주변이 어두워도 금속 하이라이트가 항상 잡힌다.
 //  세기(_MatCapStrength)는 Udon 이 프리셋마다 SetFloat 로 바꾼다 — 밤에는 달빛 받은 정도로만.
+//  _MatCapTint : MatCap 은 "주변 환경의 반사" 대역이다. 밤엔 주변이 청색이니 밤하늘 색을 곱한다
+//                (노랑 알베도 × 청색 = 차분한 청동). 노랑 그대로 두면 스스로 빛나는 것처럼 읽힌다.
+//  _SpecNoTint : 반사 프로브는 이미 프리셋별 큐브맵이므로 밤 색조를 다시 곱하지 않는다 (PyriteNight.cginc)
 //
 //  평평한 큐브 면은 법선이 하나라 MatCap 한 점만 찍혀 단색이 된다.
 //  조선(줄무늬) 노멀맵으로 법선을 흔들어야 면 위에 반사 띠가 생긴다 → MatCap 전용 노멀 세기를 따로 둔다.
@@ -24,6 +27,8 @@ Shader "Pyrite/PyriteMetal"
         _MatCap ("MatCap", 2D) = "gray" {}
         _MatCapStrength ("MatCap Strength (프리셋별)", Range(0,3)) = 1
         _MatCapBoost ("MatCap Boost", Float) = 1.5
+        _MatCapTint ("MatCap Env Tint (프리셋별 — 밤엔 하늘색)", Color) = (1,1,1,1)
+        _SpecNoTint ("Reflection: skip night tint", Float) = 1
 
         // 밤 어둠 — 결정도 정적이라 노을 라이트맵을 받는다. 지형과 같은 색조를 곱한다.
         _NightTint ("Night Tint (캠프 밖)", Color) = (1,1,1,1)
@@ -53,6 +58,7 @@ Shader "Pyrite/PyriteMetal"
         half _Metallic, _Glossiness, _BumpScale, _MatCapNormal, _StriationTile;
         half4 _EmissionColor;
         half _MatCapStrength, _MatCapBoost;
+        half4 _MatCapTint;
 
         struct Input
         {
@@ -77,7 +83,7 @@ Shader "Pyrite/PyriteMetal"
             float3 vn = normalize(mul((float3x3)UNITY_MATRIX_V, wn));
             half3 mc = tex2D(_MatCap, vn.xy * 0.49 + 0.5).rgb;
 
-            o.Emission = _EmissionColor.rgb + mc * c.rgb * (_MatCapStrength * _MatCapBoost);
+            o.Emission = _EmissionColor.rgb + mc * c.rgb * _MatCapTint.rgb * (_MatCapStrength * _MatCapBoost);
             o.Alpha = 1;
         }
         ENDCG
