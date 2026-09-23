@@ -1,7 +1,7 @@
 // Tools ▸ Pyrite2 ▸ Z26b. Build Video Beam  /  Z26c. Video Beam Revert
 //  테이블 오른쪽에 영상 프로젝터(설정 프로젝터와 같은 몸체 복제) → 빛줄기 → 스크린 3.2×1.8 m (ProTV Main Screen 을 옮긴다)
 //   방향: 영상 프로젝터에서 yaw 208° (설정 패널 오른쪽), 거리 4.5 m, 스크린 중심 = 지면 + 1.9 m, 수직
-//   스크린 뒤 테두리 = 설정 패널과 같은 흑요석 유리 + 금선 (M_Proj_Panel)
+//   테두리 없음 (계속 보는 화면)
 //   ProTV: Main Screen·Speakers·MediaControls 를 스크린 쪽으로 옮기고(조작 패널은 스크린 아래, 2배), ScreenRig·ControlPost 는 끈다
 //   켜고 끄기는 모두에게 동기화 (PyriteVideoProjector, Manual). 기본 꺼짐
 //   되돌리기 위치·회전·크기와 끈 오브젝트는 Logs/pyrite_video_revert.txt
@@ -112,15 +112,8 @@ public static class PyriteVideoBeam
         Off(rig != null ? rig.gameObject : null);
         Off(post != null ? post.gameObject : null);
 
-        // 4) 테두리 (설정 패널과 같은 유리)
-        var panelMat = spt.Find("Panel").GetComponent<Renderer>().sharedMaterial;
-        var frame = GameObject.CreatePrimitive(PrimitiveType.Quad); frame.name = "ScreenFrame";
-        Object.DestroyImmediate(frame.GetComponent<Collider>());
-        frame.transform.SetParent(root.transform, false);
-        frame.transform.SetPositionAndRotation(sc + dir * 0.02f, faceRot);
-        frame.transform.localScale = new Vector3(SW + 0.16f, SH + 0.09f, 1f);
-        var fr = frame.GetComponent<MeshRenderer>(); fr.sharedMaterial = panelMat;
-        fr.shadowCastingMode = ShadowCastingMode.Off; fr.receiveShadows = false; fr.lightProbeUsage = LightProbeUsage.Off; fr.reflectionProbeUsage = ReflectionProbeUsage.Off;
+        // 4) 테두리 없음 (2026-09-24 관리자: 계속 보는 화면이라 금테가 거슬린다)
+        GameObject frame = null;
 
         // 5) 빛줄기
         var beamMat = spt.Find("Beam").GetComponent<Renderer>().sharedMaterial;
@@ -140,7 +133,7 @@ public static class PyriteVideoBeam
         PyriteVideoProjector vp;
         try { vp = UdonSharpUndo.AddComponent<PyriteVideoProjector>(root); }
         catch (System.Exception e) { sb.AppendLine("AddComponent 실패 (H 로 프로그램 에셋 먼저): " + e.Message); Flush(sb); return; }
-        vp.onObjects = new[] { beam, frame, screen.gameObject, controls.gameObject, glow, led }.Where(o => o != null).ToArray();
+        vp.onObjects = new[] { beam, screen.gameObject, controls.gameObject, glow, led }.Where(o => o != null).ToArray();
         vp.lensRenderer = lens.GetComponent<Renderer>();
         vp.lensOn = spj.lensOn; vp.lensOff = spj.lensOff; vp.isOn = false;
         UdonSharpEditorUtility.CopyProxyToUdon(vp); EditorUtility.SetDirty(vp);
