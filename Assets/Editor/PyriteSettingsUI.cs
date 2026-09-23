@@ -147,7 +147,7 @@ public static class PyriteSettingsUI
         // 반사
         var cRefl = Card("CardReflect", 2, 0, "refl");
         var (lakeT, lakeL) = Tgl(cRefl, "Lake", 32, 90, 489, true, "OnLake"); L(lakeL, S["lake"]);
-        var (mirT, mirL) = Tgl(cRefl, "Mirror", 32, 160, 489, false, "OnCampMirror"); L(mirL, S["mirror"]);
+        var (mirT, mirL) = Tgl(cRefl, "MirrorToggle", 32, 160, 489, false, "OnCampMirror"); L(mirL, S["mirror"]);
 
         // 소리
         var cSound = Card("CardSound", 0, 1, "sound");
@@ -231,11 +231,12 @@ public static class PyriteSettingsUI
         // 7) 호수 반사 스위치 숨김 (스크립트는 유지)
         HideLakeSwitch(lakeMirror, sb);
         // 예전 캠프 거울(기둥·스위치·거울면) 통째로 끔 — 설정 빔 거울로 대체
-        var oldStand = Find("Mirror");
+        // 🔴 Find("Mirror") 는 설정 칸의 'Mirror' 토글을 잡을 수 있다 → 씬 루트에서만 찾는다
+        var oldStand = SceneManager.GetActiveScene().GetRootGameObjects().FirstOrDefault(g => g.name == "Mirror");
         if (oldStand != null && oldStand.activeSelf)
         {
             oldStand.SetActive(false);
-            var lines = File.Exists(HIDDEN_LOG) ? File.ReadAllLines(HIDDEN_LOG).ToList() : new List<string>();
+            var lines = File.Exists(HIDDEN_LOG) ? File.ReadAllLines(HIDDEN_LOG).Where(l => !l.Contains("SettingsUI")).ToList() : new List<string>();
             lines.Add("A|" + PathOf(oldStand.transform));
             File.WriteAllLines(HIDDEN_LOG, lines.Distinct());
             sb.AppendLine("camp mirror stand 'Mirror' off");

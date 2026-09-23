@@ -1,7 +1,7 @@
 // Tools ▸ Pyrite2 ▸ Z27b. Build Tarp Mirror  /  Z27c. Tarp Mirror Revert
 //  타프 왼쪽 앞 줄(왼쪽 기둥 꼭대기 (-11.71, 4.19, 57.60) → 말뚝 (-14.30, 1.70, 55.45))에 둥근 손거울을 매단다
-//   손거울을 누르면 가로 거울 2.4 × 1.35 m 가 옆에 켜진다 (로컬, PyriteMirrorToggle — 거울은 보는 사람만 렌더)
-//   가로 거울 = 예전 캠프 거울 MirrorSurface 복제(같은 반사 레이어·해상도) + 나무 테, 캠프 쪽을 본다
+//   손거울을 누르면 가로 거울 3.2 × 1.8 m (테 없음, 아래 끝이 지면에 닿음)가 옆에 켜진다 (로컬, PyriteMirrorToggle — 거울은 보는 사람만 렌더)
+//   가로 거울 = 예전 캠프 거울 MirrorSurface 복제(같은 반사 레이어·해상도), 캠프 쪽을 본다
 //   설정 패널 반사 칸의 '거울' 토글도 이 거울을 켠다 (Z25a 가 연결)
 //  렌더 Assets/_preview/tarp/mirror_*.png
 #if UNITY_EDITOR
@@ -24,7 +24,7 @@ public static class PyriteTarpMirror
     static readonly Vector3 ROPE_PEG = new Vector3(-14.30f, 1.70f, 55.45f);
     static readonly Vector3 CAMP = new Vector3(-10.5f, 0f, 53.5f);
     static readonly Vector3 BIG_AT = new Vector3(-15.2f, 0f, 55.0f);       // 가로 거울 중심 (예전 거울 자리 근처, 타프 밖)
-    const float BIG_W = 2.4f, BIG_H = 1.35f, BIG_Y = 1.45f;                 // 지면 위 중심 높이
+    const float BIG_W = 3.2f, BIG_H = 1.8f, SINK = 0.03f;                   // 2026-09-24: 테 없이, 아래 끝이 지면에 닿게(3 cm 묻음), 더 크게
     const float HANG_Y = 1.50f;                                             // 손거울 걸린 줄 높이 = 지면 + 1.50
 
     [MenuItem("Tools/Pyrite2/Z27b. Build Tarp Mirror", false, 11)]
@@ -70,7 +70,7 @@ public static class PyriteTarpMirror
         var col = root.AddComponent<BoxCollider>(); col.center = new Vector3(0f, cy + 0.03f, 0f); col.size = new Vector3(0.34f, 0.44f, 0.12f);
 
         // 가로 거울 (컨테이너: 균일 크기, 표면 + 나무 테)
-        var bigPos = BIG_AT; bigPos.y = G(BIG_AT) + BIG_Y;
+        var bigPos = BIG_AT; bigPos.y = G(BIG_AT) + BIG_H * 0.5f - SINK;
         var bigToCamp = CAMP - bigPos; bigToCamp.y = 0; bigToCamp.Normalize();
         var big = new GameObject("BigMirror");
         big.transform.SetParent(root.transform, false);
@@ -79,16 +79,9 @@ public static class PyriteTarpMirror
         surf.name = "Surface"; surf.SetActive(true);
         foreach (var c in surf.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
         surf.transform.localPosition = Vector3.zero; surf.transform.localRotation = Quaternion.identity; surf.transform.localScale = new Vector3(BIG_W, BIG_H, 1f);
-        const float fw = 0.05f, fd = 0.04f;
-        Prim(PrimitiveType.Cube, "FrameTop", big.transform, new Vector3(0f, BIG_H * 0.5f + fw * 0.5f, fd * 0.5f), Quaternion.identity, new Vector3(BIG_W + fw * 2f, fw, fd), mWood);
-        Prim(PrimitiveType.Cube, "FrameBottom", big.transform, new Vector3(0f, -BIG_H * 0.5f - fw * 0.5f, fd * 0.5f), Quaternion.identity, new Vector3(BIG_W + fw * 2f, fw, fd), mWood);
-        Prim(PrimitiveType.Cube, "FrameL", big.transform, new Vector3(-BIG_W * 0.5f - fw * 0.5f, 0f, fd * 0.5f), Quaternion.identity, new Vector3(fw, BIG_H, fd), mWood);
-        Prim(PrimitiveType.Cube, "FrameR", big.transform, new Vector3(BIG_W * 0.5f + fw * 0.5f, 0f, fd * 0.5f), Quaternion.identity, new Vector3(fw, BIG_H, fd), mWood);
-        Prim(PrimitiveType.Cube, "Back", big.transform, new Vector3(0f, 0f, fd + 0.005f), Quaternion.identity, new Vector3(BIG_W + fw * 2f, BIG_H + fw * 2f, 0.01f), mWood);
-        // 다리 두 개 (거울 아래 → 지면)
-        float legLen = BIG_Y - BIG_H * 0.5f - fw;
-        foreach (var sx in new[] { -1f, 1f })
-            Prim(PrimitiveType.Cylinder, "Leg", big.transform, new Vector3(sx * (BIG_W * 0.5f - 0.2f), -BIG_H * 0.5f - fw - legLen * 0.5f, fd * 0.5f), Quaternion.identity, new Vector3(0.05f, legLen * 0.5f, 0.05f), mWood);
+        var rgt = big.transform.right * (BIG_W * 0.5f);
+        sb.AppendLine(string.Format("mirror bottom {0:0.00} | ground L {1:0.00} C {2:0.00} R {3:0.00} (묻힘 +, 뜸 -: L {4:+0.00;-0.00} R {5:+0.00;-0.00})",
+            bigPos.y - BIG_H * 0.5f, G(bigPos - rgt), G(bigPos), G(bigPos + rgt), G(bigPos - rgt) - (bigPos.y - BIG_H * 0.5f), G(bigPos + rgt) - (bigPos.y - BIG_H * 0.5f)));
         big.SetActive(false);
 
         foreach (var tr in root.GetComponentsInChildren<Transform>(true)) GameObjectUtility.SetStaticEditorFlags(tr.gameObject, 0);
@@ -103,7 +96,7 @@ public static class PyriteTarpMirror
         var ub = UdonSharpEditorUtility.GetBackingUdonBehaviour(tg); if (ub != null) { ub.interactText = "Mirror"; EditorUtility.SetDirty(ub); }
 
         sb.AppendLine(string.Format("hang {0} (rope t {1:0.00}, ground {2:0.00}) | big mirror {3} {4}x{5} m, top {6:0.00} above ground | camp dist {7:0.0} m",
-            hang.ToString("F2"), t, gy, bigPos.ToString("F2"), BIG_W, BIG_H, BIG_Y + BIG_H * 0.5f, Vector3.Distance(new Vector3(bigPos.x, 0, bigPos.z), CAMP)));
+            hang.ToString("F2"), t, gy, bigPos.ToString("F2"), BIG_W, BIG_H, BIG_H - SINK, Vector3.Distance(new Vector3(bigPos.x, 0, bigPos.z), CAMP)));
 
         Shots(root, big, sb);
         AssetDatabase.SaveAssets();

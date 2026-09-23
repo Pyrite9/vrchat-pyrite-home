@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: PP_UserNoBloom
   m_EditorClassIdentifier: 
   settings:
-  - {fileID: 5529962156282634753}
---- !u!114 &5529962156282634753
+  - {fileID: 4653259082069609147}
+--- !u!114 &4653259082069609147
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}

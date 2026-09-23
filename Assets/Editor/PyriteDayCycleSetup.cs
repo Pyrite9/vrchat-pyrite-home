@@ -282,7 +282,7 @@ public static class PyriteDayCycleSetup
         // 🔴 기준값은 상수 — 씬 값은 도구가 배수를 누적시켜 무너졌다(캠프 조명 0.01, 반딧불 0, 풀벌레 1e-33)
         cyc.ffBaseRate = cyc.fireflies.Select(p => 25.06f).ToArray();       // push 된 씬(노을 배수 1) 값
         cyc.ffBaseSize = cyc.fireflies.Select(p => 0.40f).ToArray();
-        cyc.campBase = new[] { 9.82f, 10.13f, 7.59f, 0.70f };                // Fire_Light, Fire_Light, 랜턴 Light, 부두 뿌리 (19:45 로그)
+        cyc.campBase = new[] { 7.86f, 10.13f, 7.59f, 0.70f };   // 2026-09-24 화로 9.82 → 7.86 (Z28b, 범위 4.2 m)                // Fire_Light, Fire_Light, 랜턴 Light, 부두 뿌리 (19:45 로그)
         cyc.ambBase = tod.ambience.Select(a => a == null ? 0f : a.name == "AMB_Water_Center" ? 0.30f : a.name == "AMB_Water_ShoreN" ? 0.42f : a.name == "AMB_Water_Dock" ? 0.40f : a.name == "AMB_Campfire" ? 0.55f : a.volume).ToArray();
         cyc.nightAmbBase = tod.nightAmbience.Select(a => a == null ? 0f : a.name == "AMB_N_Crickets_A" ? 0.38f : a.name == "AMB_N_Crickets_B" ? 0.34f : a.volume).ToArray();   // PyriteAmbienceTools 스펙
         sb.AppendLine("bases camp " + string.Join("/", cyc.campBase) + "  amb " + string.Join("/", cyc.ambBase) + "  night " + string.Join("/", cyc.nightAmbBase) + "  (lights " + string.Join(",", tod.campLights.Select(l => l ? l.name : "-")) + ")");
