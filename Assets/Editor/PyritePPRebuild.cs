@@ -86,7 +86,8 @@ public static class PyritePPRebuild
 
         var day = Fresh(DAY);
         BloomSet(AddS<Bloom>(day), 0.5f, 1.2f, Color.white);
-        Grading(AddS<ColorGrading>(day), EXP_DAY, 0f, 0f, 8f, 12f, new Vector4(1f, 1f, 1.02f, 0f), new Vector4(1f, 1f, 1f, 0.02f));
+        Grading(AddS<ColorGrading>(day), EXP_DAY, 0f, 0f, 8f, 4f,   // 채도 12→4: 꽃 파랑이 남색으로 몰렸다(인게임 정오 R 5)
+             new Vector4(1f, 1f, 1.02f, 0f), new Vector4(1f, 1f, 1f, 0.02f));
         Vig(AddS<Vignette>(day), 0.18f);
         EditorUtility.SetDirty(day);
 

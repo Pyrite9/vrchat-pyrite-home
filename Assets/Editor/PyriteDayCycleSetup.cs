@@ -57,7 +57,8 @@ public static class PyriteDayCycleSetup
             fogCol = t.fogColor[p], fogDen = t.fogOn[p] ? t.fogDensity[p] : 0f, refl = t.reflIntensity[p],
             lightCol = t.sunColor[p], lightInt = t.sunIntensity[p],
             cliff = cliffM[p].GetColor("_Color"), waterBase = waterM[p].GetColor("_BaseColor"), waterDeep = waterM[p].GetColor("_DeepColor"),
-            flower = flowerM[p].GetColor("_MainColor"),
+            // 🔴 꽃 기준색은 상수 — Day 머티리얼은 사이클이 보정값을 써 넣으므로 읽으면 재실행마다 곱해진다 (Z18a 원래 값)
+            flower = p == 1 ? new Color(0.145f, 0.165f, 0.24f, 1f) : new Color(0.66f, 0.66f, 0.66f, 1f),
             shimmer = t.shimmerGain[p], ffA = t.ffColorA[p], ffB = t.ffColorB[p], ffRate = t.ffRateMul[p], ffSize = t.ffSizeMul[p],
             crEm = t.crystalEmissionMul[p], crMatcap = t.crystalMatcap[p], crGloss = t.crystalGlossMul[p], crLight = t.crystalLightIntensity[p], crTint = t.crystalMatcapTint[p],
             camp = t.campLightMul[p], amb = t.ambienceMul[p], nightAmb = t.nightAmbienceMul[p],
@@ -153,6 +154,13 @@ public static class PyriteDayCycleSetup
         var predawn = blue.Clone("predawn", 5.5f, 2);
         predawn.skyHaze = 1.5f; predawn.ambSky = RGB(0.20f, 0.18f, 0.28f); predawn.fogCol = RGB(0.24f, 0.20f, 0.28f);
         predawn.ffRate = 0.3f; predawn.camp = 0.9f; predawn.nightAmb = 0.4f;
+        // 꽃 보정 — ACES 가 짙은 파랑을 크게 누른다(텐트 옆 꽃 밝기: 노을 56→39, 밤 25→18, 정오 70→68). 후처리 전 밝기로. 인게임 정오 꽃 RGB 5/37/88 (밝기 44) → 정오도 1.45
+        var flowerMul = new System.Collections.Generic.Dictionary<K, float> {
+            { night, 1.4f }, { predawn, 1.4f }, { dawn, 1.8f }, { morning, 2.0f }, { noon, 2.0f },
+            { afternoon, 2.0f }, { dusk, 1.8f }, { sunset, 1.8f }, { blue, 1.4f } };   // 기준 0.66 → 낮 1.32 / 노을 1.19 (0.66×2.1 에서 정오 80·노을 65 측정)
+        foreach (var kv in flowerMul) { var c = kv.Key.flower * kv.Value; c.a = 1f; kv.Key.flower = c; }
+        sb.AppendLine("flower: dusk " + Fmt(dusk.flower) + " noon " + Fmt(noon.flower) + " night " + Fmt(night.flower));
+
         // 후처리 볼륨 weight (노을 프로필 위에 섞음)
         night.ppDay = 0f; night.ppNight = 1f;
         predawn.ppDay = 0f; predawn.ppNight = 0.7f;
@@ -345,6 +353,7 @@ public static class PyriteDayCycleSetup
     {
         new V{ n="camp_lake",   eye=new Vector3(-10.0f, 1.7f, 47.0f), look=new Vector3(-10.0f, 3.0f, -40.0f), fov=70f },
         new V{ n="far_to_camp", eye=new Vector3(  5.0f, 1.7f, -40.0f), look=new Vector3( -5.0f, 6.0f, 78.0f), fov=70f },
+        new V{ n="tent_side",   eye=new Vector3( -4.0f, 1.7f, 58.0f), look=new Vector3(-16.0f, 1.5f, 56.0f), fov=70f },
     };
 
     [MenuItem("Tools/Pyrite/Z18d. Day Cycle Sweep Render", false, 43)]

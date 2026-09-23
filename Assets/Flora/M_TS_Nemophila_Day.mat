@@ -236,7 +236,7 @@ Material:
     - _EmissionColor: {r: 0.6854237, g: 0.9623886, b: 1.4980394, a: 1}
     - _HeiTex_ST: {r: 1, g: 1, b: 0, a: 0}
     - _MainCol: {r: 1, g: 1, b: 1, a: 1}
-    - _MainColor: {r: 0.66, g: 0.66, b: 0.66, a: 1}
+    - _MainColor: {r: 1.188, g: 1.188, b: 1.188, a: 1}
     - _MainTexColor: {r: 1, g: 1, b: 1, a: 1}
     - _PPos: {r: 0, g: -1000, b: 0, a: 0}
     - _SSpd: {r: 0.02, g: 0.02, b: 0, a: 0}
