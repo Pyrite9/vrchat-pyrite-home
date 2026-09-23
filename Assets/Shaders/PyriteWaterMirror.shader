@@ -20,7 +20,7 @@ Shader "Pyrite/WaterMirror"
         _RippleDistort("Ripple Share of Distortion", Range(0, 1)) = 0.2
         _FresnelPower("Fresnel Power", Range(0.1, 10)) = 3
         _FresnelMin("Fresnel Min", Range(0, 1)) = 0.04
-        _NormalScale("Ripple Strength", Range(0, 1)) = 0.35
+        _NormalScale("Ripple Strength", Range(0, 1)) = 0.06
         _WaveSpeed("Ripple Speed", Float) = 0.4
         _RippleFar("Ripple Far Fade (m)", Float) = 90
         _WaveHeight("Swell Height (x)", Float) = 1
@@ -31,6 +31,7 @@ Shader "Pyrite/WaterMirror"
         _ShoreAlpha("Shore Alpha Fade (m)", Float) = 0.25
         _SwellFade("Swell Fade Depth (m)", Float) = 0.6
         _Lift("Lift above water (m)", Float) = 0.003
+        _PlayerRipple("Player Ripple Normal (x)", Float) = 4
     }
 
     SubShader
@@ -75,6 +76,20 @@ Shader "Pyrite/WaterMirror"
             float _MirrorStrength, _Distort, _RippleDistort, _FresnelPower, _FresnelMin;
             float _NormalScale, _WaveSpeed, _RippleFar, _WaveHeight, _WaveTime, _WaveNormal;
             float _DepthMax, _ShoreFade, _ShoreAlpha, _SwellFade, _Lift;
+
+            // [Z16] 사람이 만든 파문 — 전역 _UdonLakeRipple(PyriteLakeRipple 의 시뮬레이션, R = 높이). 범위는 수심 텍스처와 같다.
+            //       전역이 없으면(에디터) 상수 텍스처라 기울기 0 → 영향 없음
+            sampler2D _UdonLakeRipple;
+            float _PlayerRipple;
+            float2 PlayerRippleGrad(float2 xz)
+            {
+                float2 uv = (xz - float2(-64, -78)) / 128.0;
+                if (any(uv < 0) || any(uv > 1)) return 0;
+                const float e = 1.0 / 1024.0;
+                float hx = tex2Dlod(_UdonLakeRipple, float4(uv + float2(e, 0), 0, 0)).r - tex2Dlod(_UdonLakeRipple, float4(uv - float2(e, 0), 0, 0)).r;
+                float hz = tex2Dlod(_UdonLakeRipple, float4(uv + float2(0, e), 0, 0)).r - tex2Dlod(_UdonLakeRipple, float4(uv - float2(0, e), 0, 0)).r;
+                return float2(hx, hz) / (2.0 * 0.125);         // m/m
+            }
 
             // Pyrite/Water 와 같은 상수
             static const float2 SW_D[4] = { float2(0.940, 0.342), float2(0.643, 0.766), float2(0.993, -0.122), float2(0.208, 0.978) };
@@ -142,7 +157,8 @@ Shader "Pyrite/WaterMirror"
 
                 // [Z12] 잔물결은 반사 좌표를 잘게 찢어 별이 긁힌 선처럼 보였다 → 흔들림·프레넬엔 잔물결 몫을 줄인 면을 쓴다
                 rip *= _RippleDistort;
-                float3 n = normalize(float3(rip.x - g.x * swellK, 1.0, rip.y - g.y * swellK));
+                float2 pr = PlayerRippleGrad(i.worldPos.xz) * _PlayerRipple;      // 사람 파문은 반사를 온전히 흔든다(레퍼런스의 핵심)
+                float3 n = normalize(float3(rip.x - g.x * swellK - pr.x, 1.0, rip.y - g.y * swellK - pr.y));
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
 
                 // 거울 텍스처 — 화면 좌표를 면 기울기만큼 흔든다. 멀수록 화면상 흔들림이 커지지 않게 거리로 나눔

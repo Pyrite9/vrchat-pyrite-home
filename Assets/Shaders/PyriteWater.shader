@@ -43,6 +43,9 @@ Shader "Pyrite/Water"
         _ShoreFade("Shore Color Fade (m)", Float) = 0.8
         _ShoreAlpha("Shore Alpha Fade (m)", Float) = 0.35
         _SwellFade("Swell Fade Depth (m)", Float) = 0.6
+
+        [Header(Player Ripples)]
+        _PlayerRipple("Player Ripple Normal (x)", Float) = 4
     }
 
     SubShader
@@ -96,6 +99,20 @@ Shader "Pyrite/Water"
             float _Smoothness, _FresnelPower, _RefractionStrength, _WaterDepth;
             float4 _DepthRect;
             float _DepthMax, _ShoreFade, _ShoreAlpha, _SwellFade;
+
+            // [Z16] 사람이 만든 파문 — 전역 _UdonLakeRipple(PyriteLakeRipple 의 시뮬레이션, R = 높이). 범위는 수심 텍스처와 같다.
+            //       전역이 없으면(에디터) 상수 텍스처라 기울기 0 → 영향 없음
+            sampler2D _UdonLakeRipple;
+            float _PlayerRipple;
+            float2 PlayerRippleGrad(float2 xz)
+            {
+                float2 uv = (xz - float2(-64, -78)) / 128.0;
+                if (any(uv < 0) || any(uv > 1)) return 0;
+                const float e = 1.0 / 1024.0;
+                float hx = tex2Dlod(_UdonLakeRipple, float4(uv + float2(e, 0), 0, 0)).r - tex2Dlod(_UdonLakeRipple, float4(uv - float2(e, 0), 0, 0)).r;
+                float hz = tex2Dlod(_UdonLakeRipple, float4(uv + float2(0, e), 0, 0)).r - tex2Dlod(_UdonLakeRipple, float4(uv - float2(0, e), 0, 0)).r;
+                return float2(hx, hz) / (2.0 * 0.125);         // m/m
+            }
 
             // 수심 (m) — 텍스처 밖은 0 (= 땅)
             float LakeDepth(float2 xz)
@@ -174,7 +191,8 @@ Shader "Pyrite/Water"
                 float far = saturate(1.0 - i.depth / max(_RippleFar, 1.0));
                 rip *= _NormalScale * lerp(0.4, 1.0, far) * lerp(0.5, 1.0, shore);
 
-                float3 worldNormal = normalize(float3(rip.x - g.x * swellK, 1.0, rip.y - g.y * swellK));
+                float2 pr = PlayerRippleGrad(i.worldPos.xz) * _PlayerRipple;
+                float3 worldNormal = normalize(float3(rip.x - g.x * swellK - pr.x, 1.0, rip.y - g.y * swellK - pr.y));
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
 
                 // 굴절 (배경 = 물 뒤/아래 장면)

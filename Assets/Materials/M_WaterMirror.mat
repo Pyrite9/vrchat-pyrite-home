@@ -48,6 +48,7 @@ Material:
     - _Lift: 0.003
     - _MirrorStrength: 0.9
     - _NormalScale: 0.06
+    - _PlayerRipple: 4
     - _RippleDistort: 0.2
     - _RippleFar: 90
     - _ShoreAlpha: 0.25

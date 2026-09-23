@@ -84,6 +84,7 @@ Material:
     - _NormalScale: 0.06
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _PlayerRipple: 4
     - _RefractionStrength: 0.03
     - _RippleFar: 90
     - _ShoreAlpha: 0.25
