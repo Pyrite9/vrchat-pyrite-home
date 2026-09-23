@@ -88589,7 +88589,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 8300000, guid: 2414cd0d0e0848d42bd3a277de0ccc89, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 1.01207424e-10
+  m_Volume: 3.54226e-11
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -88754,7 +88754,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 8300000, guid: 2414cd0d0e0848d42bd3a277de0ccc89, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 9.055402e-11
+  m_Volume: 3.1693908e-11
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -104474,7 +104474,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 1.02e-43, y: 6e-44, z: 2e-44, w: 1.9192e-41}
+  m_BoundingSphereOverride: {x: 4.5905e-41, y: 0, z: 0, w: 0}
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ShadowRadius: 0
