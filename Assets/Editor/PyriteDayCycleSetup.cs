@@ -187,13 +187,25 @@ public static class PyriteDayCycleSetup
             for (var tr = tod.dialPointer; tr != null; tr = tr.parent)
                 sb.AppendLine("  dial chain " + tr.name + ": " + string.Join(", ", tr.GetComponents<Component>().Select(c => c.GetType().Name)));
 
-        // ── DayCycle ──
-        var cyc = go.GetComponent<PyriteDayCycle>();
+        // ── DayCycle — 자기 루트 오브젝트에 ──
+        // 🔴 TimeOfDay 에 같이 붙이면 네트워크 ID 기록(UdonBehaviour 1개)과 어긋나 빌드가 AssignSceneNetworkIDs 에서 멈춘다(2026-09-23 실측)
+        var old = go.GetComponent<PyriteDayCycle>();
+        if (old != null)
+        {
+            var ob = UdonSharpEditorUtility.GetBackingUdonBehaviour(old);
+            Object.DestroyImmediate(old);
+            if (ob != null) Object.DestroyImmediate(ob);
+            sb.AppendLine("TimeOfDay 에서 DayCycle 제거 → 원래 구성 " + string.Join(", ", go.GetComponents<Component>().Select(c => c.GetType().Name)));
+        }
+        var host = SceneManager.GetActiveScene().GetRootGameObjects().FirstOrDefault(g => g.name == "DayCycle");
+        if (host == null) { host = new GameObject("DayCycle"); Undo.RegisterCreatedObjectUndo(host, "day cycle"); }
+        var cyc = host.GetComponent<PyriteDayCycle>();
         if (cyc == null)
         {
-            try { cyc = UdonSharpUndo.AddComponent<PyriteDayCycle>(go); }
+            try { cyc = UdonSharpUndo.AddComponent<PyriteDayCycle>(host); }
             catch (System.Exception e) { sb.AppendLine("AddComponent 실패 (H 로 프로그램 에셋 먼저): " + e.Message); Flush(sb, false); return; }
         }
+        sb.AppendLine("DayCycle host: " + string.Join(", ", host.GetComponents<Component>().Select(c => c.GetType().Name)));
         cyc.startHour = 21f; cyc.hourAtSync = 21f; cyc.dayMinutes = 12f; cyc.autoFlow = false; cyc.syncStamp = 0;
         cyc.keyHour = keys.Select(k => k.hour).ToArray();
         cyc.keyCubeSet = keys.Select(k => k.cube).ToArray();
@@ -280,12 +292,13 @@ public static class PyriteDayCycleSetup
         var sb = new StringBuilder("[Z18c] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
         var tod = Object.FindObjectOfType<PyriteTimeOfDay>(true);
         if (tod == null) { sb.AppendLine("ToD 없음"); Flush(sb, true); return; }
-        var cyc = tod.GetComponent<PyriteDayCycle>();
-        if (cyc != null)
+        foreach (var cyc in Object.FindObjectsOfType<PyriteDayCycle>(true))
         {
             var cb = UdonSharpEditorUtility.GetBackingUdonBehaviour(cyc);
+            var hostGo = cyc.gameObject;
             Object.DestroyImmediate(cyc);
             if (cb != null) Object.DestroyImmediate(cb);
+            if (hostGo != tod.gameObject && hostGo.name == "DayCycle") Object.DestroyImmediate(hostGo);
         }
         foreach (var d in Object.FindObjectsOfType<PyriteDial>(true)) { d.cycle = null; UdonSharpEditorUtility.CopyProxyToUdon(d); EditorUtility.SetDirty(d); }
         var ub = UdonSharpEditorUtility.GetBackingUdonBehaviour(tod);
