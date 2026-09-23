@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -15,7 +16,8 @@ public static class PyriteOcclusionTools
 {
     // 이 이름(또는 그 자식)은 건드리지 않는다
     static readonly string[] SKIP_ROOTS =
-    { "Mirror", "TimePanel", "TimeDial", "LightFX", "Ambience", "Main Camera", "VRCWorld", "EventSystem" };
+    { "Mirror", "TimePanel", "TimeDial", "LightFX", "Ambience", "Main Camera", "VRCWorld", "EventSystem",
+      "LakeMirror", "LakeMirrorSwitch", "SkyDiscs", "SpinChair", "MediaPlayer" };   // B6(2026-09-23): 호수 반사·스위치·하늘 원반·회전 의자·ProTV
 
     const float OCCLUDER_MIN = 3.0f;   // 이 크기(최대 변, m) 넘는 것만 가림막으로 쓴다
 
@@ -23,6 +25,15 @@ public static class PyriteOcclusionTools
     public static void SetupFlags()
     {
         int occluder = 0, occludee = 0, skipped = 0;
+        // 🔴 회전 의자(Udon 으로 45° 씩 돈다) 아래에 정적 플래그가 남아 있었다 — 움직이는 물체는 정적이면 안 된다
+        foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects().Where(g => g.name == "SpinChair"))
+            foreach (var tr in root.GetComponentsInChildren<Transform>(true))
+                if (GameObjectUtility.GetStaticEditorFlags(tr.gameObject) != 0)
+                {
+                    Debug.Log("[OCC] 정적 플래그 제거 (움직이는 물체): " + tr.name + " was " + GameObjectUtility.GetStaticEditorFlags(tr.gameObject));
+                    GameObjectUtility.SetStaticEditorFlags(tr.gameObject, 0);
+                    var rr = tr.GetComponent<Renderer>(); if (rr != null) rr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes;
+                }
         var big = new List<string>();
 
         foreach (var r in Object.FindObjectsOfType<Renderer>(true))
@@ -69,6 +80,7 @@ public static class PyriteOcclusionTools
         StaticOcclusionCulling.backfaceThreshold  = 100f;   // 100 = 뒷면 제거 안 함(닫히지 않은 메시가 많을 때 안전)
 
         EditorSceneManager_MarkDirty();
+        UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
         Debug.Log(string.Format(
             "[OCC] 플래그 정리 — Occluder {0} / Occludee {1} / 건너뜀 {2}\n  큰 가림막 예: {3}\n  파라미터: smallestOccluder {4} / smallestHole {5} / backface {6}",
             occluder, occludee, skipped, string.Join(", ", big),
