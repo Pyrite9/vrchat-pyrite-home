@@ -156,8 +156,8 @@ public static class PyriteDayCycleSetup
         predawn.ffRate = 0.3f; predawn.camp = 0.9f; predawn.nightAmb = 0.4f;
         // 꽃 보정 — ACES 가 짙은 파랑을 크게 누른다(텐트 옆 꽃 밝기: 노을 56→39, 밤 25→18, 정오 70→68). 후처리 전 밝기로. 인게임 정오 꽃 RGB 5/37/88 (밝기 44) → 정오도 1.45
         var flowerMul = new System.Collections.Generic.Dictionary<K, float> {
-            { night, 1.4f }, { predawn, 1.4f }, { dawn, 1.8f }, { morning, 2.0f }, { noon, 2.0f },
-            { afternoon, 2.0f }, { dusk, 1.8f }, { sunset, 1.8f }, { blue, 1.4f } };   // 기준 0.66 → 낮 1.32 / 노을 1.19 (0.66×2.1 에서 정오 80·노을 65 측정)
+            { night, 1.8f }, { predawn, 1.8f }, { dawn, 2.05f }, { morning, 2.3f }, { noon, 2.3f },
+            { afternoon, 2.3f }, { dusk, 2.05f }, { sunset, 2.05f }, { blue, 1.8f } };   // 관리자: "약간만 더" (+15%, 밤 1.4→1.8)   // 기준 0.66 → 낮 1.32 / 노을 1.19 (0.66×2.1 에서 정오 80·노을 65 측정)
         foreach (var kv in flowerMul) { var c = kv.Key.flower * kv.Value; c.a = 1f; kv.Key.flower = c; }
         sb.AppendLine("flower: dusk " + Fmt(dusk.flower) + " noon " + Fmt(noon.flower) + " night " + Fmt(night.flower));
 
@@ -255,7 +255,21 @@ public static class PyriteDayCycleSetup
         cyc.flowerRenderers = tod.flowerRenderers; cyc.flowerMat = tod.flowerMat[0];
         cyc.flowerColor = keys.Select(k => k.flower).ToArray();
         cyc.shimmerMat = tod.shimmerMat; cyc.shimmerGain = keys.Select(k => k.shimmer).ToArray();
-        cyc.fireflies = tod.fireflies;
+        // 반딧불은 황철석 결정 주변만 (2026-09-23 관리자). 꽃밭 반딧불(FF_P_TS_*)은 오브젝트를 끈다
+        cyc.fireflies = tod.fireflies.Where(p => p != null && p.name.StartsWith("FF_Crystal_")).ToArray();
+        foreach (var p in tod.fireflies.Where(p => p != null && !p.name.StartsWith("FF_Crystal_")))
+        {
+            if (p.transform.parent != null && p.transform.parent.name == "Fireflies") { p.transform.parent.gameObject.SetActive(false); }
+            else p.gameObject.SetActive(false);
+        }
+        sb.AppendLine("fireflies: " + string.Join(", ", cyc.fireflies.Select(p => p.name)) + "  (꽃밭 반딧불 끔)");
+        // 🔴 기준값은 상수 — 씬 값은 도구가 배수를 누적시켜 무너졌다(캠프 조명 0.01, 반딧불 0, 풀벌레 1e-33)
+        cyc.ffBaseRate = cyc.fireflies.Select(p => 25.06f).ToArray();       // push 된 씬(노을 배수 1) 값
+        cyc.ffBaseSize = cyc.fireflies.Select(p => 0.40f).ToArray();
+        cyc.campBase = new[] { 9.82f, 10.13f, 7.59f, 0.70f };                // Fire_Light, Fire_Light, 랜턴 Light, 부두 뿌리 (19:45 로그)
+        cyc.ambBase = tod.ambience.Select(a => a == null ? 0f : a.name == "AMB_Water_Center" ? 0.30f : a.name == "AMB_Water_ShoreN" ? 0.42f : a.name == "AMB_Water_Dock" ? 0.40f : a.name == "AMB_Campfire" ? 0.55f : a.volume).ToArray();
+        cyc.nightAmbBase = tod.nightAmbience.Select(a => a == null ? 0f : a.name == "AMB_N_Crickets_A" ? 0.38f : a.name == "AMB_N_Crickets_B" ? 0.34f : a.volume).ToArray();   // PyriteAmbienceTools 스펙
+        sb.AppendLine("bases camp " + string.Join("/", cyc.campBase) + "  amb " + string.Join("/", cyc.ambBase) + "  night " + string.Join("/", cyc.nightAmbBase) + "  (lights " + string.Join(",", tod.campLights.Select(l => l ? l.name : "-")) + ")");
         cyc.ffColorA = keys.Select(k => k.ffA).ToArray(); cyc.ffColorB = keys.Select(k => k.ffB).ToArray();
         cyc.ffRateMul = keys.Select(k => k.ffRate).ToArray(); cyc.ffSizeMul = keys.Select(k => k.ffSize).ToArray();
         cyc.crystalMats = tod.crystalMats; cyc.crystalBaseEmission = tod.crystalBaseEmission; cyc.crystalBaseGloss = tod.crystalBaseGloss;

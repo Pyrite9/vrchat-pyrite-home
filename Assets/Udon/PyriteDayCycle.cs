@@ -135,6 +135,14 @@ public class PyriteDayCycle : UdonSharpBehaviour
     [Header("다이얼 (임시)")]
     public Transform dialPointer;
 
+    [Header("기준값 (상수, 셋업이 넣는다) — 씬 값을 읽으면 에디터 도구를 돌릴 때마다 배수가 누적된다")]
+    // 🔴 2026-09-23: 씬에서 읽던 방식 때문에 캠프 조명 9.8→0.01, 반딧불 발생량 0, 풀벌레 볼륨 1e-33 까지 무너졌다
+    public float[] ffBaseRate;
+    public float[] ffBaseSize;
+    public float[] campBase;
+    public float[] ambBase;
+    public float[] nightAmbBase;
+
     // 기준값
     private float[] baseFfRate;
     private float[] baseFfSize;
@@ -289,6 +297,22 @@ public class PyriteDayCycle : UdonSharpBehaviour
 
     private void CaptureBase()
     {
+        if (ffBaseRate != null && ffBaseRate.Length == fireflies.Length && ffBaseSize != null && ffBaseSize.Length == fireflies.Length
+            && campBase != null && campBase.Length == campLights.Length
+            && ambBase != null && ambBase.Length == ambience.Length
+            && nightAmbBase != null && nightAmbBase.Length == nightAmbience.Length)
+        {
+            baseFfRate = ffBaseRate; baseFfSize = ffBaseSize; baseCampLight = campBase;
+            baseAmbience = ambBase; baseNightAmbience = nightAmbBase;
+            FixOnce();
+            return;
+        }
+        ReadBaseFromScene();
+        FixOnce();
+    }
+
+    private void ReadBaseFromScene()
+    {
         baseFfRate = new float[fireflies.Length];
         baseFfSize = new float[fireflies.Length];
         for (int i = 0; i < fireflies.Length; i++)
@@ -304,6 +328,10 @@ public class PyriteDayCycle : UdonSharpBehaviour
         baseNightAmbience = new float[nightAmbience.Length];
         for (int i = 0; i < nightAmbience.Length; i++) if (nightAmbience[i] != null) baseNightAmbience[i] = nightAmbience[i].volume;
 
+    }
+
+    private void FixOnce()
+    {
         // 한 번만: 교체하던 렌더러를 기준 머티리얼로 고정, 하늘 지정
         for (int k = 0; k < cliffRenderers.Length; k++) if (cliffRenderers[k] != null) cliffRenderers[k].sharedMaterial = cliffMat;
         for (int k = 0; k < waterRenderers.Length; k++) if (waterRenderers[k] != null) waterRenderers[k].sharedMaterial = waterMat;
