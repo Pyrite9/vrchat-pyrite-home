@@ -32,6 +32,12 @@ public class PyriteSettings : UdonSharpBehaviour
     public PyriteMirrorToggle lakeMirror;
     public PyriteMirrorToggle campMirror;
 
+    [Header("거울 (설정 빔 패널이 거울이 된다)")]
+    public Toggle mirrorToggle;
+    public GameObject panelMirror;        // 패널 앞 VRCMirrorReflection
+    public GameObject content;            // 설정 칸 6개 (거울일 때 숨김)
+    public GameObject mirrorBar;          // 머리줄 '거울 닫기' 버튼
+
     [Header("소리")]
     public Slider soundSlider;            // 0..1.5
     public TextMeshProUGUI soundText;
@@ -67,7 +73,7 @@ public class PyriteSettings : UdonSharpBehaviour
 
     void OnEnable() { if (assetsPopup != null) assetsPopup.SetActive(false); if (inited) Refresh(true); }
 
-    void OnDisable() { if (assetsPopup != null) assetsPopup.SetActive(false); }
+    void OnDisable() { if (assetsPopup != null) assetsPopup.SetActive(false); SetMirror(false); }
 
     private void Init()
     {
@@ -150,6 +156,27 @@ public class PyriteSettings : UdonSharpBehaviour
     {
         if (updating || campMirrorToggle == null || campMirror == null) return;
         campMirror.SetOn(campMirrorToggle.isOn);
+    }
+
+    public void OnMirror()
+    {
+        if (updating || mirrorToggle == null) return;
+        SetMirror(mirrorToggle.isOn);
+    }
+
+    public void MirrorOff() { SetMirror(false); }
+
+    private void SetMirror(bool on)
+    {
+        if (panelMirror != null) panelMirror.SetActive(on);
+        if (content != null) content.SetActive(!on);
+        if (mirrorBar != null) mirrorBar.SetActive(on);
+        if (mirrorToggle != null && mirrorToggle.isOn != on)
+        {
+            updating = true;
+            mirrorToggle.isOn = on;
+            updating = false;
+        }
     }
 
     // ── 소리 ──
