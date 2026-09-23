@@ -1,7 +1,7 @@
 // Tools ▸ Pyrite ▸ Z25a. Build Settings UI  /  Z25b. Settings UI Revert
 //  프로젝터 패널(3.0×1.69 m) 앞에 월드 캔버스(1920×1080 px, 1 px = 1.5625 mm)를 띄우고 설정 6칸을 만든다
 //   시간(분 슬라이더·자동 흐름, 모두에게 공유) · 화면(밝기 ±1 EV, 블룸) · 반사(호수·캠프 거울) · 소리(자연 소리 0~150%) · 성능(꽃·반딧불·해 그림자) · 정보(환경)
-//   거울: 반사 칸 토글 → 패널이 거울(2.72×1.31 m)이 되고 칸은 숨김, 머리줄 '거울 닫기'. 예전 캠프 거울 기둥은 끔
+//   거울: 반사 칸 '거울' 토글 = 타프 줄 손거울(Z27b)과 같은 거울. 예전 캠프 거울 기둥은 끔
 //   머리줄: 사용한 에셋(팝업, 바깥·× 로 닫힘, 메인이 꺼지면 같이 꺼짐) · EN/KO · 닫기
 //   EN / KO — 글꼴 Noto Sans KR Medium (OFL, ASCII + KS X 1001 한글 2350자 서브셋) → 정적 TMP 폰트(사용 글자만)
 //   후처리: SettingsPP 루트에 전역 볼륨 3개 (layer 23, priority 10, weight 0) — 밝게(노출 2.0)/어둡게(0.0)/블룸 끔(강도 0). 기존 프로필 노출 1.0 기준 ±1 EV
@@ -147,7 +147,7 @@ public static class PyriteSettingsUI
         // 반사
         var cRefl = Card("CardReflect", 2, 0, "refl");
         var (lakeT, lakeL) = Tgl(cRefl, "Lake", 32, 90, 489, true, "OnLake"); L(lakeL, S["lake"]);
-        var (mirT, mirL) = Tgl(cRefl, "Mirror", 32, 160, 489, false, "OnMirror"); L(mirL, S["mirror"]);
+        var (mirT, mirL) = Tgl(cRefl, "Mirror", 32, 160, 489, false, "OnCampMirror"); L(mirL, S["mirror"]);
 
         // 소리
         var cSound = Card("CardSound", 0, 1, "sound");
@@ -169,25 +169,8 @@ public static class PyriteSettingsUI
         L(Txt(cAbout, "Body", 32, 146, 489, 150, "", 22, GREY, TextAlignmentOptions.TopLeft), S["aboutBody"]);
         L(Txt(cAbout, "Credit", 32, 312, 489, 32, "", 22, GOLD), S["credit"]);
 
-        // 거울 모드: 머리줄 '거울 닫기' + 패널 앞 거울 (기존 캠프 거울 MirrorSurface 복제 → 같은 반사 레이어·해상도)
-        var (_, mbBg, mbL) = Btn(t, "MirrorBar", 880, 66, 280, 66, "", "MirrorOff"); L(mbL, S["mirrorOff"]);
-        var mirrorBar = mbBg.gameObject; mirrorBar.SetActive(false);
+        // (거울 모드 폐기 2026-09-24 — 거울은 타프 줄 손거울 Z27b. 반사 칸 '거울' 토글은 그 거울을 켠다)
         var oldPm = root.transform.Find("PanelMirror"); if (oldPm != null) Object.DestroyImmediate(oldPm.gameObject);
-        var srcMirror = Object.FindObjectsOfType<VRCMirrorReflection>(true).FirstOrDefault(m => m.name == "MirrorSurface");
-        GameObject panelMirror = null;
-        if (srcMirror != null)
-        {
-            panelMirror = Object.Instantiate(srcMirror.gameObject, root.transform);
-            panelMirror.name = "PanelMirror";
-            foreach (var c in panelMirror.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
-            // 칸 영역 x 90..1830, y 200..1040 px → 2.72 × 1.31 m, 중심은 캔버스 중심에서 80 px 아래
-            float px = panel.lossyScale.x / W;
-            panelMirror.transform.SetPositionAndRotation(panel.position - panel.up * (80f * px) - panel.forward * 0.004f, panel.rotation);
-            panelMirror.transform.localScale = new Vector3(1740f * px, 840f * px, 1f);
-            panelMirror.SetActive(false);
-            sb.AppendLine(string.Format("panel mirror {0:0.00} x {1:0.00} m ({2:0.00} m², 예전 캠프 거울 3.08 m²)", 1740f * px, 840f * px, 1740f * px * 840f * px));
-        }
-        else sb.AppendLine("MirrorSurface 없음 — 패널 거울 생략");
 
         // 사용한 에셋 팝업 (캔버스 자식 → 메인이 꺼지면 같이 꺼짐. 바깥 어둠을 누르면 닫힘)
         var popup = Rect(t, "AssetsPopup", 0, 0, W, H).gameObject;
@@ -215,7 +198,8 @@ public static class PyriteSettingsUI
         // 6) 연결
         var toggles = Object.FindObjectsOfType<PyriteMirrorToggle>(true);
         var lakeMirror = toggles.FirstOrDefault(m => m.name.Contains("Lake") || (m.mirror != null && m.mirror.name.Contains("Lake")));
-        var campMirror = toggles.FirstOrDefault(m => m != lakeMirror);
+        var campMirror = toggles.FirstOrDefault(m => m.name == "TarpMirror");
+        if (campMirror == null) sb.AppendLine("TarpMirror 없음 — Z27b 먼저 (거울 토글은 동작 안 함)");
         sb.AppendLine("mirror toggles: " + string.Join(", ", toggles.Select(m => m.name + "→" + (m.mirror ? m.mirror.name : "null") + " startOn " + m.startOn)));
 
         // 자동 흐름 기본 켬 (2026-09-24 관리자) — 동기화 필드 기본값. 방장 입장 시 21:00 부터 흐른다
@@ -223,8 +207,7 @@ public static class PyriteSettingsUI
         st.cycle = cyc; st.projector = pj;
         st.timeSlider = timeSlider; st.timeText = timeText; st.autoToggle = autoT;
         st.brightSlider = brightSlider; st.ppBright = vBright; st.ppDark = vDark; st.bloomToggle = bloomT; st.ppNoBloom = vNoBloom;
-        st.lakeToggle = lakeT; st.lakeMirror = lakeMirror; st.campMirrorToggle = null; st.campMirror = null;
-        st.mirrorToggle = mirT; st.panelMirror = panelMirror; st.content = content.gameObject; st.mirrorBar = mirrorBar;
+        st.lakeToggle = lakeT; st.lakeMirror = lakeMirror; st.campMirrorToggle = mirT; st.campMirror = campMirror;
         st.soundSlider = soundSlider; st.soundText = soundText;
         st.flowersToggle = flT; st.firefliesToggle = ffT; st.shadowsToggle = shT;
         st.flowerRenderers = (cyc.flowerRenderers ?? new Renderer[0]).Where(r => r != null).ToArray();
@@ -320,7 +303,6 @@ public static class PyriteSettingsUI
         ["refl"] = ("REFLECTIONS", "반사"),
         ["lake"] = ("Lake reflection", "호수 반사"),
         ["mirror"] = ("Mirror", "거울"),
-        ["mirrorOff"] = ("Close mirror", "거울 닫기"),
         ["sound"] = ("SOUND", "소리"),
         ["nature"] = ("Nature sounds", "자연 소리"),
         ["soundNote"] = ("Campfire · lake · crickets", "모닥불 · 호수 · 풀벌레"),
@@ -560,14 +542,8 @@ public static class PyriteSettingsUI
                     Shot(cam, near, panel.position, 40f, "Assets/_preview/projector/ui_" + tag + "_assets.png");
                     st.assetsPopup.SetActive(false);
                 }
-                if (h > 20f && st != null && st.panelMirror != null)
-                {
-                    st.panelMirror.SetActive(true); st.content.SetActive(false); st.mirrorBar.SetActive(true);
-                    Shot(cam, near, panel.position, 40f, "Assets/_preview/projector/ui_" + tag + "_mirror.png");
-                    st.panelMirror.SetActive(false); st.content.SetActive(true); st.mirrorBar.SetActive(false);
-                }
             }
-            sb.AppendLine("  shots ui_{21_en,21_ko,12_en}_{table,panel} + ui_21_{en,ko}_{assets,mirror}");
+            sb.AppendLine("  shots ui_{21_en,21_ko,12_en}_{table,panel} + ui_21_{en,ko}_assets");
         }
         finally
         {
