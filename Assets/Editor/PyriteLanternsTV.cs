@@ -67,6 +67,12 @@ public static class PyriteLanternsTV
             var body = new GameObject("Body").transform; body.SetParent(root.transform, false);
             t.SetParent(body, true);
             t.localPosition = cVisual.localPosition; t.localRotation = Quaternion.identity;
+            // 🔴 정적(배칭) 메시는 빌드에서 합쳐져 움직이지 않는다 → 광원만 들린다. 정적 플래그를 지운다
+            foreach (var ch in t.GetComponentsInChildren<Transform>(true))
+            {
+                var fl = GameObjectUtility.GetStaticEditorFlags(ch.gameObject);
+                if (fl != 0) { revert.Add(string.Format("S|{0}|{1}", n + "|" + RelPath(ch, t), (int)fl)); GameObjectUtility.SetStaticEditorFlags(ch.gameObject, 0); }
+            }
             var rb = root.AddComponent<Rigidbody>(); rb.isKinematic = true; rb.useGravity = false; rb.constraints = RigidbodyConstraints.FreezeRotation;
             var box = root.AddComponent<BoxCollider>(); box.center = cBox.center; box.size = cBox.size; box.isTrigger = false;
             var pk = root.AddComponent<VRCPickup>();
@@ -79,7 +85,7 @@ public static class PyriteLanternsTV
             lh.body = body; lh.snapRadius = cHook.snapRadius; lh.swing = cHook.swing;
             roots.Add(root.transform);
             revert.Add("W|Pick_" + n);
-            sb.AppendLine(string.Format("  wrap {0} → root {1}", n, root.transform.position.ToString("F2")));
+            sb.AppendLine(string.Format("  wrap {0} → root {1} (static cleared {2})", n, root.transform.position.ToString("F2"), revert.Count(l => l.StartsWith("S|" + n + "|"))));
             if (n == "Lantern_Dock")
             {
                 var dh = new GameObject("LanternHook_Dock").transform;
@@ -143,9 +149,11 @@ public static class PyriteLanternsTV
             revert.Add("U|" + url.stringValue + "|" + so.FindProperty("autoplayLoop").boolValue);
             url.stringValue = VIDEO;
             so.FindProperty("autoplayLoop").boolValue = true;
+            revert.Add("D|" + so.FindProperty("defaultVolume").floatValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            so.FindProperty("defaultVolume").floatValue = 1f;                        // 관리자: 기본 소리 최대
             so.ApplyModifiedPropertiesWithoutUndo();
             UdonSharpEditorUtility.CopyProxyToUdon(tvm); EditorUtility.SetDirty(tvm);
-            sb.AppendLine("TV autoplay " + VIDEO + " loop true");
+            sb.AppendLine("TV autoplay " + VIDEO + " loop true, default volume 1.0");
         }
         else sb.AppendLine("TVManager 없음");
         var vp = Object.FindObjectOfType<PyriteVideoProjector>(true);
@@ -185,6 +193,8 @@ public static class PyriteLanternsTV
                 var tvm = Object.FindObjectsOfType<UdonSharpBehaviour>(true).FirstOrDefault(u => u.GetType().Name == "TVManager");
                 if (tvm != null) { var so = new SerializedObject(tvm); so.FindProperty("autoplayMainUrl").FindPropertyRelative("url").stringValue = p[1]; so.FindProperty("autoplayLoop").boolValue = bool.Parse(p[2]); so.ApplyModifiedPropertiesWithoutUndo(); UdonSharpEditorUtility.CopyProxyToUdon(tvm); }
             }
+            if (p[0] == "S") { var lan = Find(p[1]); var ch = lan ? (p[2] == "." ? lan.transform : lan.transform.Find(p[2])) : null; if (ch) GameObjectUtility.SetStaticEditorFlags(ch.gameObject, (StaticEditorFlags)int.Parse(p[3])); }
+            if (p[0] == "D") { var tvm = Object.FindObjectsOfType<UdonSharpBehaviour>(true).FirstOrDefault(u => u.GetType().Name == "TVManager"); if (tvm != null) { var so = new SerializedObject(tvm); so.FindProperty("defaultVolume").floatValue = float.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture); so.ApplyModifiedPropertiesWithoutUndo(); UdonSharpEditorUtility.CopyProxyToUdon(tvm); } }
             if (p[0] == "V") { var vp = Object.FindObjectOfType<PyriteVideoProjector>(true); if (vp) { vp.isOn = false; UdonSharpEditorUtility.CopyProxyToUdon(vp); } }
         }
         foreach (var line in lines.Where(l => l.StartsWith("W|"))) { var g = Find(line.Substring(2)); if (g) Object.DestroyImmediate(g); sb.AppendLine("  삭제 " + line.Substring(2)); }
@@ -240,6 +250,7 @@ public static class PyriteLanternsTV
     static Vector3 PV(string s) { var f = Fs(s); return new Vector3(f[0], f[1], f[2]); }
     static Quaternion PQ(string s) { var f = Fs(s); return new Quaternion(f[0], f[1], f[2], f[3]); }
     static GameObject Find(string n) => GameObject.Find(n) ?? Resources.FindObjectsOfTypeAll<GameObject>().FirstOrDefault(x => x.name == n && x.scene.IsValid());
+    static string RelPath(Transform t, Transform root) { if (t == root) return "."; var s = t.name; while (t.parent != null && t.parent != root) { t = t.parent; s = t.name + "/" + s; } return s; }
     static string PathOf(Transform t) { var s = t.name; while (t.parent != null) { t = t.parent; s = t.name + "/" + s; } return s; }
     static void Flush(StringBuilder sb) { Directory.CreateDirectory("Logs"); File.AppendAllText("Logs/pyrite_lantern.txt", sb.ToString()); }
 }

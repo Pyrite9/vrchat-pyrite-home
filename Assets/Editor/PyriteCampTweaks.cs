@@ -1,7 +1,7 @@
 // Tools ▸ Pyrite2 ▸ Z28b. Camp Tweaks (fire, spin chair, carry chair)  /  Z28c. Revert
 //  1) 화로 불빛: 기준 밝기 9.82 → 7.86 (−20%), 범위 5.5 → 4.2 m  (DayCycle.campBase[0] + Light.range. Z18b 상수도 같이 바꿈)
 //  2) 회전의자 SpinChair: EditorOnly 태그 + 끔 (빌드에서 빠진다. 되돌리기 가능)
-//  3) 들고 다니는 접이식 의자 CarryChair: 타프 밑 (-11.2, 56.4), 모닥불 쪽을 본다
+//  3) 들고 다니는 접이식 의자: CarryChair(타프 밑 (-11.2, 56.4), 모닥불 쪽) + CarryChair_1·2(기존 ChairSeat_1·2 자리, 원본은 EditorOnly)
 //     루트 = Rigidbody(키네마틱) + VRCPickup + VRCObjectSync + PyriteCarryChair(놓으면 땅에 똑바로) + 등받이 콜라이더
 //     Seat  = Rigidbody(키네마틱, 픽업과 분리) + 앉는 면 콜라이더 + VRCStation + PyriteCarrySeat(앉은 동안 들기 금지)
 //     의자 메시는 ChairSeat_1 과 같은 camp04_chair_BRN. 등받이는 로컬 -Z → 앞(+Z)이 모닥불을 본다. 판정: 등받이 위쪽 = 들기, 앉는 면 = 앉기. 레이어 Pickup(13) → 몸에 안 걸린다
@@ -44,52 +44,64 @@ public static class PyriteCampTweaks
         if (spin != null) { spin.tag = "EditorOnly"; spin.SetActive(false); EditorUtility.SetDirty(spin); sb.AppendLine("SpinChair → EditorOnly + off"); }
         else sb.AppendLine("SpinChair 없음");
 
-        // 3) 들고 다니는 의자
-        var old = Find("CarryChair"); if (old != null) Object.DestroyImmediate(old);
+        // 3) 들고 다니는 의자: 타프 밑 새 의자 + 기존 의자 ChairSeat_1·2 를 같은 자리·방향의 들고 다니는 의자로 바꾼다
+        foreach (var o in Resources.FindObjectsOfTypeAll<GameObject>().Where(g => g.scene.IsValid() && g.name.StartsWith("CarryChair")).ToArray()) Object.DestroyImmediate(o);
         var src = Find("ChairSeat_1");
         var srcMesh = src != null ? src.GetComponentsInChildren<MeshRenderer>(true).FirstOrDefault() : null;
         var srcStation = src != null ? src.GetComponent<VRCStation>() : null;
         if (srcMesh == null || srcStation == null) { sb.AppendLine("ChairSeat_1 메시/스테이션 없음"); Flush(sb); return; }
         var terr = Terrain.activeTerrain;
-        var pos = CHAIR_AT; pos.y = terr ? terr.SampleHeight(pos) + terr.transform.position.y : 1.81f;
-        var toFire = FIRE - pos; toFire.y = 0; toFire.Normalize();
-        var root = new GameObject("CarryChair");
-        Undo.RegisterCreatedObjectUndo(root, "carry chair");
-        root.layer = PICKUP_LAYER;
-        root.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(toFire, Vector3.up));    // 실측(Z29a): 등받이가 로컬 -Z(z -0.25, y 0.55~0.67) → 앞 = +Z
-        var mesh = Object.Instantiate(srcMesh.gameObject, root.transform);
-        mesh.name = "Chair"; mesh.layer = PICKUP_LAYER;
-        mesh.transform.localPosition = Vector3.zero; mesh.transform.localRotation = Quaternion.identity; mesh.transform.localScale = srcMesh.transform.localScale;
-        foreach (var c in mesh.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
-        GameObjectUtility.SetStaticEditorFlags(mesh, 0);
-        var mb = mesh.GetComponent<Renderer>().bounds;
-        sb.AppendLine("chair bounds size " + mb.size.ToString("F2") + " min y " + (mb.min.y - pos.y).ToString("0.00") + " max y " + (mb.max.y - pos.y).ToString("0.00"));
+        var pos0 = CHAIR_AT; pos0.y = terr ? terr.SampleHeight(pos0) + terr.transform.position.y : 1.81f;
+        var toFire = FIRE - pos0; toFire.y = 0; toFire.Normalize();
+        if (!Make("CarryChair", pos0, Quaternion.LookRotation(toFire, Vector3.up))) return;           // 실측(Z29a): 등받이가 로컬 -Z → 앞 = +Z
+        foreach (var n in new[] { "ChairSeat_1", "ChairSeat_2" })
+        {
+            var cs0 = Find(n); if (cs0 == null) { sb.AppendLine(n + " 없음"); continue; }
+            var m0 = cs0.GetComponentsInChildren<MeshRenderer>(true).FirstOrDefault(); if (m0 == null) continue;
+            if (!Make("CarryChair_" + n.Substring(n.Length - 1), m0.transform.position, m0.transform.rotation)) return;
+            cs0.tag = "EditorOnly"; cs0.SetActive(false); EditorUtility.SetDirty(cs0);
+            sb.AppendLine("  " + n + " → EditorOnly + off (들고 다니는 의자로 대체)");
+        }
 
-        var rb = root.AddComponent<Rigidbody>(); rb.isKinematic = true; rb.useGravity = false;
-        var back = root.AddComponent<BoxCollider>(); back.center = new Vector3(0f, 0.57f, -0.225f); back.size = new Vector3(0.50f, 0.22f, 0.06f);   // 등받이 위쪽만
-        var pk = root.AddComponent<VRCPickup>();
-        pk.AutoHold = VRC.SDKBase.VRC_Pickup.AutoHoldMode.Yes; pk.orientation = VRC.SDKBase.VRC_Pickup.PickupOrientation.Any;
-        pk.InteractionText = "Carry chair"; pk.proximity = 2f; pk.pickupable = true; pk.allowManipulationWhenEquipped = false;
-        var os = root.AddComponent<VRCObjectSync>(); os.AllowCollisionOwnershipTransfer = false;
+        bool Make(string name, Vector3 pos, Quaternion rot)
+        {
+            var root = new GameObject(name);
+            Undo.RegisterCreatedObjectUndo(root, "carry chair");
+            root.layer = PICKUP_LAYER;
+            root.transform.SetPositionAndRotation(pos, rot);
+            var mesh = Object.Instantiate(srcMesh.gameObject, root.transform);
+            mesh.name = "Chair"; mesh.layer = PICKUP_LAYER; mesh.SetActive(true);
+            mesh.transform.localPosition = Vector3.zero; mesh.transform.localRotation = Quaternion.identity; mesh.transform.localScale = srcMesh.transform.localScale;
+            foreach (var c in mesh.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+            GameObjectUtility.SetStaticEditorFlags(mesh, 0);
 
-        var seat = new GameObject("Seat"); seat.layer = PICKUP_LAYER;
-        seat.transform.SetParent(root.transform, false);
-        var srb = seat.AddComponent<Rigidbody>(); srb.isKinematic = true; srb.useGravity = false;
-        var sc = seat.AddComponent<BoxCollider>(); sc.center = new Vector3(0f, 0.34f, 0.01f); sc.size = new Vector3(0.46f, 0.08f, 0.40f);        // 앉는 면만 (y 0.30~0.37)
-        var st = seat.AddComponent<VRCStation>();
-        EditorUtility.CopySerialized(srcStation, st);
-        var seatPt = new GameObject("SeatPoint"); seatPt.transform.SetParent(root.transform, false); seatPt.transform.localPosition = new Vector3(0f, -0.10f, -0.06f);
-        var exitPt = new GameObject("ExitPoint"); exitPt.transform.SetParent(root.transform, false); exitPt.transform.localPosition = new Vector3(0f, 0.05f, 0.65f);
-        st.stationEnterPlayerLocation = seatPt.transform; st.stationExitPlayerLocation = exitPt.transform;
-        EditorUtility.SetDirty(st);
+            var rb = root.AddComponent<Rigidbody>(); rb.isKinematic = true; rb.useGravity = false;
+            var back = root.AddComponent<BoxCollider>(); back.center = new Vector3(0f, 0.57f, -0.225f); back.size = new Vector3(0.50f, 0.22f, 0.06f);   // 등받이 위쪽만
+            var pk = root.AddComponent<VRCPickup>();
+            pk.AutoHold = VRC.SDKBase.VRC_Pickup.AutoHoldMode.Yes; pk.orientation = VRC.SDKBase.VRC_Pickup.PickupOrientation.Any;
+            pk.InteractionText = "Carry chair"; pk.proximity = 2f; pk.pickupable = true; pk.allowManipulationWhenEquipped = false;
+            var os = root.AddComponent<VRCObjectSync>(); os.AllowCollisionOwnershipTransfer = false;
 
-        PyriteCarryChair cc; PyriteCarrySeat cs;
-        try { cc = UdonSharpUndo.AddComponent<PyriteCarryChair>(root); cs = UdonSharpUndo.AddComponent<PyriteCarrySeat>(seat); }
-        catch (System.Exception e) { sb.AppendLine("AddComponent 실패 (H 로 프로그램 에셋 먼저): " + e.Message); Flush(sb); return; }
-        cs.station = st; cs.pickup = pk;
-        UdonSharpEditorUtility.CopyProxyToUdon(cc); UdonSharpEditorUtility.CopyProxyToUdon(cs);
-        var ubs = UdonSharpEditorUtility.GetBackingUdonBehaviour(cs); if (ubs != null) { ubs.interactText = "Sit"; EditorUtility.SetDirty(ubs); }
-        sb.AppendLine("CarryChair at " + pos.ToString("F2") + " yaw " + root.transform.eulerAngles.y.ToString("0") + " | station copied from ChairSeat_1 (mobility " + st.PlayerMobility + ")");
+            var seat = new GameObject("Seat"); seat.layer = PICKUP_LAYER;
+            seat.transform.SetParent(root.transform, false);
+            var srb = seat.AddComponent<Rigidbody>(); srb.isKinematic = true; srb.useGravity = false;
+            var sc = seat.AddComponent<BoxCollider>(); sc.center = new Vector3(0f, 0.34f, 0.01f); sc.size = new Vector3(0.46f, 0.08f, 0.40f);        // 앉는 면만 (y 0.30~0.37)
+            var st = seat.AddComponent<VRCStation>();
+            EditorUtility.CopySerialized(srcStation, st);
+            var seatPt = new GameObject("SeatPoint"); seatPt.transform.SetParent(root.transform, false); seatPt.transform.localPosition = new Vector3(0f, -0.10f, -0.06f);
+            var exitPt = new GameObject("ExitPoint"); exitPt.transform.SetParent(root.transform, false); exitPt.transform.localPosition = new Vector3(0f, 0.05f, 0.65f);
+            st.stationEnterPlayerLocation = seatPt.transform; st.stationExitPlayerLocation = exitPt.transform;
+            EditorUtility.SetDirty(st);
+
+            PyriteCarryChair cc; PyriteCarrySeat cs;
+            try { cc = UdonSharpUndo.AddComponent<PyriteCarryChair>(root); cs = UdonSharpUndo.AddComponent<PyriteCarrySeat>(seat); }
+            catch (System.Exception e) { sb.AppendLine("AddComponent 실패 (H 로 프로그램 에셋 먼저): " + e.Message); Flush(sb); return false; }
+            cs.station = st; cs.pickup = pk;
+            UdonSharpEditorUtility.CopyProxyToUdon(cc); UdonSharpEditorUtility.CopyProxyToUdon(cs);
+            var ubs = UdonSharpEditorUtility.GetBackingUdonBehaviour(cs); if (ubs != null) { ubs.interactText = "Sit"; EditorUtility.SetDirty(ubs); }
+            sb.AppendLine(name + " at " + pos.ToString("F2") + " yaw " + root.transform.eulerAngles.y.ToString("0"));
+            return true;
+        }
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
@@ -111,7 +123,8 @@ public static class PyriteCampTweaks
             UdonSharpEditorUtility.CopyProxyToUdon(cyc); EditorUtility.SetDirty(cyc);
         }
         var spin = Find("SpinChair"); if (spin != null) { spin.tag = "Untagged"; spin.SetActive(true); }
-        var cc = Find("CarryChair"); if (cc != null) Object.DestroyImmediate(cc);
+        foreach (var o in Resources.FindObjectsOfTypeAll<GameObject>().Where(g => g.scene.IsValid() && g.name.StartsWith("CarryChair")).ToArray()) Object.DestroyImmediate(o);
+        foreach (var n in new[] { "ChairSeat_1", "ChairSeat_2" }) { var g = Find(n); if (g != null) { g.tag = "Untagged"; g.SetActive(true); } }
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
         sb.AppendLine("RESULT: DONE");
