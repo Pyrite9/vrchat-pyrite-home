@@ -4,7 +4,7 @@
 //   · 격자는 기존 절벽과 같은 육각 격자(외접 1.1m, 행 1.65m) — 기존 벽(R≥79) 바로 앞 칸부터 안쪽으로 이어 붙인다.
 //     (OBJ 임포트의 X 반전을 거쳐도 이 격자는 자기 자신으로 겹친다 → 월드 좌표로 바로 계산해도 정합)
 //   · 꽃(FlowerDensity.bin)·물·씬 오브젝트(랜드마크 등) 자리는 비운다. 벽에서 이어진 칸만 남긴다(BFS).
-//   · 높이 = 앞(0.3~1.2m) → 뒤(그 방향 벽 높이의 ~절반, 2~12m), 0.55m 단으로 끊어 계단 느낌 + 가끔 솟은 기둥
+//   · 높이 = 앞(0.4~1.4m) → 뒤(그 방향 벽 높이의 ~62%, 3~16m), 0.55m 단으로 끊어 계단 느낌 + 가끔 솟은 기둥
 //   · 충돌: 닫힌 육각기둥. 1.3m 넘는 기둥은 콜라이더를 60m 까지 올려 벽 위로 기어오르지 못하게(앞줄 낮은 돌만 밟힘)
 //   · 황철석: 가려지는 절벽 결정은 위로 올리거나 앞 기둥 위에 얹고, 기둥 자리에 묻힌 지상 결정은 앞쪽으로 뺀다.
 //            새 계단에 작은 광맥 몇 개를 더한다.
@@ -29,6 +29,7 @@ public static class PyriteTerraces
     const float R_WALL = 79f, R_MIN = 64f;
     const float FLOWER_CLEAR = 0.6f;                      // 칸 중심에서 이 거리 안에 꽃이 있으면 제외
     const int SEG = 8;
+    const float TERR_LM = 0.12f;                          // 절벽 대비 라이트맵 배율 — 절벽은 1024 한 장에 눌려 있어 같은 배율이면 계단이 4장을 먹었다
     const string OUTDIR = "Assets/Meshes/Terraces/";
     const string ROOT = "PyriteTerraces";
 
@@ -173,9 +174,9 @@ public static class PyriteTerraces
             }
             c.gmin = g0; c.gmax = g1;
             float hw = wallTop[(int)c.th % 360] - c.gmax;
-            float hback = Mathf.Clamp(0.5f * hw * (0.8f + 0.4f * Low(c.th)), 2.0f, 12f);
-            float hfront = Rf(0.3, 1.2);
-            float h = Mathf.Lerp(hfront, hback, Mathf.Pow(c.t, 1.25f)) + Rf(-0.35, 0.35);
+            float hback = Mathf.Clamp(0.62f * hw * (0.8f + 0.4f * Low(c.th)), 3.0f, 16f);
+            float hfront = Rf(0.4, 1.4);
+            float h = Mathf.Lerp(hfront, hback, c.t) + Rf(-0.4, 0.4);
             h = Mathf.Round(h / 0.55f) * 0.55f + Rf(-0.08, 0.08);
             if (c.t > 0.3f && rnd.NextDouble() < 0.04) h += Rf(1.5, 3.5);
             h = Mathf.Clamp(h, 0.3f, Mathf.Max(0.5f, hw - 1.5f));
@@ -194,6 +195,18 @@ public static class PyriteTerraces
         var flags = GameObjectUtility.GetStaticEditorFlags(cliffR.gameObject);
         float lmScale = new SerializedObject(cliffR).FindProperty("m_ScaleInLightmap").floatValue;
 
+        // 이웃 조회 — 옆면이 이웃 기둥에 가려지는 만큼은 만들지 않는다 (라이트맵 면적·삼각형 절약)
+        var byKey = kept.ToDictionary(c => Key(c.i, c.j));
+        float NeighborTop(Cell c, int side)
+        {
+            float a = (120f + 60f * side) * Mathf.Deg2Rad;
+            float nx = c.x + HW * Mathf.Cos(a), nz = c.z + HW * Mathf.Sin(a);
+            if (Mathf.Sqrt(nx * nx + nz * nz) >= R_WALL) return float.MaxValue;     // 기존 벽
+            int nj = Mathf.RoundToInt(nz / ROWS);
+            int ni = Mathf.RoundToInt(nx / HW - 0.5f * (nj & 1));
+            Cell n; return byKey.TryGetValue(Key(ni, nj), out n) ? n.top : float.MinValue;
+        }
+
         // ── 시각 메시 (8구간)
         var newRenderers = new List<Renderer>();
         int triTotal = 0;
@@ -202,7 +215,7 @@ public static class PyriteTerraces
             var part = kept.Where(c => (int)(c.th / (360f / SEG)) == s).ToList();
             if (part.Count == 0) continue;
             var mb = new MB();
-            foreach (var c in part) Column(mb, c, rnd, false, 0f);
+            foreach (var c in part) Column(mb, c, rnd, false, 0f, k => NeighborTop(c, k));
             var mesh = mb.Build("PyriteTerrace_Seg" + (s + 1).ToString("00"));
             Unwrapping.GenerateSecondaryUVSet(mesh);
             SaveMesh(mesh, OUTDIR + mesh.name + ".asset");
@@ -213,7 +226,7 @@ public static class PyriteTerraces
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = cliffMat;
             mr.shadowCastingMode = cliffR.shadowCastingMode; mr.receiveGI = ReceiveGI.Lightmaps;
-            var so = new SerializedObject(mr); so.FindProperty("m_ScaleInLightmap").floatValue = lmScale; so.ApplyModifiedPropertiesWithoutUndo();
+            var so = new SerializedObject(mr); so.FindProperty("m_ScaleInLightmap").floatValue = lmScale * TERR_LM; so.ApplyModifiedPropertiesWithoutUndo();
             GameObjectUtility.SetStaticEditorFlags(go, flags);
             newRenderers.Add(mr);
         }
@@ -222,7 +235,7 @@ public static class PyriteTerraces
         // ── 충돌
         {
             var mb = new MB();
-            foreach (var c in kept) Column(mb, c, rnd, true, c.h > 1.3f ? 60f : 0f);
+            foreach (var c in kept) Column(mb, c, rnd, true, c.h > 1.3f ? 60f : 0f, null);
             var mesh = mb.Build("PyriteTerrace_Collider");
             SaveMesh(mesh, OUTDIR + mesh.name + ".asset");
             var go = new GameObject("PyriteTerrace_Collider");
@@ -415,7 +428,7 @@ public static class PyriteTerraces
     }
 
     // ── 육각기둥
-    static void Column(MB mb, Cell c, System.Random rnd, bool closed, float colliderTop)
+    static void Column(MB mb, Cell c, System.Random rnd, bool closed, float colliderTop, System.Func<int, float> neighborTop)
     {
         float top = colliderTop > 0f ? colliderTop : c.top;
         float bot = c.gmin - 1.5f;
@@ -435,6 +448,17 @@ public static class PyriteTerraces
             int k1 = (k + 1) % 6;
             float v0 = bot / 35f, v1 = U[k].y / 35f, v2 = U[k1].y / 35f;
             var ow = (B[k] + B[k1]) * 0.5f - ctr; ow.y = 0f;
+            if (neighborTop != null)
+            {
+                float nt = neighborTop(k);
+                float faceTop = Mathf.Min(U[k].y, U[k1].y);
+                if (nt >= faceTop - 0.02f) continue;                       // 완전히 가려짐
+                float nb0 = Mathf.Max(bot, nt - 0.05f);                     // 이웃 위로 드러난 부분만
+                var b0 = new Vector3(B[k].x, nb0, B[k].z); var b1 = new Vector3(B[k1].x, nb0, B[k1].z);
+                float w0 = nb0 / 35f;
+                mb.Quad(b0, b1, U[k1], U[k], new Vector2(0, w0), new Vector2(1, w0), new Vector2(1, v2), new Vector2(0, v1), ow);
+                continue;
+            }
             mb.Quad(B[k], B[k1], U[k1], U[k], new Vector2(0, v0), new Vector2(1, v0), new Vector2(1, v2), new Vector2(0, v1), ow);
         }
         var tuv = U.Select(p => new Vector2(p.x * 0.25f, p.z * 0.25f)).ToArray();
