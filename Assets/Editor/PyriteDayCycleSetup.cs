@@ -182,6 +182,7 @@ public static class PyriteDayCycleSetup
         // 낮 다듬기 (Z23b 격자 → 관리자: 절벽 0.30, 구름 0.5). Sorafield _CloudCoverage 는 낮출수록 흐려진다(0.2 = 회색 하늘)
         { var c = dusk.cliff * (0.30f / 0.227f); c.a = 1f; noon.cliff = c; afternoon.cliff = c; var m = dusk.cliff * (0.28f / 0.227f); m.a = 1f; morning.cliff = m; }
         noon.skyCloud = 0.5f; afternoon.skyCloud = 0.5f; morning.skyCloud = 0.45f;
+        predawn.skyCloud = 0.55f; dawn.skyCloud = 0.55f;   // 관리자: 여명·새벽 먹구름(새벽 프리셋 0.30) → 0.55
         sb.AppendLine("day: cliff " + Fmt(noon.cliff) + " cloud " + noon.skyCloud);
 
         // 낮 반사 세트(Z23a)가 있으면 아침 3 / 정오 4 / 오후 5
