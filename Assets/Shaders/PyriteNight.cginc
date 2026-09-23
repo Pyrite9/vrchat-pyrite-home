@@ -13,6 +13,9 @@
 //  [A]  _SpecNoTint = 1 이면 반사(specular)에는 색조를 곱하지 않는다.
 //       반사 프로브는 이미 프리셋별 큐브맵으로 교체되므로(T) 여기에 또 곱하면 두 번 어두워진다.
 //       금속(황철석)은 반사가 전부라 1 로 둔다. 선언 안 한 셰이더는 0 → 기존 동작.
+//  [Z13] 밤 하늘빛도 AO(s.Occlusion)를 받는다 — 판자 틈·결 골이 밤에 드러나게. AO 맵이 없는 셰이더는 1 이라 그대로.
+//       _NightAmbTilt > 0 이면 하늘빛 반구를 달 쪽(_NightAmbDir, 수평 방향)으로 기울인다 → 노멀맵 음영이 밤에도 보인다.
+//       선언 안 한/0 인 머티리얼(지형·황철석)은 기존과 같다.
 #ifndef PYRITE_NIGHT_INCLUDED
 #define PYRITE_NIGHT_INCLUDED
 
@@ -26,6 +29,8 @@ float  _CampR1;
 half4  _NightAmbSky;
 half4  _NightAmbGround;
 half   _SpecNoTint;
+half   _NightAmbTilt;
+float4 _NightAmbDir;
 
 inline half3 PyriteNightTint(float3 wp)
 {
@@ -43,8 +48,12 @@ inline void LightingPyriteNight_GI(SurfaceOutputStandard s, UnityGIInput data, i
 {
     LightingStandard_GI(s, data, gi);
     half3 t = PyriteNightTint(data.worldPos);
-    half  up = saturate(s.Normal.y * 0.5 + 0.5);
-    gi.indirect.diffuse  = gi.indirect.diffuse * t + lerp(_NightAmbGround.rgb, _NightAmbSky.rgb, up);
+    float3 skyN = normalize(float3(0, 1, 0) + _NightAmbDir.xyz * _NightAmbTilt);
+    half  up = saturate(dot(s.Normal, skyN) * 0.5 + 0.5);
+    // 기울였을 때 위를 보는 면이 어두워지지 않게, 평평한 면 기준으로 다시 맞춘다
+    half  up0 = saturate(skyN.y * 0.5 + 0.5);
+    up = saturate(up + (1.0 - up0));
+    gi.indirect.diffuse  = gi.indirect.diffuse * t + lerp(_NightAmbGround.rgb, _NightAmbSky.rgb, up) * s.Occlusion;
     gi.indirect.specular *= lerp(t, half3(1, 1, 1), saturate(_SpecNoTint));
 }
 

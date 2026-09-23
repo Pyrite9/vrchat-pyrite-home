@@ -103,6 +103,15 @@ public static class PyriteDockLightmap
     [MenuItem("Tools/Pyrite/Z6d. Dock Capture Only", false, 13)]
     public static void CaptureOnly() { log.Clear(); Capture("now"); Flush(); }
 
+    // 다른 도구(Z13 등)가 전후 렌더를 찍을 때 — 로그는 Logs/pyrite_dock.txt 에 덧붙인다
+    public static string CaptureTagged(string tag)
+    {
+        log.Clear(); Capture(tag);
+        string s = log.ToString();
+        Directory.CreateDirectory("Logs"); File.AppendAllText(LOG, "[" + tag + "] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n" + s);
+        return s;
+    }
+
     static void Capture(string tag)
     {
         Directory.CreateDirectory(OUT);

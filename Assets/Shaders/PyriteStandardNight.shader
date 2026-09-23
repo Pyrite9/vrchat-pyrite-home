@@ -10,6 +10,8 @@ Shader "Pyrite/StandardNight"
         [Gamma] _Metallic ("Metallic", Range(0,1)) = 0
         [Normal] _BumpMap ("Normal Map", 2D) = "bump" {}
         _BumpScale ("Normal Scale", Float) = 1
+        _OcclusionMap ("Occlusion (G)", 2D) = "white" {}
+        _OcclusionStrength ("Occlusion Strength", Range(0,1)) = 1
         [HDR] _EmissionColor ("Emission", Color) = (0,0,0,1)
 
         _NightTint ("Night Tint (캠프 밖)", Color) = (1,1,1,1)
@@ -17,6 +19,8 @@ Shader "Pyrite/StandardNight"
         _CampCenter("Camp Center (xz)", Vector) = (-10.5, 0, 54.5, 0)
         _CampR0    ("Camp Inner Radius", Float) = 8
         _CampR1    ("Camp Outer Radius", Float) = 16
+        _NightAmbTilt ("Night Sky Light Tilt (0 = 기존)", Range(0, 2)) = 0
+        _NightAmbDir  ("Night Sky Light Dir (수평, 달 쪽)", Vector) = (-0.423, 0, -0.906, 0)
     }
 
     SubShader
@@ -34,6 +38,8 @@ Shader "Pyrite/StandardNight"
 
         sampler2D _MainTex;
         sampler2D _BumpMap;
+        sampler2D _OcclusionMap;
+        half _OcclusionStrength;
         fixed4 _Color;
         half _Glossiness;
         half _Metallic;
@@ -49,6 +55,7 @@ Shader "Pyrite/StandardNight"
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
             o.Normal = UnpackScaleNormal(tex2D(_BumpMap, IN.uv_MainTex), _BumpScale);
+            o.Occlusion = lerp(1, tex2D(_OcclusionMap, IN.uv_MainTex).g, _OcclusionStrength);   // 간접광(라이트맵·프로브)에만 — 밤 부두는 거의 간접광이라 여기서 입체감이 난다
             o.Emission = _EmissionColor.rgb;
             o.Alpha = 1;
         }
