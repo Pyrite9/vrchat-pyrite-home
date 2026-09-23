@@ -84,6 +84,8 @@ public class PyriteTimeOfDay : UdonSharpBehaviour
     public Material[] nightMats;
     public Color[] nightTint;     // 프리셋별 — 캠프 밖
     public Color[] campTint;      // 프리셋별 — 캠프 안
+    public Color[] nightAmbSky;   // 프리셋별 — 밤 하늘빛(반구 위). 노을·새벽 = 검정
+    public Color[] nightAmbGround;// 프리셋별 — 밤 하늘빛(반구 아래)
 
     [Header("리플렉션 프로브 — 프리셋별 큐브맵")]
     // 물 반사는 전부 프로브에서 온다. 라이트맵은 런타임 교체가 막혀 있지만
@@ -279,6 +281,8 @@ public class PyriteTimeOfDay : UdonSharpBehaviour
                 if (nightMats[k] == null) continue;
                 nightMats[k].SetColor("_NightTint", nightTint[i]);
                 nightMats[k].SetColor("_CampTint",  campTint[i]);
+                if (nightAmbSky != null && i < nightAmbSky.Length) nightMats[k].SetColor("_NightAmbSky", nightAmbSky[i]);
+                if (nightAmbGround != null && i < nightAmbGround.Length) nightMats[k].SetColor("_NightAmbGround", nightAmbGround[i]);
             }
         }
 

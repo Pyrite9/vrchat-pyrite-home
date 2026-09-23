@@ -30,6 +30,9 @@ public static class PyriteNightTools
     // 프리셋별 색조 [노을, 밤, 새벽] — 구운 간접광(라이트맵·프로브)에만 곱해진다
     static readonly Color[] NIGHT_T = { Color.white, new Color(0.13f, 0.15f, 0.22f), new Color(0.86f, 0.84f, 0.94f) };
     static readonly Color[] CAMP_T  = { Color.white, new Color(0.62f, 0.50f, 0.40f), new Color(0.92f, 0.90f, 0.97f) };
+    // [E1] 밤 하늘빛 (선형값) — 라이트맵엔 간접광만 있어서 색조만 곱하면 물가 모래가 새까매진다
+    public static Color[] NIGHT_AMB_SKY    = { Color.black, new Color(0.030f, 0.044f, 0.095f), Color.black };
+    public static Color[] NIGHT_AMB_GROUND = { Color.black, new Color(0.009f, 0.012f, 0.022f), Color.black };
     
     // 원래 노을 태양 (buildspec: Directional FFB070 / 1.25)
     static readonly Color SUN_DUSK_C = new Color(1.000f, 0.690f, 0.439f);
@@ -168,6 +171,8 @@ public static class PyriteNightTools
         tod.nightMats = nm.ToArray();
         tod.nightTint = (Color[])NIGHT_T.Clone();
         tod.campTint  = (Color[])CAMP_T.Clone();
+        tod.nightAmbSky    = (Color[])NIGHT_AMB_SKY.Clone();
+        tod.nightAmbGround = (Color[])NIGHT_AMB_GROUND.Clone();
 
         // 꽃 밤 머티리얼 — Day 복사본을 어둡게
         var fDay = FindMat("M_TS_Nemophila_Day");

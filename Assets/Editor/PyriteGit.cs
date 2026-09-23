@@ -66,7 +66,7 @@ public static class PyriteGit
 
     static bool IsRepo() => Directory.Exists(Path.Combine(Root, ".git"));
 
-    [MenuItem("Tools/Pyrite/X1. Git Check")]
+    [MenuItem("Tools/Pyrite/X1. Git Check", false, 1)]
     public static void Check()
     {
         Begin("X1 Git Check");
@@ -104,11 +104,11 @@ public static class PyriteGit
         return true;
     }
 
-    [MenuItem("Tools/Pyrite/X2. Git Commit")]
+    [MenuItem("Tools/Pyrite/X2. Git Commit", false, 2)]
     public static void Commit() { DoCommit(false); }
 
     // X4: re-apply .gitignore to the index and rewrite the (unpushed) last commit
-    [MenuItem("Tools/Pyrite/X4. Reindex + Amend (before first push)")]
+    [MenuItem("Tools/Pyrite/X4. Reindex + Amend (before first push)", false, 4)]
     public static void Amend() { DoCommit(true); }
 
     static void DoCommit(bool amend)
@@ -170,7 +170,7 @@ public static class PyriteGit
         End();
     }
 
-    [MenuItem("Tools/Pyrite/X3. Git Push")]
+    [MenuItem("Tools/Pyrite/X3. Git Push", false, 3)]
     public static void Push()
     {
         Begin("X3 Git Push");

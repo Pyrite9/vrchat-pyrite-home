@@ -32,7 +32,9 @@ public static class PyriteViews
     [MenuItem("Tools/Pyrite/Y9. Capture Check Views", false, 299)]
     public static void Capture() { CaptureSet(null); }
 
-    public static void CaptureSet(string only)
+    public static void CaptureSet(string only) { CaptureSet(only, new[] { 0, 1, 2 }); }
+
+    public static void CaptureSet(string only, int[] presets)
     {
         Directory.CreateDirectory(OUT);
         var tod = Object.FindObjectOfType<PyriteTimeOfDay>();
@@ -44,7 +46,7 @@ public static class PyriteViews
         var tt = cam.targetTexture; float n0 = cam.nearClipPlane, fa0 = cam.farClipPlane;
         try
         {
-            for (int i = 0; i < 3; i++)
+            foreach (int i in presets)
             {
                 if (tod != null) { tod.index = i; tod.Apply(); }
                 foreach (var v in Views)
