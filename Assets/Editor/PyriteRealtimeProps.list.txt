@@ -31,4 +31,3 @@ Cot/Post_3
 Cot/Rail_L
 Cot/Rail_R
 Cot/Tab
-Dock/DockMesh/default
