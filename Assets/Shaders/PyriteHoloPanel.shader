@@ -27,8 +27,9 @@ Shader "Pyrite/HoloPanel"
             #include "UnityCG.cginc"
             half _Aspect, _BorderW, _Radius, _Inner, _Scan, _Fade;
             half4 _Glass, _Border;
-            struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; };
-            v2f vert (appdata_base v) { v2f o; o.pos = UnityObjectToClipPos(v.vertex); o.uv = v.texcoord.xy; return o; }
+            struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; UNITY_VERTEX_OUTPUT_STEREO };
+            // VR 단일 패스 인스턴싱: 스테레오 매크로가 없으면 한쪽 눈에만 그려진다
+            v2f vert (appdata_base v) { v2f o; UNITY_SETUP_INSTANCE_ID(v); UNITY_INITIALIZE_OUTPUT(v2f, o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.pos = UnityObjectToClipPos(v.vertex); o.uv = v.texcoord.xy; return o; }
             float sdRound(float2 p, float2 b, float r) { float2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
             half4 frag (v2f i) : SV_Target
             {

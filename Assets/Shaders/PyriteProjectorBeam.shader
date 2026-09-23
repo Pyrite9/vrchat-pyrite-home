@@ -23,10 +23,11 @@ Shader "Pyrite/ProjectorBeam"
             #pragma multi_compile_fog
             #include "UnityCG.cginc"
             half4 _Color; half _Intensity, _EdgePow, _Dust;
-            struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; float3 wn : TEXCOORD1; float3 wp : TEXCOORD2; UNITY_FOG_COORDS(3) };
+            struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; float3 wn : TEXCOORD1; float3 wp : TEXCOORD2; UNITY_FOG_COORDS(3) UNITY_VERTEX_OUTPUT_STEREO };
             v2f vert (appdata_base v)
             {
-                v2f o; o.pos = UnityObjectToClipPos(v.vertex); o.uv = v.texcoord.xy;
+                v2f o; UNITY_SETUP_INSTANCE_ID(v); UNITY_INITIALIZE_OUTPUT(v2f, o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);   // VR 양쪽 눈
+                o.pos = UnityObjectToClipPos(v.vertex); o.uv = v.texcoord.xy;
                 o.wn = UnityObjectToWorldNormal(v.normal); o.wp = mul(unity_ObjectToWorld, v.vertex).xyz;
                 UNITY_TRANSFER_FOG(o, o.pos); return o;
             }

@@ -1,4 +1,5 @@
 // Tools ▸ Pyrite2 ▸ Z30e. Boat Water Mask Test
+//  아바타 대역(컷아웃 큐 캡슐)을 세워 발이 잘리지 않는지도 본다
 //  물결이 배 안까지 올라온 상황을 흉내: 보트를 잠시 25 cm 내려(안쪽 바닥이 수면 아래) 가림막 켬/끔을 렌더하고 되돌린다 (씬 변경 없음)
 #if UNITY_EDITOR
 using System.IO;
@@ -26,6 +27,16 @@ public static class PyriteBoatMaskTest
             var eye = c + new Vector3(2.6f, 1.9f, 4.2f);
             cam.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(c + new Vector3(0f, 0.1f, 0.3f) - eye));
             cam.fieldOfView = 50f;
+            // 아바타 대역: 배 안 바닥에 선 1.6 m 캡슐, 컷아웃 큐 2450 (lilToon/Poiyomi 컷아웃과 같은 순서)
+            var dummy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Object.DestroyImmediate(dummy.GetComponent<Collider>());
+            dummy.transform.localScale = new Vector3(0.4f, 0.8f, 0.4f);
+            dummy.transform.position = c + new Vector3(0f, 0.8f + 0.12f, 0.3f);
+            var dm = new Material(Shader.Find("Standard")); dm.color = new Color(0.9f, 0.3f, 0.3f); dm.renderQueue = 2450;
+            dummy.GetComponent<MeshRenderer>().sharedMaterial = dm;
+            dummy.hideFlags = HideFlags.DontSave;
+            try
+            {
             foreach (var on in new[] { false, true })
             {
                 if (mask) mask.gameObject.SetActive(on);
@@ -34,6 +45,8 @@ public static class PyriteBoatMaskTest
                 File.WriteAllBytes("Assets/_preview/boat/masktest_" + (on ? "on" : "off") + ".png", tx.EncodeToPNG());
                 cam.targetTexture = null; Object.DestroyImmediate(tx); rt.Release(); Object.DestroyImmediate(rt);
             }
+            }
+            finally { Object.DestroyImmediate(dummy); Object.DestroyImmediate(dm); }
         }
         finally
         {
