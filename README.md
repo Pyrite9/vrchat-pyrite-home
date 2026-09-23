@@ -34,7 +34,16 @@ Unity 2022.3.22f1 / VRChat SDK Worlds 3.10.5 / UdonSharp.
 Unity 밖에서 돌려 만든 결과물(`Terrain.raw`, `Splat4.bin`, `Assets/Meshes/*.obj`, `Assets/Audio/*.wav` 등)의 원본이다.
 경로가 제작 당시 작업 환경 기준이라 그대로 돌리려면 입출력 경로를 맞춰야 한다.
 
+## 크레딧
+
+- Flowers & Grassland — ©つきのすとあ (https://tsukino-vr.booth.pm/items/8154089)
+- VRC向け水面シェーダー — サカナ-sakanasan- (https://booth.pm/ja/items/7882111)
+- Sorafield Atmosphere Sky — SoraField (https://sorafield.booth.pm/)
+- キャンプ＆焚火アセット — のあがみ
+- ProTV — ArchiTechVR
+
 ## 규약
 
-- VRChat 업로드는 항상 **Private**
+- 월드는 **Public 업로드 가능** — 위 유료 에셋 4종 모두 퍼블릭 월드 사용 허용 (재배포는 불가라 저장소에 없음)
+- ProTV 는 Public 대비 잠금 상태로 시작한다 (`Tools ▸ Pyrite ▸ W. Lock Media Player`) — 인스턴스 마스터·소유자·슈퍼유저만 영상 변경
 - 제작 기록은 Claude 프로젝트 문서(`world-pyritehome-*.md`)에 있다
