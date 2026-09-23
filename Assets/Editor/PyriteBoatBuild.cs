@@ -22,7 +22,7 @@ public static class PyriteBoatBuild
 {
     const string PREFAB = "Assets/WoodBoat/WoodBoat.prefab";
     const string MAT = "Assets/Materials/M_Boat.mat";
-    static readonly Vector3 POS = new Vector3(-12.13f, 0.25f, 32.35f);   // 0.12 에선 안쪽 바닥(로컬 −0.21)이 수면 아래라 배 안에 물이 보였다 → 바닥 +0.04, 흘수 15 cm
+    static readonly Vector3 POS = new Vector3(-12.13f, 0.25f, 35.0f);    // 관리자: 호수 반사를 깔끔하게 → 뭍 쪽으로 2.65 m (32.35 → 35.0). 고물 끝 z 37.6 호수 바닥 −0.26 < 선체 바닥 −0.15   // 0.12 에선 안쪽 바닥(로컬 −0.21)이 수면 아래라 배 안에 물이 보였다 → 바닥 +0.04, 흘수 15 cm
 
     [MenuItem("Tools/Pyrite2/Z30c. Place Boat", false, 42)]
     public static void Build()

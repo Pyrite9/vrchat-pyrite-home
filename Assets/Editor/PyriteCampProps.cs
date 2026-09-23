@@ -1,11 +1,11 @@
 // Tools ▸ Pyrite2 ▸ Z31b. Build Camp Props / Z31c. Camp Props Revert / Z31d. Camp Props Renders
 //  캠프 소품 6종을 절차적 메시로 만들어 새 루트 CampProps 아래에 둔다 (유료 에셋 안 씀 → 저장소에 들어가도 된다)
 //   - 마시멜로 꼬치 3개 + 통나무 꽂이 : 테이블 왼쪽(+X, 의자에 앉아 불을 볼 때 왼쪽)
-//   - 나무 상자 + 캠핑 스토브 + 주전자 : 테이블 오른쪽(-X) 바로 옆, 주전자는 스토브 위
+//   - 가스 캔 스토브 + 주전자 : 커진 테이블 위 오른쪽(-X), 주전자는 스토브 위 (나무 상자는 폐기)
 //   - 법랑 머그 2개 : 테이블 가운데 의자 쪽 (프로젝터 둘은 불 쪽 절반에 있다), 여섯 모금
 //  들었을 때 방향: 손 방향 대신 스크립트가 Visual(피벗 = 손잡이)을 세운다 — 랜턴과 같은 방식
 //   - 망원경 : 화로 오른쪽(-X) 3 m
-//   - 돗자리 : 타프 밑, 야전침대 앞 (Z31a 실측: 침대와 겹치지 않게)
+//   - 돗자리 : 타프 밑, 야전침대 앞 (Z31a 실측: 침대와 겹치지 않게), 녹색 단색, 눕기 두 자리
 //   - 테이블 콜라이더 (camp03_table 에는 콜라이더가 없어 떨어뜨린 머그가 바닥까지 빠진다)
 //  조작: VRChat 데스크톱은 든 채 우클릭 = 놓기(클라이언트 고정) → 먹기·따르기·마시기·스토브 올리기는 좌클릭(사용)
 //  재실행 안전: CampProps 를 지우고 다시 만든다. Z31c 는 CampProps 만 지운다(생성 에셋은 Assets/Props 에 남김)
@@ -28,12 +28,14 @@ public static class PyriteCampProps
     const string ROOT = "CampProps";
     const int PICKUP_LAYER = 13;
     static readonly Vector3 FIRE = new Vector3(-10.5f, 2.15f, 51.5f);
-    // 테이블 상판 (Z31a 실측): x -11.04..-10.17, z 52.64..53.09, y 2.187
-    const float T_X0 = -11.04f, T_X1 = -10.17f, T_Z0 = 52.64f, T_Z1 = 53.09f, T_TOP = 2.187f;
-    static readonly Vector3 RACK = new Vector3(-9.93f, 0f, 52.87f);
-    static readonly Vector3 CRATE = new Vector3(-11.26f, 0f, 52.87f);
-    const float CRATE_H = 0.36f, CRATE_W = 0.34f;
-    static readonly Vector3[] MUGS = { new Vector3(-10.74f, 0f, 52.99f), new Vector3(-10.48f, 0f, 52.99f) };
+    // 테이블: camp03_table 을 가로(로컬 X) 1.6배·세로(로컬 Z) 1.5배로 키운다(높이 그대로 → 위의 프로젝터 둘은 안 움직인다)
+    //  원래 상판 (Z31a 실측): x -11.04..-10.17, z 52.64..53.09, y 2.187 → 빌드 때 메시 정점으로 다시 잰다
+    const float TABLE_SX = 1.6f, TABLE_SZ = 1.5f;
+    const string TABLE_REVERT = "Logs/pyrite_table_revert.txt";
+    static float T_X0 = -11.04f, T_X1 = -10.17f, T_Z0 = 52.64f, T_Z1 = 53.09f, T_TOP = 2.187f;
+    static readonly Vector3 RACK = new Vector3(-9.72f, 0f, 52.87f);        // 커진 테이블(x 끝 -9.91) 왼쪽
+    static readonly Vector3 STOVE = new Vector3(-11.14f, 0f, 52.97f);      // 테이블 위 오른쪽 끝 (영상 프로젝터 x -10.98..-10.75, z 52.63..52.84 와 안 겹침)
+    static readonly Vector3[] MUGS = { new Vector3(-10.30f, 0f, 53.00f), new Vector3(-10.08f, 0f, 52.96f) };
     static readonly float[] MUG_YAW = { -70f, -110f };
     static readonly Vector3 SCOPE = new Vector3(-13.6f, 0f, 51.6f);
     static readonly Vector3 MAT = new Vector3(-8.3f, 0f, 56.62f);   // 야전침대(x -9.25..-7.35, z 57.69..58.31) 앞, 타프 앞 끝(z≈55.7) 안쪽
@@ -64,6 +66,13 @@ public static class PyriteCampProps
         var old = FindRoot();
         if (old != null) { Object.DestroyImmediate(old); sb.AppendLine("CampProps 삭제"); }
         else sb.AppendLine("CampProps 없음");
+        var table = GameObject.Find("Camp/camp03_table");
+        if (table != null && File.Exists(TABLE_REVERT))
+        {
+            table.transform.localScale = ParseV(File.ReadAllText(TABLE_REVERT));
+            File.Delete(TABLE_REVERT);
+            sb.AppendLine("table scale 복구 " + table.transform.localScale.ToString("F3") + " (라이트맵 재베이크 F → T 필요)");
+        }
         EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
         sb.AppendLine("RESULT: DONE");
@@ -108,6 +117,23 @@ public static class PyriteCampProps
         var mFlame = Mat("M_PropFlame", Color.black, 0f, 0.2f, new Color(0.35f, 0.62f, 1.6f) * 2.2f);
         var mSteam = SteamMat();
         var mMat = MatTex("M_PropMat", MatTexture());
+
+        // 0) 테이블 키우기 (원래 스케일은 한 번만 기록)
+        {
+            var table = GameObject.Find("Camp/camp03_table");
+            if (table == null) { sb.AppendLine("Camp/camp03_table 없음"); return; }
+            Vector3 orig;
+            if (File.Exists(TABLE_REVERT)) orig = ParseV(File.ReadAllText(TABLE_REVERT));
+            else { orig = table.transform.localScale; Directory.CreateDirectory("Logs"); File.WriteAllText(TABLE_REVERT, V3(orig)); }
+            table.transform.localScale = new Vector3(orig.x * TABLE_SX, orig.y, orig.z * TABLE_SZ);
+            EditorUtility.SetDirty(table.transform);
+            var vs = table.GetComponentsInChildren<MeshFilter>().SelectMany(mf => mf.sharedMesh.vertices.Select(v => mf.transform.TransformPoint(v))).ToArray();
+            float top = vs.Max(v => v.y);
+            var tv = vs.Where(v => v.y > top - 0.01f).ToArray();
+            T_TOP = top; T_X0 = tv.Min(v => v.x); T_X1 = tv.Max(v => v.x); T_Z0 = tv.Min(v => v.z); T_Z1 = tv.Max(v => v.z);
+            sb.AppendLine(string.Format("table scale {0} → {1} | top y {2:F3} x {3:F2}..{4:F2} z {5:F2}..{6:F2} ({7:F2}×{8:F2} m) — 라이트맵 재베이크 F → T 필요",
+                orig.ToString("F3"), table.transform.localScale.ToString("F3"), T_TOP, T_X0, T_X1, T_Z0, T_Z1, T_X1 - T_X0, T_Z1 - T_Z0));
+        }
 
         // 1) 테이블 콜라이더
         var tc = new GameObject("TableCollider");
@@ -180,47 +206,48 @@ public static class PyriteCampProps
         foreach (var sk in skewerScripts) { sk.others = skewers; UdonSharpEditorUtility.CopyProxyToUdon(sk); EditorUtility.SetDirty(sk); }
         sb.AppendLine(string.Format("rack {0} | skewer tris {1} + marsh {2} | slot0 {3}", rack.transform.position.ToString("F2"), Tris(skewerMesh), Tris(marshMesh), slots[0].position.ToString("F3")));
 
-        // 3) 상자 + 스토브
-        var crate = new GameObject("StoveCrate");
-        crate.transform.SetParent(root.transform, false);
-        crate.transform.position = new Vector3(CRATE.x, Ground(CRATE), CRATE.z);
+        // 3) 가스 캔 스토브 (관리자 참고 이미지: 파란 캔 + 은색 밸브·버너 + 톱니 받침 4개 + 검은 노브) — 테이블 위
         var cube = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
-        var crateParts = new List<Part>();
-        // 판자 느낌: 옆면 널 4줄씩 + 모서리 기둥 + 뚜껑
-        for (int k = 0; k < 4; k++)
-        {
-            float y = 0.02f + k * 0.085f + 0.04f;
-            foreach (var sgn in new[] { -1f, 1f })
-            {
-                crateParts.Add(new Part(cube, Matrix4x4.TRS(new Vector3(0, y, sgn * (CRATE_W * 0.5f - 0.01f)), Quaternion.identity, new Vector3(CRATE_W - 0.04f, 0.078f, 0.02f)), k % 2 == 0 ? mWood : mWoodDark));
-                crateParts.Add(new Part(cube, Matrix4x4.TRS(new Vector3(sgn * (CRATE_W * 0.5f - 0.01f), y, 0), Quaternion.identity, new Vector3(0.02f, 0.078f, CRATE_W - 0.04f)), k % 2 == 0 ? mWoodDark : mWood));
-            }
-        }
-        foreach (var sx in new[] { -1f, 1f }) foreach (var sz in new[] { -1f, 1f })
-            crateParts.Add(new Part(cube, Matrix4x4.TRS(new Vector3(sx * (CRATE_W * 0.5f - 0.02f), CRATE_H * 0.5f - 0.01f, sz * (CRATE_W * 0.5f - 0.02f)), Quaternion.identity, new Vector3(0.04f, CRATE_H - 0.02f, 0.04f)), mWoodDark));
-        crateParts.Add(new Part(cube, Matrix4x4.TRS(new Vector3(0, CRATE_H - 0.01f, 0), Quaternion.identity, new Vector3(CRATE_W, 0.02f, CRATE_W)), mWood));
-        MeshOn(crate, "Crate", crateParts);
-        var cb = crate.AddComponent<BoxCollider>(); cb.center = new Vector3(0, CRATE_H * 0.5f, 0); cb.size = new Vector3(CRATE_W, CRATE_H, CRATE_W);
-
+        var mCan = Mat("M_PropCanBlue", new Color(0.10f, 0.33f, 0.55f), 0.35f, 0.45f);
         var stove = new GameObject("Stove");
-        stove.transform.SetParent(crate.transform, false);
-        stove.transform.localPosition = new Vector3(0, CRATE_H, 0);
+        stove.transform.SetParent(root.transform, false);
+        stove.transform.SetPositionAndRotation(new Vector3(STOVE.x, T_TOP, STOVE.z), Quaternion.Euler(0f, 200f, 0f));
         var stoveParts = new List<Part> {
-            new Part(Lathe(new[] { V(0, 0), V(0.085f, 0), V(0.088f, 0.006f), V(0.082f, 0.045f), V(0.07f, 0.05f), V(0, 0.05f) }, 24), Matrix4x4.identity, mBlack),
-            new Part(Lathe(new[] { V(0, 0.05f), V(0.036f, 0.05f), V(0.036f, 0.068f), V(0.03f, 0.072f), V(0, 0.072f) }, 20), Matrix4x4.identity, mSteel),
-            new Part(Torus(0.027f, 0.0055f, 24, 8, 0f, 360f), Matrix4x4.TRS(new Vector3(0, 0.076f, 0), Quaternion.Euler(90, 0, 0), Vector3.one), mFlame),
-            new Part(Lathe(new[] { V(0, 0), V(0.012f, 0), V(0.012f, 0.02f), V(0, 0.02f) }, 10), Matrix4x4.TRS(new Vector3(0.086f, 0.022f, 0), Quaternion.Euler(0, 0, -90), Vector3.one), mSteel),
+            // 캔: 은색 바닥 테 + 파란 몸통(어깨 둥글게) + 은색 윗테
+            new Part(Lathe(new[] { V(0, 0), V(0.053f, 0), V(0.055f, 0.004f), V(0.055f, 0.010f), V(0.052f, 0.012f), V(0, 0.012f) }, 32), Matrix4x4.identity, mSteel),
+            new Part(Lathe(new[] { V(0.052f, 0.010f), V(0.054f, 0.014f), V(0.054f, 0.118f), V(0.050f, 0.132f), V(0.038f, 0.142f), V(0.026f, 0.146f), V(0, 0.146f) }, 32), Matrix4x4.identity, mCan),
+            new Part(Lathe(new[] { V(0.027f, 0.144f), V(0.029f, 0.150f), V(0.024f, 0.156f), V(0, 0.156f) }, 24), Matrix4x4.identity, mSteel),
+            // 육각 너트 + 밸브 몸통 + 버너까지 기둥
+            new Part(Lathe(new[] { V(0, 0.156f), V(0.023f, 0.156f), V(0.023f, 0.176f), V(0, 0.176f) }, 6), Matrix4x4.identity, mSteel),
+            new Part(Lathe(new[] { V(0, 0.176f), V(0.014f, 0.176f), V(0.014f, 0.206f), V(0, 0.206f) }, 16), Matrix4x4.identity, mSteel),
+            new Part(Lathe(new[] { V(0, 0.206f), V(0.009f, 0.206f), V(0.009f, 0.246f), V(0, 0.246f) }, 12), Matrix4x4.identity, mSteel),
+            // 노브: 옆으로 나온 팔 + 검은 톱니 노브
+            new Part(Lathe(new[] { V(0, 0), V(0.008f, 0), V(0.008f, 0.042f), V(0, 0.042f) }, 12), Matrix4x4.TRS(new Vector3(0.010f, 0.19f, 0), Quaternion.Euler(0, 0, -90), Vector3.one), mSteel),
+            new Part(Lathe(new[] { V(0, 0), V(0.017f, 0), V(0.019f, 0.003f), V(0.019f, 0.020f), V(0.016f, 0.024f), V(0, 0.024f) }, 14), Matrix4x4.TRS(new Vector3(0.050f, 0.19f, 0), Quaternion.Euler(0, 0, -90), Vector3.one), mBlack),
+            // 버너: 은색 컵 + 구멍 뚫린 윗면(어두운 원판) + 파란 불꽃 고리
+            new Part(Lathe(new[] { V(0.009f, 0.244f), V(0.028f, 0.257f), V(0.036f, 0.261f), V(0.036f, 0.268f), V(0.031f, 0.272f), V(0, 0.272f) }, 28), Matrix4x4.identity, mSteel),
+            new Part(Lathe(new[] { V(0.026f, 0.2725f), V(0, 0.2725f) }, 28), Matrix4x4.identity, mBlack),
+            new Part(Torus(0.032f, 0.0045f, 28, 8, 0f, 360f), Matrix4x4.TRS(new Vector3(0, 0.274f, 0), Quaternion.Euler(90, 0, 0), Vector3.one), mFlame),
         };
-        for (int i = 0; i < 3; i++)
+        // 받침 4개: 기둥에서 비스듬히 올라가는 판 + 위 가로대 + 톱니 + 안쪽 버팀
+        for (int i = 0; i < 4; i++)
         {
-            var q = Quaternion.Euler(0, 30f + i * 120f, 0);
-            stoveParts.Add(new Part(cube, Matrix4x4.TRS(q * new Vector3(0, 0.074f, 0.058f), q, new Vector3(0.008f, 0.044f, 0.05f)), mSteel));
+            var q = Quaternion.Euler(0, 45f + i * 90f, 0);
+            Vector3 a = new Vector3(0, 0.215f, 0.016f), b = new Vector3(0, 0.285f, 0.088f);
+            var mid = (a + b) * 0.5f; var dir = b - a;
+            stoveParts.Add(new Part(cube, Matrix4x4.TRS(q * mid, q * Quaternion.LookRotation(dir, Vector3.up), new Vector3(0.003f, 0.011f, dir.magnitude)), mSteel));
+            stoveParts.Add(new Part(cube, Matrix4x4.TRS(q * new Vector3(0, 0.287f, 0.070f), q, new Vector3(0.003f, 0.010f, 0.062f)), mSteel));
+            for (int t = 0; t < 4; t++)
+                stoveParts.Add(new Part(cube, Matrix4x4.TRS(q * new Vector3(0, 0.2935f, 0.046f + t * 0.016f), q, new Vector3(0.003f, 0.005f, 0.006f)), mSteel));
+            Vector3 c = new Vector3(0, 0.284f, 0.044f), d = new Vector3(0, 0.250f, 0.030f);
+            var dir2 = c - d;
+            stoveParts.Add(new Part(cube, Matrix4x4.TRS(q * ((c + d) * 0.5f), q * Quaternion.LookRotation(dir2, Vector3.up), new Vector3(0.003f, 0.007f, dir2.magnitude)), mSteel));
         }
         MeshOn(stove, "Stove", stoveParts);
-        var sc = stove.AddComponent<BoxCollider>(); sc.center = new Vector3(0, 0.045f, 0); sc.size = new Vector3(0.18f, 0.09f, 0.18f);
+        var sc = stove.AddComponent<BoxCollider>(); sc.center = new Vector3(0, 0.145f, 0); sc.size = new Vector3(0.12f, 0.29f, 0.12f);
         var slot = new GameObject("KettleSlot").transform;
-        slot.SetParent(stove.transform, false); slot.localPosition = new Vector3(0, 0.096f, 0); slot.localRotation = Quaternion.Euler(0, 180f, 0);
-        sb.AppendLine(string.Format("crate {0} top {1:F3} | kettle slot {2}", crate.transform.position.ToString("F2"), crate.transform.position.y + CRATE_H, slot.position.ToString("F3")));
+        slot.SetParent(stove.transform, false); slot.localPosition = new Vector3(0, 0.297f, 0); slot.localRotation = Quaternion.identity;
+        sb.AppendLine(string.Format("stove {0} on table | tris {1} | kettle slot {2}", stove.transform.position.ToString("F3"), Tris(stove.GetComponent<MeshFilter>().sharedMesh), slot.position.ToString("F3")));
 
         // 4) 머그 2개
         var mugRoots = new Transform[2];
@@ -340,13 +367,19 @@ public static class PyriteCampProps
             });
             // 경통 끝 카메라 → RT
             var rtPath = DIR + "/RT_Telescope.renderTexture";
+            // 화질: 512² → 1024² + MSAA 4 (관리자: 망원경 화질이 매우 나쁨). 원 지름이 데스크톱 화면 세로의 약 90% 라 512 는 1.7배 늘어났다
             var rt = AssetDatabase.LoadAssetAtPath<RenderTexture>(rtPath);
+            if (rt != null && (rt.width != 1024 || rt.antiAliasing != 4)) { AssetDatabase.DeleteAsset(rtPath); rt = null; }
             bool rtNew = rt == null;
-            if (rtNew) { rt = new RenderTexture(512, 512, 16, RenderTextureFormat.ARGB32); rt.name = "RT_Telescope"; AssetDatabase.CreateAsset(rt, rtPath); }
+            if (rtNew)
+            {
+                rt = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4, useMipMap = false, filterMode = FilterMode.Bilinear, anisoLevel = 0 };
+                rt.name = "RT_Telescope"; AssetDatabase.CreateAsset(rt, rtPath);
+            }
             var camGo = new GameObject("ScopeCam"); camGo.transform.SetParent(pitch, false); camGo.transform.localPosition = new Vector3(0, 0, 0.57f);
             var cam = camGo.AddComponent<Camera>();
             cam.fieldOfView = 18f; cam.nearClipPlane = 0.35f; cam.farClipPlane = 3000f; cam.targetTexture = rt; cam.depth = -5;   // 화각 6°·10° 는 하늘 별이 막대처럼 늘어났다 → 18° (약 3배)
-            cam.clearFlags = CameraClearFlags.Skybox; cam.allowHDR = false; cam.allowMSAA = false;
+            cam.clearFlags = CameraClearFlags.Skybox; cam.allowHDR = false; cam.allowMSAA = true;
             cam.cullingMask = ~((1 << 5) | (1 << 10) | (1 << 12) | (1 << 18) | (1 << 19));
             string tt0 = cam.targetTexture != null ? cam.targetTexture.name : "NULL";
             camGo.SetActive(false);
@@ -383,7 +416,34 @@ public static class PyriteCampProps
             go.AddComponent<VRCObjectSync>().AllowCollisionOwnershipTransfer = false;
             var cc = UdonSharpUndo.AddComponent<PyriteCarryChair>(go);
             UdonSharpEditorUtility.CopyProxyToUdon(cc);
-            sb.AppendLine("mat " + go.transform.position.ToString("F3") + " size " + MAT_W + "x" + MAT_D);
+            // 눕기 두 자리: 야전침대(Cot) 의 VRCStation(누운 자세 컨트롤러)을 복사. 머리 -X, 발 +X
+            //  판정: 발 쪽 끝 0.3 m 띠 = 들기(돗자리 콜라이더), 나머지 = 눕기(돗자리 위 0.09 m 상자, 레이어 Pickup → 몸에 안 걸림)
+            var cotSt = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects().FirstOrDefault(g => g.name == "Cot")?.GetComponent<VRC.SDK3.Components.VRCStation>();
+            var matPk = go.GetComponent<VRCPickup>();
+            int nLie = 0;
+            foreach (var zs in new[] { -1f, 1f })
+            {
+                var lie = new GameObject(zs < 0 ? "Lie_A" : "Lie_B"); lie.layer = PICKUP_LAYER;
+                lie.transform.SetParent(go.transform, false);
+                var lrb = lie.AddComponent<Rigidbody>(); lrb.isKinematic = true; lrb.useGravity = false;
+                var lbc = lie.AddComponent<BoxCollider>(); lbc.center = new Vector3(-0.15f, 0.057f, zs * MAT_D * 0.25f); lbc.size = new Vector3(MAT_W - 0.3f, 0.09f, MAT_D * 0.5f - 0.02f);
+                var st = lie.AddComponent<VRC.SDK3.Components.VRCStation>();
+                if (cotSt != null) EditorUtility.CopySerialized(cotSt, st);
+                st.PlayerMobility = VRC.SDKBase.VRCStation.Mobility.Immobilize; st.seated = true; st.disableStationExit = false; st.canUseStationFromStation = true;
+                var lp = new GameObject("LiePoint").transform; lp.SetParent(lie.transform, false);
+                lp.localPosition = new Vector3(-0.05f, 0.012f, zs * MAT_D * 0.25f); lp.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                var ep = new GameObject("ExitPoint").transform; ep.SetParent(lie.transform, false);
+                ep.localPosition = new Vector3(-0.05f, 0.05f, zs * (MAT_D * 0.5f + 0.45f)); ep.localRotation = Quaternion.Euler(0f, zs < 0 ? 180f : 0f, 0f);
+                st.stationEnterPlayerLocation = lp; st.stationExitPlayerLocation = ep;
+                EditorUtility.SetDirty(st);
+                var cs = UdonSharpUndo.AddComponent<PyriteCarrySeat>(lie);
+                cs.station = st; cs.pickup = matPk;
+                UdonSharpEditorUtility.CopyProxyToUdon(cs);
+                var lub = UdonSharpEditorUtility.GetBackingUdonBehaviour(cs);
+                if (lub != null) { lub.interactText = "Lie down"; lub.proximity = 2f; EditorUtility.SetDirty(lub); }
+                nLie++;
+            }
+            sb.AppendLine("mat " + go.transform.position.ToString("F3") + " size " + MAT_W + "x" + MAT_D + " | lie stations " + nLie + " (cot station " + (cotSt != null ? "copied, ctrl " + (cotSt.animatorController ? cotSt.animatorController.name : "null") : "NOT FOUND") + ")");
         }
 
         AssetDatabase.SaveAssets();
@@ -418,8 +478,8 @@ public static class PyriteCampProps
             var shots = new (string n, Vector3 eye, Vector3 at, float fov)[] {
                 ("overview", new Vector3(-10.6f, 3.35f, 55.4f), new Vector3(-10.9f, 2.0f, 52.4f), 55f),
                 ("table", new Vector3(-10.05f, 2.78f, 53.75f), new Vector3(-10.6f, 2.22f, 52.9f), 48f),
-                ("stove", new Vector3(-10.95f, 2.62f, 53.45f), new Vector3(-11.26f, 2.33f, 52.87f), 40f),
-                ("rack", new Vector3(-9.45f, 2.75f, 53.45f), new Vector3(-9.93f, 2.45f, 52.87f), 42f),
+                ("stove", new Vector3(-10.72f, 2.66f, 53.55f), new Vector3(-11.14f, 2.36f, 52.97f), 40f),
+                ("rack", new Vector3(-9.25f, 2.75f, 53.45f), new Vector3(-9.72f, 2.45f, 52.87f), 42f),
                 ("telescope", new Vector3(-12.2f, 2.85f, 53.1f), new Vector3(-13.6f, 2.85f, 51.6f), 45f),
                 ("mat", new Vector3(-8.3f, 3.5f, 53.9f), new Vector3(-8.3f, 1.85f, 56.9f), 58f),
             };
@@ -441,7 +501,7 @@ public static class PyriteCampProps
                 var hand = new[] { new Vector3(0.22f, -0.32f, 0.42f), new Vector3(0.18f, -0.30f, 0.45f), new Vector3(0.16f, -0.28f, 0.36f) };
                 var names = new[] { "Skewer_0", "Kettle", "Mug_0" };
                 var q = Quaternion.Euler(60f, 40f, 120f);
-                for (int k = 0; k < 3; k++)
+                for (int k = 1; k < 3; k++)   // 꼬치(0)는 손 방향 그대로라 흉내 대상 아님
                 {
                     var r = root.transform.Find(names[k]); if (r == null) continue;
                     var vis = r.Find("Visual"); if (vis == null) continue;
@@ -620,29 +680,30 @@ public static class PyriteCampProps
 
     static Texture2D MatTexture()
     {
-        // 돗자리: 볏짚색 바탕 + 가는 결 + 붉은·남색 줄 + 남색 테두리
+        // 돗자리: 녹색 단색 (관리자: 줄무늬가 너무 튄다) — 같은 색의 옅은 짚 결과 조금 어두운 같은 색 테두리만
         string p = DIR + "/Textures/T_PicnicMat.png";
         const int W = 512, H = 352;
         var t = new Texture2D(W, H, TextureFormat.RGB24, true);
-        var straw = new Color(0.80f, 0.69f, 0.47f);
-        var red = new Color(0.62f, 0.17f, 0.14f);
-        var navy = new Color(0.13f, 0.18f, 0.32f);
+        var green = new Color(0.26f, 0.38f, 0.23f);
         var rnd = new System.Random(7);
         var rowJit = Enumerable.Range(0, H).Select(_ => (float)rnd.NextDouble()).ToArray();
         for (int y = 0; y < H; y++) for (int x = 0; x < W; x++)
         {
-            Color c = straw * (0.92f + 0.08f * rowJit[y]);
-            if (y % 4 == 0) c *= 0.82f;                            // 짚 결
-            if ((x / 3) % 2 == 0 && y % 4 == 2) c *= 0.93f;        // 엮은 날실
-            int bx = x % 128;
-            if (bx >= 20 && bx < 30) c = Color.Lerp(c, red, 0.85f);
-            if (bx >= 34 && bx < 38) c = Color.Lerp(c, navy, 0.85f);
-            if (bx >= 90 && bx < 94) c = Color.Lerp(c, navy, 0.85f);
-            if (bx >= 98 && bx < 108) c = Color.Lerp(c, red, 0.85f);
-            if (x < 12 || x >= W - 12 || y < 12 || y >= H - 12) c = navy * (y % 4 == 0 ? 0.85f : 1f);
+            Color c = green * (0.95f + 0.05f * rowJit[y]);
+            if (y % 4 == 0) c *= 0.90f;                            // 짚 결
+            if ((x / 3) % 2 == 0 && y % 4 == 2) c *= 0.96f;        // 엮은 날실
+            if (x < 12 || x >= W - 12 || y < 12 || y >= H - 12) c *= 0.78f;   // 같은 색 테두리
+            c.a = 1f;
             t.SetPixel(x, y, c);
         }
         return SaveTex(t, p, false, TextureWrapMode.Clamp);
+    }
+
+    static string V3(Vector3 v) { return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0},{1},{2}", v.x, v.y, v.z); }
+    static Vector3 ParseV(string s)
+    {
+        var a = s.Trim().Split(',').Select(x => float.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+        return new Vector3(a[0], a[1], a[2]);
     }
 
     static Texture2D SaveTex(Texture2D t, string p, bool alpha, TextureWrapMode wrap)
