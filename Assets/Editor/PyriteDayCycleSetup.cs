@@ -38,6 +38,7 @@ public static class PyriteDayCycleSetup
         public float crEm, crMatcap, crGloss, crLight; public Color crTint;
         public float camp, amb, nightAmb;
         public Color nightTint, campTint, nAmbSky, nAmbGr;
+        public float ppDay, ppNight;
         public K Clone(string n, float h, int c) { var k = (K)MemberwiseClone(); k.name = n; k.hour = h; k.cube = c; return k; }
     }
 
@@ -152,6 +153,16 @@ public static class PyriteDayCycleSetup
         var predawn = blue.Clone("predawn", 5.5f, 2);
         predawn.skyHaze = 1.5f; predawn.ambSky = RGB(0.20f, 0.18f, 0.28f); predawn.fogCol = RGB(0.24f, 0.20f, 0.28f);
         predawn.ffRate = 0.3f; predawn.camp = 0.9f; predawn.nightAmb = 0.4f;
+        // 후처리 볼륨 weight (노을 프로필 위에 섞음)
+        night.ppDay = 0f; night.ppNight = 1f;
+        predawn.ppDay = 0f; predawn.ppNight = 0.7f;
+        dawn.ppDay = 0.2f; dawn.ppNight = 0.2f;
+        morning.ppDay = 0.8f; morning.ppNight = 0f;
+        noon.ppDay = 1f; noon.ppNight = 0f;
+        afternoon.ppDay = 1f; afternoon.ppNight = 0f;
+        dusk.ppDay = 0f; dusk.ppNight = 0f;
+        sunset.ppDay = 0f; sunset.ppNight = 0.2f;
+        blue.ppDay = 0f; blue.ppNight = 0.6f;
         var keys = new List<K> { night, night.Clone("night", 4.3f, 1), predawn, dawn, morning, noon, afternoon, dusk, sunset, blue, night.Clone("night", 20.3f, 1) };
         keys = keys.OrderBy(k => k.hour).ToList();
         sb.AppendLine("keys: " + string.Join(" | ", keys.Select(k => string.Format("{0:00.00} {1} cube{2}", k.hour, k.name, k.cube))));
@@ -255,6 +266,12 @@ public static class PyriteDayCycleSetup
         cyc.nightAmbGround = keys.Select(k => k.nAmbGr).ToArray();
         cyc.probes = tod.probes; cyc.probeCubes = tod.probeCubes;
         cyc.dialPointer = tod.dialPointer;
+        var vols = Object.FindObjectsOfType<UnityEngine.Rendering.PostProcessing.PostProcessVolume>(true);
+        cyc.ppDay = vols.FirstOrDefault(v => v.name == "PostProcess_Day");
+        cyc.ppNight = vols.FirstOrDefault(v => v.name == "PostProcess_Night");
+        cyc.ppDayW = keys.Select(k => k.ppDay).ToArray();
+        cyc.ppNightW = keys.Select(k => k.ppNight).ToArray();
+        sb.AppendLine("pp volumes: day " + (cyc.ppDay != null) + " night " + (cyc.ppNight != null));
 
         // 기준값(캠프 조명·볼륨)은 노을 상태에서 잡혀야 한다 — 위에서 tod.Apply(0) 했지만 배수 1 이 아닌 값이 있을 수 있어 기록
         sb.AppendLine("campLights base: " + string.Join(", ", tod.campLights.Select(l => l == null ? "-" : l.intensity.ToString("0.00"))) + "  (노을 배수 " + tod.campLightMul[0] + ")");

@@ -11,6 +11,7 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using UnityEngine.Rendering.PostProcessing;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class PyriteDayCycle : UdonSharpBehaviour
@@ -124,6 +125,12 @@ public class PyriteDayCycle : UdonSharpBehaviour
     [Header("반사 프로브")]
     public ReflectionProbe[] probes;
     public Texture[] probeCubes;
+
+    [Header("후처리 — 노을 볼륨(weight 1 고정) 위에 낮·밤 볼륨을 섞는다")]
+    public PostProcessVolume ppDay;
+    public PostProcessVolume ppNight;
+    public float[] ppDayW;
+    public float[] ppNightW;
 
     [Header("다이얼 (임시)")]
     public Transform dialPointer;
@@ -447,6 +454,9 @@ public class PyriteDayCycle : UdonSharpBehaviour
                 probes[k].customBakedTexture = probeCubes[idx];
             }
         }
+
+        if (ppDay != null && ppDayW != null && ppDayW.Length == keyHour.Length) ppDay.weight = F(ppDayW);
+        if (ppNight != null && ppNightW != null && ppNightW.Length == keyHour.Length) ppNight.weight = F(ppNightW);
 
         if (dialPointer != null) dialPointer.localRotation = Quaternion.Euler(0f, h / 24f * 360f, 0f);
     }
