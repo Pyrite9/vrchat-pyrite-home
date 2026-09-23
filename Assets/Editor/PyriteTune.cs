@@ -62,6 +62,17 @@ public static class PyriteTune
                         if (gm != null) { gm.SetFloat("_Glossiness", f[gi]); EditorUtility.SetDirty(gm); }
                     }
                     break;
+                case "water":   // water=프로퍼티,값  → M_Water_Dusk/Night/Dawn 전부
+                    {
+                        var parts = v.Split(',');
+                        float val; if (parts.Length == 2 && float.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out val))
+                            foreach (var wn in new[] { "M_Water_Dusk", "M_Water_Night", "M_Water_Dawn" })
+                            {
+                                var wm = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/" + wn + ".mat");
+                                if (wm != null) { wm.SetFloat(parts[0].Trim(), val); EditorUtility.SetDirty(wm); }
+                            }
+                    }
+                    break;
                 case "views":   views = v; break;
                 case "presets": presets = f.Select(x => (int)x).ToArray(); break;
             }
