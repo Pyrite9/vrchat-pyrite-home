@@ -1,6 +1,7 @@
 // Tools ▸ Pyrite ▸ Z25a. Build Settings UI  /  Z25b. Settings UI Revert
 //  프로젝터 패널(3.0×1.69 m) 앞에 월드 캔버스(1920×1080 px, 1 px = 1.5625 mm)를 띄우고 설정 6칸을 만든다
-//   시간(분 슬라이더·자동 흐름, 모두에게 공유) · 화면(밝기 ±1 EV, 블룸) · 반사(호수·캠프 거울) · 소리(자연 소리 0~150%) · 성능(꽃·반딧불·해 그림자) · 정보
+//   시간(분 슬라이더·자동 흐름, 모두에게 공유) · 화면(밝기 ±1 EV, 블룸) · 반사(호수·캠프 거울) · 소리(자연 소리 0~150%) · 성능(꽃·반딧불·해 그림자) · 정보(환경)
+//   머리줄: 사용한 에셋(팝업, 바깥·× 로 닫힘, 메인이 꺼지면 같이 꺼짐) · EN/KO · 닫기
 //   EN / KO — 글꼴 Noto Sans KR Medium (OFL, ASCII + KS X 1001 한글 2350자 서브셋) → 정적 TMP 폰트(사용 글자만)
 //   후처리: SettingsPP 루트에 전역 볼륨 3개 (layer 23, priority 10, weight 0) — 밝게(노출 2.0)/어둡게(0.0)/블룸 끔(강도 0). 기존 프로필 노출 1.0 기준 ±1 EV
 //   LakeMirrorSwitch 는 렌더러·콜라이더만 끈다(스크립트는 살아서 호수 거울 상태를 쥔다) → 설정의 호수 반사 토글이 SetOn 으로 조작
@@ -108,6 +109,7 @@ public static class PyriteSettingsUI
         // 제목 줄
         L(Txt(t, "Title", 90, 52, 1000, 76, "", 62, GOLD), S["title"]);
         L(Txt(t, "Subtitle", 94, 128, 700, 42, "", 30, GREY), S["subtitle"]);
+        var (_, _, assetsLabel) = Btn(t, "AssetsButton", 1196, 66, 240, 66, "", "OpenAssets"); L(assetsLabel, S["assets"]);
         var (bEn, iEn, _) = Btn(t, "LangEN", 1464, 66, 116, 66, "EN", "SetEN");
         var (bKo, iKo, _) = Btn(t, "LangKO", 1590, 66, 116, 66, "KO", "SetKO");
         Btn(t, "Close", 1740, 66, 90, 66, "×", "Close");
@@ -144,7 +146,6 @@ public static class PyriteSettingsUI
         var cRefl = Card("CardReflect", 2, 0, "refl");
         var (lakeT, lakeL) = Tgl(cRefl, "Lake", 32, 90, 489, true, "OnLake"); L(lakeL, S["lake"]);
         var (campT, campL) = Tgl(cRefl, "CampMirror", 32, 160, 489, false, "OnCampMirror"); L(campL, S["campMirror"]);
-        L(Txt(cRefl, "Note", 32, 250, 489, 90, "", 21, GREY, TextAlignmentOptions.TopLeft), S["reflNote"]);
 
         // 소리
         var cSound = Card("CardSound", 0, 1, "sound");
@@ -165,6 +166,27 @@ public static class PyriteSettingsUI
         L(Txt(cAbout, "World", 32, 80, 489, 56, "", 40, WHITE), S["world"]);
         L(Txt(cAbout, "Body", 32, 146, 489, 150, "", 22, GREY, TextAlignmentOptions.TopLeft), S["aboutBody"]);
         L(Txt(cAbout, "Credit", 32, 312, 489, 32, "", 22, GOLD), S["credit"]);
+
+        // 사용한 에셋 팝업 (캔버스 자식 → 메인이 꺼지면 같이 꺼짐. 바깥 어둠을 누르면 닫힘)
+        var popup = Rect(t, "AssetsPopup", 0, 0, W, H).gameObject;
+        var (_, dim, _) = Btn(popup.transform, "Dim", 0, 0, W, H, "", "CloseAssets");
+        dim.sprite = null; dim.type = Image.Type.Simple; dim.color = new Color(0f, 0f, 0f, 0.8f);   // 선형 색공간이라 알파 0.55 는 거의 안 어두워 보였다(아래 글자 밝기 0.70)
+        var cb = dim.GetComponent<Button>().colors; cb.highlightedColor = Color.white; cb.pressedColor = Color.white; dim.GetComponent<Button>().colors = cb;
+        const float bx = 300f, by = 150f, bw = 1320f, bh = 790f;
+        var box = Img(popup.transform, "Box", bx, by, bw, bh, new Color(0.045f, 0.05f, 0.06f, 1f), spr); box.raycastTarget = true;
+        Img(box.transform, "Edge", 0, 0, bw, 3, new Color(GOLD.r, GOLD.g, GOLD.b, 0.6f), null);
+        L(Txt(box.transform, "Title", 60, 40, 900, 60, "", 42, GOLD, spacing: 6f), S["assetsTitle"]);
+        Btn(box.transform, "Close", bw - 60 - 90, 38, 90, 66, "×", "CloseAssets");
+        Img(box.transform, "Divider", 60, 124, bw - 120, 2, new Color(GOLD.r, GOLD.g, GOLD.b, 0.3f), null);
+        for (int i = 0; i < ASSETS.Length; i++)
+        {
+            float ry = 150f + i * 72f;
+            Txt(box.transform, "Name" + i, 60, ry, 560, 60, ASSETS[i].name, 30, WHITE);
+            Txt(box.transform, "Author" + i, 640, ry, 330, 60, ASSETS[i].author, 26, GOLD);
+            L(Txt(box.transform, "Use" + i, 990, ry, 270, 60, "", 24, GREY, TextAlignmentOptions.Right), S[ASSETS[i].use]);
+        }
+        L(Txt(box.transform, "Foot", 60, 680, bw - 120, 50, "", 24, GREY), S["assetsFoot"]);
+        popup.SetActive(false);
 
         foreach (var x in loc) x.t.text = x.en;
 
@@ -187,6 +209,7 @@ public static class PyriteSettingsUI
         st.textEn = loc.Select(x => x.en).ToArray();
         st.textKo = loc.Select(x => x.ko).ToArray();
         st.langEnBg = iEn; st.langKoBg = iKo; st.lang = 0;
+        st.assetsPopup = popup;
         UdonSharpEditorUtility.CopyProxyToUdon(st); EditorUtility.SetDirty(st);
         ub.interactText = "Settings"; EditorUtility.SetDirty(ub);
         iEn.color = st.langOn; iKo.color = st.langOff;
@@ -247,7 +270,7 @@ public static class PyriteSettingsUI
     // ── 문구 ──
     static Dictionary<string, (string en, string ko)> Strings() => new Dictionary<string, (string, string)>
     {
-        ["title"] = ("PYRITE HOME", "파이라이트 홈"),
+        ["title"] = ("PYRITE LAKE", "파이라이트 호수"),
         ["subtitle"] = ("Settings", "설정"),
         ["time"] = ("TIME", "시간"),
         ["auto"] = ("Auto flow", "자동 흐름"),
@@ -256,11 +279,10 @@ public static class PyriteSettingsUI
         ["bright"] = ("Brightness", "밝기"),
         ["darker"] = ("Darker", "어둡게"),
         ["brighter"] = ("Brighter", "밝게"),
-        ["bloom"] = ("Bloom", "빛 번짐"),
+        ["bloom"] = ("Bloom", "블룸 효과"),
         ["refl"] = ("REFLECTIONS", "반사"),
         ["lake"] = ("Lake reflection", "호수 반사"),
         ["campMirror"] = ("Camp mirror", "캠프 거울"),
-        ["reflNote"] = ("Mirrors are only visible to you\nand cost a lot of performance.", "거울은 나에게만 보이며\n성능 부담이 큽니다."),
         ["sound"] = ("SOUND", "소리"),
         ["nature"] = ("Nature sounds", "자연 소리"),
         ["soundNote"] = ("Campfire · lake · crickets", "모닥불 · 호수 · 풀벌레"),
@@ -270,12 +292,34 @@ public static class PyriteSettingsUI
         ["shadows"] = ("Sun shadows", "햇빛 그림자"),
         ["perfNote"] = ("Turn these off if your frame rate drops.", "프레임이 떨어지면 꺼 보세요."),
         ["about"] = ("ABOUT", "정보"),
-        ["world"] = ("Pyrite Home", "파이라이트 홈"),
-        ["aboutBody"] = ("A quiet camp in a pyrite basin by the lake.\nEverything here applies only to you,\nexcept the time of day.", "호숫가 황철석 분지의 조용한 캠프입니다.\n시간을 제외한 설정은\n나에게만 적용됩니다."),
+        ["world"] = ("Pyrite Lake", "파이라이트 호수"),
+        ["aboutBody"] = ("Pyrite, lake, and basalt columns.\nA lakeside camp in a basin of columnar\ncliffs, with nemophila fields and\nfireflies drifting around the crystals.", "황철석과 호수와 주상절리.\n기둥 절벽에 둘러싸인 호숫가 캠프,\n네모필라 꽃밭과\n결정 곁을 떠도는 반딧불이."),
+        ["assets"] = ("Used assets", "사용한 에셋"),
+        ["assetsTitle"] = ("USED ASSETS", "사용한 에셋"),
+        ["aFlowers"] = ("Flowers & grass", "꽃 · 풀"),
+        ["aCamp"] = ("Camp props & campfire", "캠프 소품 · 모닥불"),
+        ["aWater"] = ("Lake water", "호수 물"),
+        ["aSky"] = ("Sky", "하늘"),
+        ["aTV"] = ("Video player", "영상 플레이어"),
+        ["aFont"] = ("Font", "글꼴"),
+        ["aCode"] = ("Scripting", "스크립트"),
+        ["assetsFoot"] = ("Terrain, crystals, dock, and shaders by Pyrite9.", "지형 · 결정 · 부두 · 셰이더는 Pyrite9 가 직접 만들었습니다."),
         ["credit"] = ("Made by Pyrite9", "제작 Pyrite9"),
     };
 
     static void L(TextMeshProUGUI t, (string en, string ko) s) { loc.Add((t, s.en, s.ko)); }
+
+    // 사용한 에셋: (이름, 제작자, 용도 키)
+    static readonly (string name, string author, string use)[] ASSETS =
+    {
+        ("FlowersGrassland", "©つきのすとあ", "aFlowers"),
+        ("キャンプ＆焚火", "のあがみ", "aCamp"),
+        ("水面シェーダー", "サカナ", "aWater"),
+        ("Sorafield Atmosphere Sky", "Sorafield", "aSky"),
+        ("ProTV", "ArchiTech", "aTV"),
+        ("Noto Sans KR", "Google Fonts · OFL", "aFont"),
+        ("UdonSharp · VRChat SDK", "Merlin · VRChat", "aCode"),
+    };
 
     // ── 글꼴 ──
     static TMP_FontAsset BuildFont(Dictionary<string, (string en, string ko)> S, StringBuilder sb)
@@ -286,6 +330,7 @@ public static class PyriteSettingsUI
         for (int c = 32; c < 127; c++) set.Add((char)c);
         foreach (var kv in S) { foreach (var c in kv.Value.en) set.Add(c); foreach (var c in kv.Value.ko) set.Add(c); }
         foreach (var c in "×·%:0123456789") set.Add(c);
+        foreach (var a in ASSETS) { foreach (var c in a.name) set.Add(c); foreach (var c in a.author) set.Add(c); }
         set.Remove('\n');
         var chars = new string(set.OrderBy(c => c).ToArray());
 
@@ -471,8 +516,14 @@ public static class PyriteSettingsUI
                 string tag = string.Format("{0:00}_{1}", (int)h, lang == 1 ? "ko" : "en");
                 Shot(cam, stand, panel.position, 60f, "Assets/_preview/projector/ui_" + tag + "_table.png");
                 Shot(cam, near, panel.position, 40f, "Assets/_preview/projector/ui_" + tag + "_panel.png");
+                if (h > 20f && st != null && st.assetsPopup != null)
+                {
+                    st.assetsPopup.SetActive(true);
+                    Shot(cam, near, panel.position, 40f, "Assets/_preview/projector/ui_" + tag + "_assets.png");
+                    st.assetsPopup.SetActive(false);
+                }
             }
-            sb.AppendLine("  shots ui_{21_en,21_ko,12_en}_{table,panel}");
+            sb.AppendLine("  shots ui_{21_en,21_ko,12_en}_{table,panel} + ui_21_{en,ko}_assets");
         }
         finally
         {

@@ -54,6 +54,9 @@ public class PyriteSettings : UdonSharpBehaviour
     public Color langOff = new Color(1f, 1f, 1f, 0.08f);
     public int lang = 0;                  // 0 EN, 1 KO
 
+    [Header("사용한 에셋 팝업")]
+    public GameObject assetsPopup;        // 메인이 닫히면 같이 닫힌다 (OnDisable)
+
     private bool updating = false;
     private bool inited = false;
     private float lastUserTime = -10f;
@@ -62,7 +65,9 @@ public class PyriteSettings : UdonSharpBehaviour
 
     void Start() { Init(); }
 
-    void OnEnable() { if (inited) Refresh(true); }
+    void OnEnable() { if (assetsPopup != null) assetsPopup.SetActive(false); if (inited) Refresh(true); }
+
+    void OnDisable() { if (assetsPopup != null) assetsPopup.SetActive(false); }
 
     private void Init()
     {
@@ -193,5 +198,12 @@ public class PyriteSettings : UdonSharpBehaviour
         if (langKoBg != null) langKoBg.color = lang == 1 ? langOn : langOff;
     }
 
-    public void Close() { if (projector != null) projector.TurnOff(); }
+    public void OpenAssets() { if (assetsPopup != null) assetsPopup.SetActive(true); }
+    public void CloseAssets() { if (assetsPopup != null) assetsPopup.SetActive(false); }
+
+    public void Close()
+    {
+        if (assetsPopup != null) assetsPopup.SetActive(false);
+        if (projector != null) projector.TurnOff();
+    }
 }
