@@ -179,6 +179,8 @@ public static class PyriteDayCycleSetup
         dusk.ppDay = 0f; dusk.ppNight = 0f;
         sunset.ppDay = 0f; sunset.ppNight = 0.2f;
         blue.ppDay = 0f; blue.ppNight = 0.6f;
+        // 낮 반사 세트(Z23a)가 있으면 아침 3 / 정오 4 / 오후 5
+        if (tod.probes != null && tod.probeCubes != null && tod.probeCubes.Length >= 6 * tod.probes.Length) { morning.cube = 3; noon.cube = 4; afternoon.cube = 5; }
         var keys = new List<K> { night, night.Clone("night", 4.3f, 1), predawn, dawn, morning, noon, afternoon, dusk, sunset, blue, night.Clone("night", 20.3f, 1) };
         keys = keys.OrderBy(k => k.hour).ToList();
         sb.AppendLine("keys: " + string.Join(" | ", keys.Select(k => string.Format("{0:00.00} {1} cube{2}", k.hour, k.name, k.cube))));
