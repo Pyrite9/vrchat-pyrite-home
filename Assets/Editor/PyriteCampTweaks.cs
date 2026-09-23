@@ -4,7 +4,7 @@
 //  3) 들고 다니는 접이식 의자 CarryChair: 타프 밑 (-11.2, 56.4), 모닥불 쪽을 본다
 //     루트 = Rigidbody(키네마틱) + VRCPickup + VRCObjectSync + PyriteCarryChair(놓으면 땅에 똑바로) + 등받이 콜라이더
 //     Seat  = Rigidbody(키네마틱, 픽업과 분리) + 앉는 면 콜라이더 + VRCStation + PyriteCarrySeat(앉은 동안 들기 금지)
-//     의자 메시는 ChairSeat_1 과 같은 camp04_chair_BRN, SeatPoint/ExitPoint 도 같은 로컬 위치. 레이어 Pickup(13) → 몸에 안 걸린다
+//     의자 메시는 ChairSeat_1 과 같은 camp04_chair_BRN. 등받이는 로컬 -Z → 앞(+Z)이 모닥불을 본다. 판정: 등받이 위쪽 = 들기, 앉는 면 = 앉기. 레이어 Pickup(13) → 몸에 안 걸린다
 //  렌더 21:00 전후 → Assets/_preview/camp/tweak_*.png
 #if UNITY_EDITOR
 using System.IO;
@@ -56,7 +56,7 @@ public static class PyriteCampTweaks
         var root = new GameObject("CarryChair");
         Undo.RegisterCreatedObjectUndo(root, "carry chair");
         root.layer = PICKUP_LAYER;
-        root.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-toFire, Vector3.up));   // 의자 앞 = 로컬 -Z (ExitPoint 가 -0.95)
+        root.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(toFire, Vector3.up));    // 실측(Z29a): 등받이가 로컬 -Z(z -0.25, y 0.55~0.67) → 앞 = +Z
         var mesh = Object.Instantiate(srcMesh.gameObject, root.transform);
         mesh.name = "Chair"; mesh.layer = PICKUP_LAYER;
         mesh.transform.localPosition = Vector3.zero; mesh.transform.localRotation = Quaternion.identity; mesh.transform.localScale = srcMesh.transform.localScale;
@@ -66,7 +66,7 @@ public static class PyriteCampTweaks
         sb.AppendLine("chair bounds size " + mb.size.ToString("F2") + " min y " + (mb.min.y - pos.y).ToString("0.00") + " max y " + (mb.max.y - pos.y).ToString("0.00"));
 
         var rb = root.AddComponent<Rigidbody>(); rb.isKinematic = true; rb.useGravity = false;
-        var back = root.AddComponent<BoxCollider>(); back.center = new Vector3(0f, 0.58f, 0.2f); back.size = new Vector3(0.56f, 0.42f, 0.14f);
+        var back = root.AddComponent<BoxCollider>(); back.center = new Vector3(0f, 0.57f, -0.225f); back.size = new Vector3(0.50f, 0.22f, 0.06f);   // 등받이 위쪽만
         var pk = root.AddComponent<VRCPickup>();
         pk.AutoHold = VRC.SDKBase.VRC_Pickup.AutoHoldMode.Yes; pk.orientation = VRC.SDKBase.VRC_Pickup.PickupOrientation.Any;
         pk.InteractionText = "Carry chair"; pk.proximity = 2f; pk.pickupable = true; pk.allowManipulationWhenEquipped = false;
@@ -75,11 +75,11 @@ public static class PyriteCampTweaks
         var seat = new GameObject("Seat"); seat.layer = PICKUP_LAYER;
         seat.transform.SetParent(root.transform, false);
         var srb = seat.AddComponent<Rigidbody>(); srb.isKinematic = true; srb.useGravity = false;
-        var sc = seat.AddComponent<BoxCollider>(); sc.center = new Vector3(0f, 0.36f, -0.06f); sc.size = new Vector3(0.52f, 0.14f, 0.46f);
+        var sc = seat.AddComponent<BoxCollider>(); sc.center = new Vector3(0f, 0.34f, 0.01f); sc.size = new Vector3(0.46f, 0.08f, 0.40f);        // 앉는 면만 (y 0.30~0.37)
         var st = seat.AddComponent<VRCStation>();
         EditorUtility.CopySerialized(srcStation, st);
         var seatPt = new GameObject("SeatPoint"); seatPt.transform.SetParent(root.transform, false); seatPt.transform.localPosition = new Vector3(0f, -0.10f, -0.06f);
-        var exitPt = new GameObject("ExitPoint"); exitPt.transform.SetParent(root.transform, false); exitPt.transform.localPosition = new Vector3(0f, 0.05f, -0.95f);
+        var exitPt = new GameObject("ExitPoint"); exitPt.transform.SetParent(root.transform, false); exitPt.transform.localPosition = new Vector3(0f, 0.05f, 0.65f);
         st.stationEnterPlayerLocation = seatPt.transform; st.stationExitPlayerLocation = exitPt.transform;
         EditorUtility.SetDirty(st);
 
