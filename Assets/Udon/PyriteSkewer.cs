@@ -2,6 +2,7 @@
 //  위치는 같은 오브젝트의 VRCObjectSync. 익은 정도·먹음은 자식 State(Manual 동기화)가 모두에게 맞춘다
 //  (VRCObjectSync 와 Manual 동기화 Udon 은 한 오브젝트에 같이 둘 수 없어서 자식으로 뺐다)
 //  놓을 때 꽂이(slots) 근처면 꽂이에 꽂히고, 아니면 떨어진다
+//  들고 있을 때 방향: 손 방향 대신 "머리 → 손" 쪽으로 꼬치를 뻗는다 (visual 피벗 = 손잡이). 드는 사람을 모두가 알므로 모두 같은 모양
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
@@ -20,6 +21,9 @@ public class PyriteSkewer : UdonSharpBehaviour
     public Transform[] slots;           // 꽂이 자리
     public Transform[] others;          // 다른 꼬치 (자리 점유 확인)
     public float snapRadius = 0.6f;
+    public Transform visual;            // 꼬치 몸체 (피벗 = 손잡이, +Z = 끝)
+
+    private VRCPickup pk;
 
     private bool held;
 
@@ -49,7 +53,9 @@ public class PyriteSkewer : UdonSharpBehaviour
             if (sync != null) { sync.SetGravity(false); sync.SetKinematic(true); sync.FlagDiscontinuity(); }
             return;
         }
-        if (sync != null) { sync.SetKinematic(false); sync.SetGravity(true); }
+        // 들고 있을 때 보이던 방향 그대로 떨어뜨린다
+        if (visual != null) transform.SetPositionAndRotation(Origin(), visual.rotation);
+        if (sync != null) { sync.SetKinematic(false); sync.SetGravity(true); sync.FlagDiscontinuity(); }
     }
 
     private void Update()
@@ -65,6 +71,20 @@ public class PyriteSkewer : UdonSharpBehaviour
         }
     }
 
+    public override void PostLateUpdate()
+    {
+        if (visual == null) return;
+        if (pk == null) pk = (VRCPickup)GetComponent(typeof(VRCPickup));
+        VRCPlayerApi p = (pk != null && pk.IsHeld) ? pk.currentPlayer : null;
+        if (!Utilities.IsValid(p)) { visual.localRotation = Quaternion.identity; return; }
+        Vector3 d = visual.position - p.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
+        if (d.sqrMagnitude < 1e-4f) return;
+        // 수평 방향은 머리→손, 기울기는 아래 35° ~ 위 10° 로 제한 (너무 아래로 처지면 불에 닿기 전에 땅을 찌른다)
+        float yaw = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
+        float down = Mathf.Atan2(-d.y, new Vector2(d.x, d.z).magnitude) * Mathf.Rad2Deg;
+        visual.rotation = Quaternion.Euler(Mathf.Clamp(down, -10f, 35f), yaw, 0f);
+    }
+
     private Transform FreeSlotNear()
     {
         if (slots == null) return null;
@@ -74,11 +94,17 @@ public class PyriteSkewer : UdonSharpBehaviour
         {
             Transform s = slots[i];
             if (s == null) continue;
-            float d = Vector3.Distance(transform.position, s.position);
+            float d = Vector3.Distance(Origin(), s.position);
             if (d > bestD || Occupied(s)) continue;
             best = s; bestD = d;
         }
         return best;
+    }
+
+    // 보이는 몸체 기준 원점 (들고 있을 땐 루트가 손 방향으로 돌아 있어 루트 위치와 다르다)
+    private Vector3 Origin()
+    {
+        return visual != null ? visual.TransformPoint(-visual.localPosition) : transform.position;
     }
 
     private bool Occupied(Transform s)

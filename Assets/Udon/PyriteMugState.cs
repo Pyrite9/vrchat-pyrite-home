@@ -1,4 +1,4 @@
-// 머그 속 음료 (머그의 자식) — fill 0~1 을 모두에게 맞춘다. 차 있으면 김이 난다
+// 머그 속 음료 (머그의 자식) — fill 0~1 을 모두에게 맞춘다. 한 모금 = 1/6, 차 있으면 김이 난다
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -10,7 +10,7 @@ public class PyriteMugState : UdonSharpBehaviour
     public Transform liquid;            // 음료 윗면 (원판)
     public float emptyY = 0.012f;
     public float fullY = 0.072f;
-    public float sip = 0.34f;
+    public float sip = 1f / 6f;       // 여섯 모금
     public ParticleSystem steam;
 
     private void Start() { Apply(); }

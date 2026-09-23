@@ -2,7 +2,8 @@
 //  캠프 소품 6종을 절차적 메시로 만들어 새 루트 CampProps 아래에 둔다 (유료 에셋 안 씀 → 저장소에 들어가도 된다)
 //   - 마시멜로 꼬치 3개 + 통나무 꽂이 : 테이블 왼쪽(+X, 의자에 앉아 불을 볼 때 왼쪽)
 //   - 나무 상자 + 캠핑 스토브 + 주전자 : 테이블 오른쪽(-X) 바로 옆, 주전자는 스토브 위
-//   - 법랑 머그 2개 : 테이블 가운데 의자 쪽 (프로젝터 둘은 불 쪽 절반에 있다)
+//   - 법랑 머그 2개 : 테이블 가운데 의자 쪽 (프로젝터 둘은 불 쪽 절반에 있다), 여섯 모금
+//  들었을 때 방향: 손 방향 대신 스크립트가 Visual(피벗 = 손잡이)을 세운다 — 랜턴과 같은 방식
 //   - 망원경 : 화로 오른쪽(-X) 3 m
 //   - 돗자리 : 타프 밑, 야전침대 앞 (Z31a 실측: 침대와 겹치지 않게)
 //   - 테이블 콜라이더 (camp03_table 에는 콜라이더가 없어 떨어뜨린 머그가 바닥까지 빠진다)
@@ -155,9 +156,11 @@ public static class PyriteCampProps
             go.layer = PICKUP_LAYER;
             go.transform.SetParent(root.transform, false);
             go.transform.SetPositionAndRotation(slots[i].position, slots[i].rotation);
-            var vis = new GameObject("Mesh"); vis.transform.SetParent(go.transform, false);
+            // 손 방향과 무관하게 꼬치 방향을 스크립트가 정한다 → 피벗 = 손잡이(Grip)
+            var sVis = new GameObject("Visual").transform; sVis.SetParent(go.transform, false); sVis.localPosition = new Vector3(0, 0, 0.07f);
+            var vis = new GameObject("Mesh"); vis.transform.SetParent(sVis, false); vis.transform.localPosition = new Vector3(0, 0, -0.07f);
             vis.AddComponent<MeshFilter>().sharedMesh = skewerMesh; vis.AddComponent<MeshRenderer>().sharedMaterials = skewerMats;
-            var marsh = new GameObject("Marshmallow"); marsh.transform.SetParent(go.transform, false);
+            var marsh = new GameObject("Marshmallow"); marsh.transform.SetParent(vis.transform, false);
             marsh.transform.localPosition = new Vector3(0, 0, 0.705f); marsh.transform.localRotation = Quaternion.Euler(90, 0, 0);
             marsh.AddComponent<MeshFilter>().sharedMesh = marshMesh;
             var mr = marsh.AddComponent<MeshRenderer>(); mr.sharedMaterial = mMarsh;
@@ -171,7 +174,7 @@ public static class PyriteCampProps
             var ss = UdonSharpUndo.AddComponent<PyriteSkewerState>(st);
             ss.marsh = mr;
             UdonSharpEditorUtility.CopyProxyToUdon(ss);
-            sk.state = ss; sk.tip = marsh.transform; sk.fire = fire; sk.slots = slots;
+            sk.state = ss; sk.tip = marsh.transform; sk.fire = fire; sk.slots = slots; sk.visual = sVis;
             skewers[i] = go.transform; skewerScripts[i] = sk;
         }
         foreach (var sk in skewerScripts) { sk.others = skewers; UdonSharpEditorUtility.CopyProxyToUdon(sk); EditorUtility.SetDirty(sk); }
@@ -232,7 +235,10 @@ public static class PyriteCampProps
             go.layer = PICKUP_LAYER;
             go.transform.SetParent(root.transform, false);
             go.transform.SetPositionAndRotation(new Vector3(MUGS[i].x, T_TOP, MUGS[i].z), Quaternion.Euler(0, MUG_YAW[i], 0));
-            var vis = new GameObject("Visual").transform; vis.SetParent(go.transform, false);
+            // 피벗 = 손잡이(Grip). Body 는 잔 바닥 기준 → 스크립트가 Visual 을 세워도 손잡이는 손에 남는다
+            var gripPos = new Vector3(0.068f, 0.048f, 0);
+            var pivot = new GameObject("Visual").transform; pivot.SetParent(go.transform, false); pivot.localPosition = gripPos;
+            var vis = new GameObject("Body").transform; vis.SetParent(pivot, false); vis.localPosition = -gripPos;
             var enamel = i == 0 ? mNavy : mCream;
             var meshGo = new GameObject("Mesh"); meshGo.transform.SetParent(vis, false);
             MeshOn(meshGo, "Mug_" + i, new List<Part> {
@@ -252,9 +258,9 @@ public static class PyriteCampProps
             var mg = UdonSharpUndo.AddComponent<PyriteMug>(go);
             var st = new GameObject("State"); st.transform.SetParent(go.transform, false);
             var ms = UdonSharpUndo.AddComponent<PyriteMugState>(st);
-            ms.liquid = liq.transform; ms.steam = steam; ms.emptyY = 0.012f; ms.fullY = 0.072f;
+            ms.liquid = liq.transform; ms.steam = steam; ms.emptyY = 0.012f; ms.fullY = 0.072f; ms.sip = 1f / 6f;   // 여섯 모금
             UdonSharpEditorUtility.CopyProxyToUdon(ms); EditorUtility.SetDirty(ms);
-            mg.state = ms; mg.visual = vis;
+            mg.state = ms; mg.visual = pivot;
             UdonSharpEditorUtility.CopyProxyToUdon(mg); EditorUtility.SetDirty(mg);
             mugRoots[i] = go.transform; mugStates[i] = ms;
         }
@@ -425,6 +431,37 @@ public static class PyriteCampProps
                     cam.fieldOfView = s.fov;
                     cam.transform.SetPositionAndRotation(s.eye, Quaternion.LookRotation(s.at - s.eye));
                     Shot(cam, string.Format("Assets/_preview/props/props_{0}_{1:00}.png", s.n, h), 1280, 720);
+                }
+            }
+            // 들고 있는 모습 흉내: 루트를 손처럼 아무렇게나 돌리고(Euler 60,40,120), Udon 과 같은 식으로 Visual 을 세운다
+            {
+                if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(13f); }
+                var head = new Vector3(-10.0f, 3.35f, 54.4f);
+                var look = Quaternion.Euler(28f, 180f, 0f);                   // 불 쪽(-Z)을 28° 내려다봄
+                var hand = new[] { new Vector3(0.22f, -0.32f, 0.42f), new Vector3(0.18f, -0.30f, 0.45f), new Vector3(0.16f, -0.28f, 0.36f) };
+                var names = new[] { "Skewer_0", "Kettle", "Mug_0" };
+                var q = Quaternion.Euler(60f, 40f, 120f);
+                for (int k = 0; k < 3; k++)
+                {
+                    var r = root.transform.Find(names[k]); if (r == null) continue;
+                    var vis = r.Find("Visual"); if (vis == null) continue;
+                    var p1 = r.position; var q1 = r.rotation;
+                    var target = head + look * hand[k];
+                    r.SetPositionAndRotation(target - q * vis.localPosition, q);
+                    if (k == 0)
+                    {
+                        var d = vis.position - head;
+                        float down = Mathf.Atan2(-d.y, new Vector2(d.x, d.z).magnitude) * Mathf.Rad2Deg;
+                        vis.rotation = Quaternion.Euler(Mathf.Clamp(down, -10f, 35f), Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg, 0f);
+                    }
+                    else { var f = look * Vector3.forward; vis.rotation = Quaternion.Euler(0f, Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg, 0f); }
+                    // 옆에서 본다 (머리 위치엔 대역 구체를 두지 않는다 — 손 쪽만 보면 된다)
+                    var side = look * new Vector3(0.9f, 0.25f, 0.35f);
+                    cam.fieldOfView = 45f;
+                    cam.transform.SetPositionAndRotation(target + side, Quaternion.LookRotation(-side + look * new Vector3(0f, 0f, 0.15f)));
+                    Shot(cam, "Assets/_preview/props/props_held_" + k + ".png", 960, 540);
+                    sb.AppendLine(string.Format("  held {0}: grip→target err {1:F4} m, visual up·Y {2:F2}", names[k], Vector3.Distance(vis.position, target), Vector3.Dot(vis.up, Vector3.up)));
+                    r.SetPositionAndRotation(p1, q1); vis.localRotation = Quaternion.identity;
                 }
             }
             // 망원경 속 (기본 방향: 호수, 18° 위)

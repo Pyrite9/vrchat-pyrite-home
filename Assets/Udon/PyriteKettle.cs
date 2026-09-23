@@ -1,6 +1,7 @@
 // 주전자 — 스토브 위에 있으면 잠시 뒤 김이 난다(모두 같은 위치를 보므로 각자 계산).
 //  든 채 좌클릭(사용): 스토브 근처면 스토브에 올려놓고, 머그 위면 따른다(머그 채움은 머그 State 가 동기화)
 //  우클릭(놓기): 스토브 근처면 스토브에, 아니면 똑바로 세워 떨어뜨린다
+//  들고 있을 때 방향: 손 방향 대신 똑바로 세우고 주둥이를 드는 사람 시선 쪽으로 (visual 피벗 = 손잡이) — 랜턴과 같은 방식
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
@@ -18,12 +19,14 @@ public class PyriteKettle : UdonSharpBehaviour
     public float pourRadius = 0.35f;        // 주둥이 ↔ 머그 수평 거리
     public ParticleSystem steam;
     public float heatUp = 4f;               // 올려놓고 김이 나기까지 (초)
-    public Transform visual;                // 기울일 몸체 (피벗 = 손잡이)
+    public Transform visual;                // 몸체 (피벗 = 손잡이, +Z = 주둥이)
     public Transform stream;                // 따르는 물줄기 (피벗 = 위 끝, -Y 로 뻗음)
 
     private float heat;
     private float pourT = -1f;
+    private float tilt;
     private bool placeNext;
+    private VRCPickup pk;
 
     private void Update()
     {
@@ -35,24 +38,34 @@ public class PyriteKettle : UdonSharpBehaviour
             if (steamOn && !steam.isPlaying) steam.Play();
             else if (!steamOn && steam.isPlaying) steam.Stop();
         }
-
+        tilt = 0f;
         if (pourT >= 0f)
         {
             pourT += Time.deltaTime;
             float a = pourT < 0.3f ? pourT / 0.3f : (pourT > 1.4f ? Mathf.Max(0f, 1f - (pourT - 1.4f) / 0.3f) : 1f);
-            if (visual != null) visual.localRotation = Quaternion.Euler(a * 50f, 0f, 0f);
-            if (stream != null)
+            tilt = a * 50f;
+            if (pourT > 1.7f) { pourT = -1f; tilt = 0f; }
+        }
+    }
+
+    public override void PostLateUpdate()
+    {
+        if (visual != null)
+        {
+            if (pk == null) pk = (VRCPickup)GetComponent(typeof(VRCPickup));
+            VRCPlayerApi p = (pk != null && pk.IsHeld) ? pk.currentPlayer : null;
+            if (Utilities.IsValid(p))
             {
-                bool s = a > 0.85f;
-                if (stream.gameObject.activeSelf != s) stream.gameObject.SetActive(s);
-                if (s && spout != null) stream.SetPositionAndRotation(spout.position, Quaternion.identity);
+                Vector3 f = p.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).rotation * Vector3.forward;
+                visual.rotation = Quaternion.Euler(0f, Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg, 0f) * Quaternion.Euler(tilt, 0f, 0f);
             }
-            if (pourT > 1.7f)
-            {
-                pourT = -1f;
-                if (visual != null) visual.localRotation = Quaternion.identity;
-                if (stream != null) stream.gameObject.SetActive(false);
-            }
+            else visual.localRotation = Quaternion.Euler(tilt, 0f, 0f);
+        }
+        if (stream != null)
+        {
+            bool s = tilt > 42f;
+            if (stream.gameObject.activeSelf != s) stream.gameObject.SetActive(s);
+            if (s && spout != null) stream.SetPositionAndRotation(spout.position, Quaternion.identity);
         }
     }
 
@@ -63,7 +76,7 @@ public class PyriteKettle : UdonSharpBehaviour
         if (NearStove())
         {
             placeNext = true;
-            VRCPickup pk = (VRCPickup)GetComponent(typeof(VRCPickup));
+            if (pk == null) pk = (VRCPickup)GetComponent(typeof(VRCPickup));
             if (pk != null) pk.Drop();
             return;
         }
@@ -79,7 +92,7 @@ public class PyriteKettle : UdonSharpBehaviour
 
     public override void OnDrop()
     {
-        if (pourT >= 0f) { pourT = -1f; if (visual != null) visual.localRotation = Quaternion.identity; if (stream != null) stream.gameObject.SetActive(false); }
+        pourT = -1f; tilt = 0f;
         if (!Networking.IsOwner(gameObject)) return;
         VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         bool toStove = placeNext || NearStove();
@@ -90,16 +103,24 @@ public class PyriteKettle : UdonSharpBehaviour
             if (sync != null) { sync.SetGravity(false); sync.SetKinematic(true); sync.FlagDiscontinuity(); }
             return;
         }
-        transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+        // 들고 있을 때 보이던 모양(똑바로, 시선 쪽) 그대로 내려놓는다
+        float yaw = visual != null ? visual.eulerAngles.y : transform.eulerAngles.y;
+        transform.SetPositionAndRotation(Origin(), Quaternion.Euler(0f, yaw, 0f));
         if (sync != null) { sync.SetKinematic(false); sync.SetGravity(true); sync.FlagDiscontinuity(); }
     }
 
     private bool NearStove()
     {
         if (stoveSlot == null) return false;
-        Vector3 d = transform.position - stoveSlot.position;
+        Vector3 d = Origin() - stoveSlot.position;
         float dy = d.y; d.y = 0f;
         return d.magnitude < stoveRadius && dy > -0.2f && dy < stoveHeight;
+    }
+
+    // 보이는 몸체 기준 원점 (들고 있을 땐 루트가 손 방향으로 돌아 있어 루트 위치와 다르다)
+    private Vector3 Origin()
+    {
+        return visual != null ? visual.TransformPoint(-visual.localPosition) : transform.position;
     }
 
     private int NearestMug()
