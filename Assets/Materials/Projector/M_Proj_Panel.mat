@@ -25,7 +25,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Aspect: 1.7777779
+    - _Aspect: 1.7777778
     - _BorderW: 0.012
     - _Fade: 1
     - _Inner: 0.035

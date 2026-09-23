@@ -1,7 +1,7 @@
 // Tools ▸ Pyrite ▸ Z24b. Build Settings Projector  /  Z24c. Revert
 //  테이블 위 미니 빔 프로젝터 → 누르면 빛줄기 + 호수 쪽 공중 패널 (로컬 토글, 기본 꺼짐). 1단계: 외형만 (UI 기능은 다음 단계)
 //   몸체 0.18×0.065×0.14 m (흑연 + 금 테 · 윗판 · 허리띠 · 통풍 슬릿 · 버튼 · 상태 LED), 테이블의 호수 쪽 가장자리, 방향 = 테이블 → 호수 중심 (yaw ≈171)
-//   패널 1.6×0.9 m, 렌즈 앞 3.2 m, 중심 높이 = 테이블 지면 + 1.55 m, 수직
+//   패널 3.0×1.69 m (16:9), 렌즈 앞 3.2 m, 중심 높이 = 테이블 지면 + 1.6 m, 수직 · 방향 = 호수 중심에서 왼쪽 10° (yaw ≈161)
 //   빛줄기 = 렌즈 사각형 → 패널 모서리 사각뿔 (Pyrite/ProjectorBeam), 렌즈 옆 작은 포인트 라이트
 //   TimeDial 은 끈다 (Z24c 가 되돌림). 재실행 안전: 기존 SettingsProjector 를 지우고 다시 만든다
 //  렌더 12:00 / 21:00 × (테이블 뒤, 옆, 근접) — 빛줄기·패널을 잠시 켜서 찍고 다시 끈다 → Assets/_preview/projector/*.png
@@ -20,7 +20,8 @@ public static class PyriteSettingsProjector
 {
     const string ROOT = "SettingsProjector";
     const string DIR = "Assets/Materials/Projector/";
-    const float PANEL_W = 1.6f, PANEL_H = 0.9f, THROW = 3.2f, PANEL_Y = 1.55f;
+    const float PANEL_W = 3.0f, PANEL_H = 1.6875f, THROW = 3.2f, PANEL_Y = 1.6f;
+    const float YAW_OFFSET = -10f;   // 관리자: 빔을 왼쪽으로 10° (테이블에서 호수를 볼 때 왼쪽 = yaw 감소)
     static readonly Vector3 BODY = new Vector3(0.18f, 0.065f, 0.14f);
     const float FOOT = 0.01f;
 
@@ -38,7 +39,7 @@ public static class PyriteSettingsProjector
 
         var terr = Terrain.activeTerrain;
         var tb = table.GetComponentsInChildren<Renderer>().Select(r => r.bounds).Aggregate((a, c) => { a.Encapsulate(c); return a; });
-        var dir = new Vector3(0f - tb.center.x, 0f, -14f - tb.center.z).normalized;
+        var dir = Quaternion.Euler(0f, YAW_OFFSET, 0f) * new Vector3(0f - tb.center.x, 0f, -14f - tb.center.z).normalized;
         // 테이블 중심에서 dir 로 상자 가장자리까지 거리
         float tEdge = Mathf.Min(Mathf.Abs(dir.x) > 1e-4f ? tb.extents.x / Mathf.Abs(dir.x) : 99f, Mathf.Abs(dir.z) > 1e-4f ? tb.extents.z / Mathf.Abs(dir.z) : 99f);
         var foot = tb.center + dir * Mathf.Max(0f, tEdge - 0.13f);
