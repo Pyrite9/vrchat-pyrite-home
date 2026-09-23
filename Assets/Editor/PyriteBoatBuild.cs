@@ -67,6 +67,35 @@ public static class PyriteBoatBuild
         foreach (var t in boat.GetComponentsInChildren<Transform>(true)) GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
         var hull = boat.GetComponentsInChildren<MeshFilter>(true).First(f => f.sharedMesh != null && f.sharedMesh.name == "WoodBoat");
         var mc = hull.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = hull.sharedMesh;
+
+        // 물 가림막: 물결·파문이 배 안쪽 바닥(+0.04)을 넘어 올라와 배 안에 물이 보였다 → 뱃전 높이 평면에 깊이만 쓴다
+        var hv = hull.sharedMesh.vertices;
+        float rimY = hv.Max(v => v.y);
+        var rim = hv.Where(v => v.y > rimY - 0.10f).Select(v => new Vector2(v.x, v.z)).ToList();
+        var outline = ConvexHull(rim);
+        var ctr = outline.Aggregate(Vector2.zero, (acc, v) => acc + v) / outline.Count;
+        var mv = new List<Vector3> { new Vector3(ctr.x, rimY - 0.04f, ctr.y) };
+        foreach (var p in outline) { var q = ctr + (p - ctr) * 0.96f; mv.Add(new Vector3(q.x, rimY - 0.04f, q.y)); }
+        var mt = new List<int>();
+        for (int i = 0; i < outline.Count; i++) { mt.Add(0); mt.Add(1 + i); mt.Add(1 + (i + 1) % outline.Count); }
+        var maskMesh = new Mesh { name = "BoatWaterMask", vertices = mv.ToArray(), triangles = mt.ToArray() };
+        maskMesh.RecalculateBounds(); maskMesh.RecalculateNormals();
+        const string MASK_MESH = "Assets/Materials/BoatWaterMask.asset", MASK_MAT = "Assets/Materials/M_BoatWaterMask.mat";
+        if (AssetDatabase.LoadAssetAtPath<Mesh>(MASK_MESH) != null) AssetDatabase.DeleteAsset(MASK_MESH);
+        AssetDatabase.CreateAsset(maskMesh, MASK_MESH);
+        var maskMat = AssetDatabase.LoadAssetAtPath<Material>(MASK_MAT);
+        if (maskMat == null) { maskMat = new Material(Shader.Find("Pyrite/DepthMask")); AssetDatabase.CreateAsset(maskMat, MASK_MAT); }
+        maskMat.shader = Shader.Find("Pyrite/DepthMask");
+        var mask = new GameObject("WaterMask"); mask.transform.SetParent(hull.transform, false);
+        mask.AddComponent<MeshFilter>().sharedMesh = maskMesh;
+        var mrm = mask.AddComponent<MeshRenderer>(); mrm.sharedMaterial = maskMat;
+        mrm.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; mrm.receiveShadows = false;
+        mrm.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off; mrm.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+        GameObjectUtility.SetStaticEditorFlags(mask, 0);
+        var waterQ = Object.FindObjectsOfType<Renderer>(true).Where(r => r.gameObject.layer == 4 || r.name.ToLower().Contains("water") || r.name.ToLower().Contains("lake"))
+            .SelectMany(r => r.sharedMaterials.Where(x => x != null).Select(x => r.name + ":" + x.name + " q" + x.renderQueue)).Distinct();
+        sb.AppendLine(string.Format("water mask: rim y {0:0.00} → plane {1:0.00} (world {2:0.00}), outline {3} pts, mask q {4} | water: {5}",
+            rimY, rimY - 0.04f, hull.transform.TransformPoint(new Vector3(0, rimY - 0.04f, 0)).y, outline.Count, maskMat.renderQueue, string.Join(", ", waterQ)));
         Physics.SyncTransforms();
 
         // 앉는 높이: 중심선 레이캐스트 (선체 콜라이더만)
@@ -184,6 +213,19 @@ public static class PyriteBoatBuild
         File.WriteAllBytes(path, tx.EncodeToPNG());
         cam.targetTexture = null;
         Object.DestroyImmediate(tx); rt.Release(); Object.DestroyImmediate(rt);
+    }
+
+    static List<Vector2> ConvexHull(List<Vector2> pts)
+    {
+        var p = pts.Distinct().OrderBy(v => v.x).ThenBy(v => v.y).ToList();
+        if (p.Count < 3) return p;
+        float Cross(Vector2 o, Vector2 a, Vector2 b2) => (a.x - o.x) * (b2.y - o.y) - (a.y - o.y) * (b2.x - o.x);
+        var h = new List<Vector2>();
+        foreach (var v in p) { while (h.Count >= 2 && Cross(h[h.Count - 2], h[h.Count - 1], v) <= 0) h.RemoveAt(h.Count - 1); h.Add(v); }
+        int lower = h.Count + 1;
+        for (int i = p.Count - 2; i >= 0; i--) { var v = p[i]; while (h.Count >= lower && Cross(h[h.Count - 2], h[h.Count - 1], v) <= 0) h.RemoveAt(h.Count - 1); h.Add(v); }
+        h.RemoveAt(h.Count - 1);
+        return h;
     }
 
     static void Flush(StringBuilder sb) { Directory.CreateDirectory("Logs"); File.AppendAllText("Logs/pyrite_boat.txt", sb.ToString()); }

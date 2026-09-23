@@ -185,7 +185,7 @@ public static class PyriteSettingsUI
         Img(box.transform, "Divider", 60, 124, bw - 120, 2, new Color(GOLD.r, GOLD.g, GOLD.b, 0.3f), null);
         for (int i = 0; i < ASSETS.Length; i++)
         {
-            float ry = 150f + i * 72f;
+            float ry = 146f + i * 64f;
             Txt(box.transform, "Name" + i, 60, ry, 560, 60, ASSETS[i].name, 30, WHITE);
             Txt(box.transform, "Author" + i, 640, ry, 330, 60, ASSETS[i].author, 26, GOLD);
             L(Txt(box.transform, "Use" + i, 990, ry, 270, 60, "", 24, GREY, TextAlignmentOptions.Right), S[ASSETS[i].use]);
@@ -320,6 +320,7 @@ public static class PyriteSettingsUI
         ["aFlowers"] = ("Flowers & grass", "꽃 · 풀"),
         ["aCamp"] = ("Camp props & campfire", "캠프 소품 · 모닥불"),
         ["aWater"] = ("Lake water", "호수 물"),
+        ["aBoat"] = ("Rowboat", "나룻배"),
         ["aSky"] = ("Sky", "하늘"),
         ["aTV"] = ("Video player", "영상 플레이어"),
         ["aFont"] = ("Font", "글꼴"),
@@ -336,6 +337,7 @@ public static class PyriteSettingsUI
         ("FlowersGrassland", "©つきのすとあ", "aFlowers"),
         ("キャンプ＆焚火", "のあがみ", "aCamp"),
         ("水面シェーダー", "サカナ", "aWater"),
+        ("木製ボート", "ootwn", "aBoat"),
         ("Sorafield Atmosphere Sky", "Sorafield", "aSky"),
         ("ProTV", "ArchiTech", "aTV"),
         ("Noto Sans KR", "Google Fonts · OFL", "aFont"),
@@ -345,6 +347,9 @@ public static class PyriteSettingsUI
     // ── 글꼴 ──
     static TMP_FontAsset BuildFont(Dictionary<string, (string en, string ko)> S, StringBuilder sb)
     {
+        // TTF 를 에디터가 켜진 채 교체하면 FreeType 이 옛 파일 핸들로 새 바이트를 읽어 글리프가 깨진다 → 강제 재임포트 + 네이티브 face 캐시 비우기
+        AssetDatabase.ImportAsset(TTF, ImportAssetOptions.ForceUpdate);
+        UnityEngine.TextCore.LowLevel.FontEngine.UnloadAllFontFaces();
         var src = AssetDatabase.LoadAssetAtPath<Font>(TTF);
         if (src == null) { sb.AppendLine("글꼴 없음: " + TTF); return null; }
         var set = new HashSet<char>();
