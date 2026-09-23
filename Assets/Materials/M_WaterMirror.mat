@@ -47,14 +47,14 @@ Material:
     - _FresnelPower: 3
     - _Lift: 0.003
     - _MirrorStrength: 0.9
-    - _NormalScale: 0.35
+    - _NormalScale: 0.06
     - _RippleDistort: 0.2
     - _RippleFar: 90
     - _ShoreAlpha: 0.25
     - _ShoreFade: 0.6
     - _SwellFade: 0.6
     - _WaveHeight: 1
-    - _WaveNormal: 1.8
+    - _WaveNormal: 1
     - _WaveSpeed: 0.4
     - _WaveTime: 0.55
     m_Colors: []

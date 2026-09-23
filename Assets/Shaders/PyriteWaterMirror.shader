@@ -25,7 +25,7 @@ Shader "Pyrite/WaterMirror"
         _RippleFar("Ripple Far Fade (m)", Float) = 90
         _WaveHeight("Swell Height (x)", Float) = 1
         _WaveTime("Swell Speed (x)", Float) = 0.55
-        _WaveNormal("Swell Slope Boost", Float) = 1.8
+        _WaveNormal("Swell Slope Boost", Float) = 1.0
         _DepthMax("Depth Max (m)", Float) = 4
         _ShoreFade("Shore Fade (m)", Float) = 0.6
         _ShoreAlpha("Shore Alpha Fade (m)", Float) = 0.25

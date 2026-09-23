@@ -81,7 +81,7 @@ Material:
     - _GlossyReflections: 1
     - _Metallic: 0
     - _Mode: 0
-    - _NormalScale: 0.15
+    - _NormalScale: 0.06
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _RefractionStrength: 0.03
@@ -98,7 +98,7 @@ Material:
     - _WaveAmplitude: 0
     - _WaveFrequency: 15
     - _WaveHeight: 1
-    - _WaveNormal: 1.8
+    - _WaveNormal: 1
     - _WaveSpeed: 0.4
     - _WaveTime: 0.55
     - _ZWrite: 1
