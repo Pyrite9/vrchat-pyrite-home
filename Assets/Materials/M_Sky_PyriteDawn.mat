@@ -34,6 +34,6 @@ Material:
     - _MieG: 0.85
     - _MieStrength: 1.9
     - _SunAzimuth: 184
-    - _SunElevation: 0.045
+    - _SunElevation: 0.14
     m_Colors: []
   m_BuildTextureStacks: []

@@ -27,6 +27,10 @@ public static class PyriteViews
         new V{ n="lm2",        eye=new Vector3( 38.0f, 3.0f,  28.0f), look=new Vector3( 56.0f, 4.0f,  18.0f), fov=55f, eyeOnGround=true },
         // 물가 선 내려다보기
         new V{ n="shoreline",  eye=new Vector3(  2.0f, 3.5f, 44.0f), look=new Vector3( -6.0f, 0.0f,  30.0f), fov=60f, eyeOnGround=true },
+        // 호수 건너에서 캠프 쪽(+Z) 벽 — 안쪽 계단(Y7) 확인
+        new V{ n="north_wall", eye=new Vector3(  5.0f, 1.7f,-40.0f), look=new Vector3( -5.0f, 6.0f,  78.0f), fov=70f, eyeOnGround=true },
+        // 캠프 동쪽에서 서쪽(-X) 벽
+        new V{ n="west_wall",  eye=new Vector3( 25.0f, 1.7f, 45.0f), look=new Vector3(-78.0f, 5.0f,  20.0f), fov=65f, eyeOnGround=true },
     };
 
     [MenuItem("Tools/Pyrite/Y9. Capture Check Views", false, 299)]

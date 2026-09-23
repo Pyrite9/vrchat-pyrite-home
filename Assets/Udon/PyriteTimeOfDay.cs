@@ -3,7 +3,7 @@
 // 라이트맵은 한 번만 굽고 고정한다. LightmapSettings는 Udon에 노출돼 있지 않다(실측).
 // 그래서 "구워진 빛"은 못 바꾸고, 아래 것들만 바꾼다. 전부 Udon 노출 확인함.
 //   RenderSettings (skybox / ambient / fog / reflectionIntensity)
-//   Light.color·intensity        — 태양 방위는 고정. 돌리면 구워진 그림자와 어긋난다
+//   Light.color·intensity·방향   — 라이트맵은 간접광만 담으므로 방향을 돌려도 그림자는 실시간이 따라간다
 //   Renderer.sharedMaterial      — 절벽·물·꽃을 밤용 복사본으로 교체
 //   ParticleSystem.main          — 반딧불 색·수
 //   Material.SetFloat            — 수면 시머 강도
@@ -35,10 +35,15 @@ public class PyriteTimeOfDay : UdonSharpBehaviour
     public float[] fogDensity;
     public float[] reflIntensity;
 
-    [Header("태양 — 방위는 고정, 색·강도만")]
+    [Header("태양 — 색·강도 + 프리셋별 방향")]
     public Light sun;
     public Color[] sunColor;
     public float[] sunIntensity;
+    // 프리셋별 방향광 오일러각 (x = 고도, y = 방위-180). 보이는 해·달 쪽에서 빛이 오게 맞춘다.
+    // 라이트맵(간접광)은 노을(0) 각도로 굽는다. 실시간 직사광·그림자만 따라 돈다.
+    public Vector3[] sunEuler;
+    // 프리셋별 하늘 원반 (노을 해 / 달 / 새벽 해) — 해당 인덱스만 켠다. null 허용
+    public GameObject[] skyObjects;
 
     [Header("머티리얼 교체")]
     public Renderer[] cliffRenderers;
@@ -225,7 +230,12 @@ public class PyriteTimeOfDay : UdonSharpBehaviour
         {
             sun.color = sunColor[i];
             sun.intensity = sunIntensity[i];
+            if (sunEuler != null && i < sunEuler.Length)
+                sun.transform.rotation = Quaternion.Euler(sunEuler[i]);
         }
+        if (skyObjects != null)
+            for (int k = 0; k < skyObjects.Length; k++)
+                if (skyObjects[k] != null) skyObjects[k].SetActive(k == i);
 
         for (int k = 0; k < cliffRenderers.Length; k++)
             if (cliffRenderers[k] != null) cliffRenderers[k].sharedMaterial = cliffMat[i];
