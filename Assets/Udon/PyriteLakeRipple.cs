@@ -7,6 +7,7 @@ using VRC.SDKBase;
 //  · 60 Hz 고정 스텝(프레임률과 무관한 파속), 한 프레임 최대 4 스텝
 //  · 수면(y 0.05 = WaterWalk 윗면) ±band 안에서 수평 속도 0.2 m/s 이상인 사람만, 최대 8명
 //  · 시뮬레이션 텍스처는 전역 _UdonLakeRipple 로 — VRChat 거울이 머티리얼을 복제해도 반사가 파문을 따라간다
+//  AddDrop(x, z, amp): 물수제비 돌 등 바깥 물방울 (Z34b)
 //  화이트리스트: SetVectorArray / GetPlayers / GetVelocity / CRT.Update / VRCShader.SetGlobalTexture 확인됨 (T7, 2026-09-23)
 [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PyriteLakeRipple : UdonSharpBehaviour
@@ -24,6 +25,17 @@ public class PyriteLakeRipple : UdonSharpBehaviour
     private VRCPlayerApi[] players = new VRCPlayerApi[90];
     private Vector4[] drops = new Vector4[8];
     private float acc;
+    // 물수제비 돌 등 바깥에서 넣는 물방울 (최대 4개, 잠깐 유지)
+    private Vector4[] ext = new Vector4[4];
+    private float[] extT = new float[4];
+
+    public void AddDrop(float x, float z, float amp)
+    {
+        int best = 0; float bt = 999f;
+        for (int i = 0; i < 4; i++) if (extT[i] < bt) { bt = extT[i]; best = i; }
+        ext[best] = new Vector4(x, z, amp, dropRadius * 1.2f);
+        extT[best] = 0.07f;
+    }
 
     void Start()
     {
@@ -54,6 +66,12 @@ public class PyriteLakeRipple : UdonSharpBehaviour
             if (sp < 0.2f) continue;
             drops[c] = new Vector4(pos.x, pos.z, dropAmp * Mathf.Clamp01(sp / speedRef), dropRadius);
             c++;
+        }
+        for (int e = 0; e < 4 && c < 8; e++)
+        {
+            if (extT[e] <= 0f) continue;
+            drops[c] = ext[e]; c++;
+            extT[e] -= steps / stepHz;
         }
         for (int j = c; j < 8; j++) drops[j] = Vector4.zero;
         sim.SetVectorArray("_Drops", drops);
