@@ -185,7 +185,6 @@ public class PyriteSettings : UdonSharpBehaviour
     {
         if (updating || campMirrorToggle == null || campMirror == null) return;
         campMirror.SetOn(campMirrorToggle.isOn);
-        MarkDirty();
     }
 
     // ── 소리 ──
@@ -252,7 +251,7 @@ public class PyriteSettings : UdonSharpBehaviour
     }
 
     // ── 개인 설정 저장 (PlayerData) ──
-    private const string K_BRIGHT = "pl_bright", K_BLOOM = "pl_bloom", K_LAKE = "pl_lake", K_MIRROR = "pl_mirror", K_SOUND = "pl_sound",
+    private const string K_BRIGHT = "pl_bright", K_BLOOM = "pl_bloom", K_LAKE = "pl_lake", K_SOUND = "pl_sound",
         K_FLOWER = "pl_flowerDist", K_FIREFLY = "pl_fireflies", K_SUNSH = "pl_sunShadows", K_LIGHTSH = "pl_lightShadows", K_LANG = "pl_lang";
 
     private void MarkDirty()
@@ -268,7 +267,7 @@ public class PyriteSettings : UdonSharpBehaviour
         if (brightSlider != null) PlayerData.SetFloat(K_BRIGHT, brightSlider.value);
         if (bloomToggle != null) PlayerData.SetBool(K_BLOOM, bloomToggle.isOn);
         if (lakeToggle != null) PlayerData.SetBool(K_LAKE, lakeToggle.isOn);
-        if (campMirrorToggle != null) PlayerData.SetBool(K_MIRROR, campMirrorToggle.isOn);
+        // 거울은 저장 안 함 (관리자 2026-09-24: 입장하자마자 거울이 켜지면 무겁다)
         if (soundSlider != null) PlayerData.SetFloat(K_SOUND, soundSlider.value);
         if (flowerDistSlider != null) PlayerData.SetFloat(K_FLOWER, flowerDistSlider.value);
         if (firefliesToggle != null) PlayerData.SetBool(K_FIREFLY, firefliesToggle.isOn);
@@ -285,7 +284,6 @@ public class PyriteSettings : UdonSharpBehaviour
         if (brightSlider != null && PlayerData.HasKey(player, K_BRIGHT)) { updating = true; brightSlider.value = PlayerData.GetFloat(player, K_BRIGHT); updating = false; OnBright(); }
         if (bloomToggle != null && PlayerData.HasKey(player, K_BLOOM)) { updating = true; bloomToggle.isOn = PlayerData.GetBool(player, K_BLOOM); updating = false; OnBloom(); }
         if (lakeToggle != null && PlayerData.HasKey(player, K_LAKE)) { updating = true; lakeToggle.isOn = PlayerData.GetBool(player, K_LAKE); updating = false; OnLake(); }
-        if (campMirrorToggle != null && PlayerData.HasKey(player, K_MIRROR)) { updating = true; campMirrorToggle.isOn = PlayerData.GetBool(player, K_MIRROR); updating = false; OnCampMirror(); }
         if (soundSlider != null && PlayerData.HasKey(player, K_SOUND)) { updating = true; soundSlider.value = PlayerData.GetFloat(player, K_SOUND); updating = false; OnSound(); }
         if (flowerDistSlider != null && PlayerData.HasKey(player, K_FLOWER)) { updating = true; flowerDistSlider.value = PlayerData.GetFloat(player, K_FLOWER); updating = false; OnFlowerDist(); }
         if (firefliesToggle != null && PlayerData.HasKey(player, K_FIREFLY)) { updating = true; firefliesToggle.isOn = PlayerData.GetBool(player, K_FIREFLY); updating = false; OnFireflies(); }
