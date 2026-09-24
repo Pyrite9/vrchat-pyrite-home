@@ -1,4 +1,6 @@
-// 물수제비 돌 — 부두 끝 쟁반에서 집어 던진다 (데스크톱: 우클릭 길게 = 던지기)
+// 물수제비 돌 — 부두 끝 쟁반에서 집어 던진다
+//  데스크톱 (2026-09-24): 클릭 = 집기(AutoHold), 우클릭 = 놓기(VRChat 기본), 좌클릭 꾹 → 떼면 던지기. 오래 누를수록 세게, 시선 방향으로 낮게
+//  VR 은 손으로 던진다 (Use 무시)
 //  수면(WaterWalk 콜라이더)에 닿을 때: 수평 속도 minSpeed 이상 + 입사각 maxAngle 이하면 튀고(속도 82%), 아니면 가라앉는다(콜라이더 끔 → 2.5초 뒤 쟁반으로)
 //  물보라·물결 고리·호수 파문. 던진 사람(주인)은 충돌로, 다른 사람은 수면 통과로 물보라를 낸다
 //  멀리 놓인 채 30초 가만있으면 쟁반으로 돌아온다
@@ -21,10 +23,19 @@ public class PyriteSkipStone : UdonSharpBehaviour
     public int maxSkips = 12;
     public AudioSource splashAudio;       // 효과음 (2026-09-24) — 물보라 파티클과 같은 오브젝트, 모든 돌이 같이 쓴다
     public AudioClip splashClip;
+    public float throwMin = 7f;           // 짧게 누름 (m/s) — 대개 가라앉는다
+    public float throwMax = 17f;          // chargeTime 이상 누름
+    public float chargeTime = 0.9f;
+    public float releaseHeight = 0.8f;    // 발 위 — 사이드암 높이. 낮을수록 입사각이 얕아 잘 튄다
 
     private Rigidbody rb;
     private Collider col;
     private VRCObjectSync sync;
+    private VRCPickup pickup;
+    private bool charging;
+    private float chargeStart;
+    private Vector3 throwVel;
+    private int throwFrames;
     private int skips;
     private bool sinking, held;
     private float sinkT, idleT, prevY;
@@ -34,12 +45,49 @@ public class PyriteSkipStone : UdonSharpBehaviour
         rb = (Rigidbody)GetComponent(typeof(Rigidbody));
         col = (Collider)GetComponent(typeof(Collider));
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        pickup = (VRCPickup)GetComponent(typeof(VRCPickup));
         prevY = transform.position.y;
     }
 
     public override void OnPickup() { held = true; skips = 0; sinking = false; if (col != null) col.enabled = true; if (rb != null) rb.drag = 0.05f; }
 
-    public override void OnDrop() { held = false; skips = 0; idleT = 0f; }
+    public override void OnDrop() { held = false; skips = 0; idleT = 0f; charging = false; }
+
+    public override void OnPickupUseDown()
+    {
+        VRCPlayerApi lp = Networking.LocalPlayer;
+        if (!Utilities.IsValid(lp) || lp.IsUserInVR()) return;
+        charging = true; chargeStart = Time.time;
+    }
+
+    public override void OnPickupUseUp()
+    {
+        if (!charging) return;
+        charging = false;
+        VRCPlayerApi lp = Networking.LocalPlayer;
+        if (!Utilities.IsValid(lp) || pickup == null || rb == null) return;
+        float k = Mathf.Clamp01((Time.time - chargeStart) / chargeTime);
+        float sp = Mathf.Lerp(throwMin, throwMax, k);
+        Vector3 f = lp.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).rotation * Vector3.forward;
+        Vector3 flat = new Vector3(f.x, 0f, f.z);
+        if (flat.sqrMagnitude < 0.0001f) flat = lp.GetRotation() * Vector3.forward;
+        flat.Normalize();
+        float pitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(f.y, -1f, 1f)) * Mathf.Rad2Deg, -4f, 10f) * Mathf.Deg2Rad;   // 위를 봐도 10° 까지만
+        throwVel = flat * (sp * Mathf.Cos(pitch)) + Vector3.up * (sp * Mathf.Sin(pitch));
+        Vector3 p = lp.GetPosition() + flat * 0.45f + Vector3.Cross(Vector3.up, flat) * 0.25f + Vector3.up * releaseHeight;
+        pickup.Drop();
+        transform.position = p;
+        Launch();
+        if (sync != null) sync.FlagDiscontinuity();
+        throwFrames = 2;   // Drop 직후 VRChat 이 손 속도를 다시 넣을 수 있어 두 프레임 더 덮어쓴다
+    }
+
+    private void Launch()
+    {
+        rb.isKinematic = false; rb.useGravity = true;
+        rb.velocity = throwVel;
+        rb.angularVelocity = new Vector3(0f, 30f, 0f);
+    }
 
     private void OnCollisionEnter(Collision c)
     {
@@ -67,6 +115,7 @@ public class PyriteSkipStone : UdonSharpBehaviour
 
     private void Update()
     {
+        if (throwFrames > 0 && rb != null) { throwFrames--; Launch(); }
         float y = transform.position.y;
         if (!Networking.IsOwner(gameObject))
         {

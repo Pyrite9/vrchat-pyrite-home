@@ -30,9 +30,10 @@ public static class PyriteSfx
         if (ai == null) { sb.AppendLine("  !! 없음 " + p); return null; }
         ai.forceToMono = true; ai.loadInBackground = false;
         var st = ai.defaultSampleSettings; st.loadType = AudioClipLoadType.DecompressOnLoad; st.compressionFormat = AudioCompressionFormat.Vorbis; st.quality = 0.6f; st.sampleRateSetting = AudioSampleRateSetting.PreserveSampleRate;
+        st.preloadAudioData = true;   // 2026-09-24: 꺼져 있으면 빌드(VRChat)에서 PlayOneShot 이 무음 — 에디터는 항상 로드돼 있어 들림
         ai.defaultSampleSettings = st; ai.SaveAndReimport();
         var c = AssetDatabase.LoadAssetAtPath<AudioClip>(p);
-        sb.AppendLine(string.Format("  clip {0} {1:0.00}s", name, c != null ? c.length : 0f));
+        sb.AppendLine(string.Format("  clip {0} {1:0.00}s preload {2} load {3}", name, c != null ? c.length : 0f, ai.defaultSampleSettings.preloadAudioData, ai.defaultSampleSettings.loadType));
         return c;
     }
 
@@ -43,9 +44,10 @@ public static class PyriteSfx
         a.minDistance = 0.6f; a.maxDistance = maxDist; a.dopplerLevel = 0f; a.volume = 1f; a.clip = null;
         var sp = go.GetComponent<VRC.SDK3.Components.VRCSpatialAudioSource>(); if (sp == null) sp = go.AddComponent<VRC.SDK3.Components.VRCSpatialAudioSource>();
         var so = new SerializedObject(sp);
-        foreach (var (n, v) in new[] { ("Gain", 4f), ("Near", 0f), ("Far", maxDist) }) { var pr = so.FindProperty(n); if (pr != null) pr.floatValue = v; }
-        var e = so.FindProperty("EnableSpatialization"); if (e != null) e.boolValue = true;
-        var u = so.FindProperty("UseAudioSourceVolumeCurve"); if (u != null) u.boolValue = false;
+        // 2026-09-24: 인게임 무음 → 들리는 환경음(AMB_*)과 같은 설정으로. Spatialization 1 / VolumeCurve 0 이던 6개만 안 들렸다
+        foreach (var (n, v) in new[] { ("Gain", 0f), ("Near", 0f), ("Far", maxDist) }) { var pr = so.FindProperty(n); if (pr != null) pr.floatValue = v; }
+        var e = so.FindProperty("EnableSpatialization"); if (e != null) e.boolValue = false;
+        var u = so.FindProperty("UseAudioSourceVolumeCurve"); if (u != null) u.boolValue = true;
         so.ApplyModifiedPropertiesWithoutUndo();
         return a;
     }

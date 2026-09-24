@@ -22,9 +22,6 @@ public class PyriteMeteors : UdonSharpBehaviour
     public float azSpread = 35f;        // ±
     public float elMin = 34f, elMax = 46f, elFloor = 26f;
 
-    public TMPro.TextMeshPro debugText;
-    public Transform debugTf;           // 글자판 transform (TMP.transform 은 Udon 미노출)          // 진단: 인게임에서 상태를 글자로 (null 이면 안 씀)
-    private float nextDbg;
 
     private int activeK = -1;
     private float t0, dur;
@@ -45,20 +42,8 @@ public class PyriteMeteors : UdonSharpBehaviour
         return new Vector3(Mathf.Sin(a) * Mathf.Cos(e), Mathf.Sin(e), Mathf.Cos(a) * Mathf.Cos(e));
     }
 
-    private float nextBeat;
-
-    private void Start()
-    {
-        Debug.Log("[PyriteMeteors] start head " + (head != null) + " trail " + (trail != null) + " cycle " + (cycle != null) + " interval " + interval);
-    }
-
     private void Update()
     {
-        if (Time.time >= nextBeat)   // 진단용 심장박동 (5 s)
-        {
-            nextBeat = Time.time + 5f;
-            Debug.Log("[PyriteMeteors] beat head " + (head != null) + " trail " + (trail != null) + " hour " + (cycle != null ? cycle.currentHour.ToString("0.00") : "-") + " sunEl " + (cycle != null ? cycle.sunElNow.ToString("0.0") : "-") + " server " + Networking.GetServerTimeInSeconds().ToString("0.0") + " H " + H(12345, 1).ToString("0.000"));
-        }
         if (head == null || trail == null) return;
         double now = Networking.GetServerTimeInSeconds();
         int k = (int)(now / interval);
@@ -67,21 +52,6 @@ public class PyriteMeteors : UdonSharpBehaviour
         float d = 0.7f + H(k, 2) * 0.6f;
         bool night = cycle == null || cycle.sunElNow < nightSunEl;
         float age = -start;
-        if (debugText != null && Time.time >= nextDbg)
-        {
-            nextDbg = Time.time + 0.2f;
-            VRCPlayerApi lp = Networking.LocalPlayer;
-            if (debugTf != null && Utilities.IsValid(lp))
-            {
-                Vector3 hp = lp.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
-                debugTf.rotation = Quaternion.LookRotation(debugTf.position - hp);
-            }
-            debugText.text = "meteor debug\nserver " + now.ToString("0.0") + "  k " + k
-                + "\nstart " + start.ToString("0.00") + "  age " + age.ToString("0.00") + "  d " + d.ToString("0.00")
-                + "\nhour " + (cycle != null ? cycle.currentHour.ToString("0.00") : "-") + "  sunEl " + (cycle != null ? cycle.sunElNow.ToString("0.0") : "-") + "  night " + night
-                + "\nactiveK " + activeK + "  head " + head.gameObject.activeSelf + "  emit " + trail.emitting + "  pts " + trail.positionCount
-                + "\nheadPos " + head.position.ToString("F0");
-        }
         if (night && age >= 0f && age <= d + trail.time)
         {
             if (activeK != k)
