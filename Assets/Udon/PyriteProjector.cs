@@ -19,6 +19,7 @@ public class PyriteProjector : UdonSharpBehaviour
         Apply();
     }
 
+    public void TurnOn() { isOn = true; Apply(); }   // 첫 방문 안내(PyriteFirstVisit)
     public void TurnOff() { isOn = false; Apply(); }
 
     private void Apply()

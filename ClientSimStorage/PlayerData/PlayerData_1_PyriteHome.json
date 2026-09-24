@@ -1,1 +1,10 @@
-{}
+{
+  "pyrite_intro_seen": {
+    "LastUpdated": "2026-09-24T15:01:18.1619604+09:00",
+    "Key": "pyrite_intro_seen",
+    "Value": {
+      "type": "Bool",
+      "value": true
+    }
+  }
+}

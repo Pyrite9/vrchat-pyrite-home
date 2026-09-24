@@ -32,5 +32,5 @@ Material:
     - _AngSize: 3.6
     m_Colors:
     - _Color: {r: 1.08, g: 1.161, b: 1.35, a: 1.35}
-    - _Dir: {r: -0.47302926, g: 0.67172486, b: -0.5701132, a: 0}
+    - _Dir: {r: -0.22181551, g: 0.528449, b: -0.8194752, a: 0}
   m_BuildTextureStacks: []

@@ -440,7 +440,7 @@ public static class PyriteJudge
         if (ub == null) { eRes.Add("FlowerCull UdonBehaviour 없음"); EditorApplication.update -= ETick; File.AppendAllText(LOG, string.Join("\n", eRes) + "\n"); return; }
         if (eStep >= EDist.Length)
         {
-            ub.SetProgramVariable("distance", 160f); ub.SendCustomEvent("_onEnable");
+            ub.SetProgramVariable("distance", 160f); foreach (var r in ff.GetComponentsInChildren<Renderer>(true)) r.enabled = true;
             EditorApplication.update -= ETick; eRes.Add("RESULT: DONE"); File.AppendAllText(LOG, string.Join("\n", eRes) + "\n"); return;
         }
         if (eWait == 0) { ub.SetProgramVariable("distance", EDist[eStep]); if (EDist[eStep] >= 160f) { foreach (var r in ff.GetComponentsInChildren<Renderer>()) r.enabled = true; } }
@@ -450,6 +450,46 @@ public static class PyriteJudge
         var lp = VRC.SDKBase.Networking.LocalPlayer;
         eRes.Add(string.Format("  distance {0,4} m: renderers on {1}/{2}, player {3}, game view tris {4:N0}", EDist[eStep], rs.Count(r => r.enabled), rs.Length, lp != null ? lp.GetPosition().ToString("F0") : "-", UnityStats.triangles));
         eWait = 0; eStep++;
+    }
+
+
+    // ───────── Z36f 첫 방문 Play 확인 — 입장 후 패널·팝업 상태 → 프로젝터 끄기 → 저장 여부
+    static int fStep; static double fT; static List<string> fRes;
+    [MenuItem("Tools/Pyrite2/Z36f. First Visit Play Test", false, 105)]
+    public static void FirstVisitPlay()
+    {
+        fRes = new List<string> { "[Z36f] " + System.DateTime.Now.ToString("HH:mm:ss") + " playing " + Application.isPlaying };
+        if (!Application.isPlaying) { File.AppendAllText(LOG, string.Join("\n", fRes) + "\n"); return; }
+        fStep = 0; fT = EditorApplication.timeSinceStartup;
+        EditorApplication.update -= FTick; EditorApplication.update += FTick;
+    }
+    static string FState()
+    {
+        var root = GameObject.Find("SettingsProjector");
+        var ubs = root.GetComponents<VRC.Udon.UdonBehaviour>();
+        var pj = ubs.FirstOrDefault(u => u.programSource != null && u.programSource.name == "PyriteProjector");
+        var fv = ubs.FirstOrDefault(u => u.programSource != null && u.programSource.name == "PyriteFirstVisit");
+        var ui = root.transform.Find("SettingsUI"); var gp = ui != null ? ui.Find("GuidePopup") : null;
+        return string.Format("projector isOn {0}, SettingsUI active {1}, GuidePopup active {2}, firstVisit autoOpened {3} done {4}",
+            pj != null ? pj.GetProgramVariable("isOn") : "?", ui != null && ui.gameObject.activeInHierarchy, gp != null && gp.gameObject.activeInHierarchy,
+            fv != null ? fv.GetProgramVariable("autoOpened") : "?", fv != null ? fv.GetProgramVariable("done") : "?");
+    }
+    static void FTick()
+    {
+        double t = EditorApplication.timeSinceStartup - fT;
+        if (fStep == 0) { fRes.Add("  t0: " + FState()); fStep = 1; }
+        else if (fStep == 1 && t > 1.0)
+        {
+            var root = GameObject.Find("SettingsProjector");
+            var pj = root.GetComponents<VRC.Udon.UdonBehaviour>().FirstOrDefault(u => u.programSource != null && u.programSource.name == "PyriteProjector");
+            if (pj != null) pj.SendCustomEvent("TurnOff");
+            fRes.Add("  TurnOff sent"); fStep = 2; fT = EditorApplication.timeSinceStartup;
+        }
+        else if (fStep == 2 && t > 2.0)
+        {
+            fRes.Add("  after close: " + FState()); fRes.Add("RESULT: DONE");
+            EditorApplication.update -= FTick; File.AppendAllText(LOG, string.Join("\n", fRes) + "\n");
+        }
     }
 
     static float Ground(Vector3 p)

@@ -264,6 +264,13 @@ public static class PyriteSettingsUI
         st.textKo = loc.Select(x => x.ko).ToArray();
         st.langEnBg = iEn; st.langKoBg = iKo; st.lang = 0;
         st.assetsPopup = popup; st.guidePopup = guide;
+        {   // 첫 방문 안내 (2026-09-24 관리자): 처음 온 사람에게만 패널 + 상호작용 팝업. 항상 켜져 있는 프로젝터 루트에
+            var fv = root.GetComponent<PyriteFirstVisit>();
+            if (fv == null) fv = UdonSharpUndo.AddComponent<PyriteFirstVisit>(root);
+            fv.projector = pj; fv.settings = st; fv.openGuide = true;
+            UdonSharpEditorUtility.CopyProxyToUdon(fv); EditorUtility.SetDirty(fv);
+            sb.AppendLine("first visit: key '" + fv.key + "', guide " + fv.openGuide);
+        }
         UdonSharpEditorUtility.CopyProxyToUdon(st); EditorUtility.SetDirty(st);
         ub.interactText = "Settings"; EditorUtility.SetDirty(ub);
         iEn.color = st.langOn; iKo.color = st.langOff;
@@ -359,7 +366,7 @@ public static class PyriteSettingsUI
         ["shadows"] = ("Sun shadows", "햇빛 그림자"),
         ["perfNote"] = ("Turn these off if your frame rate drops.", "프레임이 떨어지면 꺼 보세요."),
         ["flowerDist"] = ("Flower distance", "꽃 보이는 거리"),
-        ["flowerOff"] = ("Off m", "끔"),
+        ["flowerOff"] = ("Off", "끔"),
         ["flowerAll"] = ("All", "전부"),
         ["lightShadows"] = ("Firelight shadows", "불빛 그림자"),
         ["about"] = ("ABOUT", "정보"),
