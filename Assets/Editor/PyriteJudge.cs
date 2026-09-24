@@ -492,6 +492,73 @@ public static class PyriteJudge
         }
     }
 
+
+    // ───────── Z36g 개인 설정 저장 Play 확인 — 1회차: 값 바꾸고 저장 / 2회차(Logs/pyrite_prefs_marker.txt 있음): 다시 들어와 읽기
+    static double gT; static int gStep; static List<string> gRes;
+    const string G_MARK = "Logs/pyrite_prefs_marker.txt";
+    [MenuItem("Tools/Pyrite2/Z36g. Prefs Play Test", false, 106)]
+    public static void PrefsPlay()
+    {
+        gRes = new List<string> { "[Z36g] " + System.DateTime.Now.ToString("HH:mm:ss") + " playing " + Application.isPlaying + " mode " + (File.Exists(G_MARK) ? "READ" : "WRITE") };
+        if (!Application.isPlaying) { File.AppendAllText(LOG, string.Join("\n", gRes) + "\n"); return; }
+        gStep = 0; gT = EditorApplication.timeSinceStartup;
+        EditorApplication.update -= GTick; EditorApplication.update += GTick;
+    }
+    static string GState()
+    {
+        var root = GameObject.Find("SettingsProjector"); var ui = root.transform.Find("SettingsUI");
+        var st = root.GetComponents<VRC.Udon.UdonBehaviour>().FirstOrDefault(u => u.programSource != null && u.programSource.name == "PyriteSettings");
+        var fc = GameObject.Find("FlowerField").GetComponents<VRC.Udon.UdonBehaviour>().FirstOrDefault(u => u.programSource != null && u.programSource.name.Contains("FlowerCull"));
+        var fire = Object.FindObjectsOfType<Light>().FirstOrDefault(l => l.name == "Fire_Light" && l.transform.parent != null && l.transform.parent.name == "campfire");
+        var pb = GameObject.Find("SettingsPP/PP_UserBright")?.GetComponent<UnityEngine.Rendering.PostProcessing.PostProcessVolume>();
+        return string.Format("flowerDist slider {0} cull {1}, lightShadows toggle {2} fire {3}, bright slider {4:0.00} ppBright {5:0.00}, lang {6}, restored {7}",
+            ui.GetComponentsInChildren<UnityEngine.UI.Slider>(true).First(x => x.name == "FlowerDist").value, fc != null ? fc.GetProgramVariable("distance") : "?",
+            ui.GetComponentsInChildren<UnityEngine.UI.Toggle>(true).First(x => x.name == "LightShadows").isOn, fire != null ? fire.shadows.ToString() : "?",
+            ui.GetComponentsInChildren<UnityEngine.UI.Slider>(true).First(x => x.name.StartsWith("Bright")).value, pb != null ? pb.weight : -1f,
+            st.GetProgramVariable("lang"), st.GetProgramVariable("restored"));
+    }
+    static void GTick()
+    {
+        double t = EditorApplication.timeSinceStartup - gT;
+        var root = GameObject.Find("SettingsProjector"); var ui = root.transform.Find("SettingsUI");
+        var st = root.GetComponents<VRC.Udon.UdonBehaviour>().FirstOrDefault(u => u.programSource != null && u.programSource.name == "PyriteSettings");
+        bool read = File.Exists(G_MARK);
+        if (gStep == 0 && t > 1.0)
+        {
+            gRes.Add("  start: " + GState());
+            if (!read)
+            {
+                ui.GetComponentsInChildren<UnityEngine.UI.Slider>(true).First(x => x.name == "FlowerDist").value = 4f; st.SendCustomEvent("OnFlowerDist");
+                ui.GetComponentsInChildren<UnityEngine.UI.Toggle>(true).First(x => x.name == "LightShadows").isOn = false; st.SendCustomEvent("OnLightShadows");
+                ui.GetComponentsInChildren<UnityEngine.UI.Slider>(true).First(x => x.name.StartsWith("Bright")).value = 0.5f; st.SendCustomEvent("OnBright");
+                st.SendCustomEvent("SetKO");
+                gRes.Add("  set: flowerDist 4, lightShadows off, bright 0.5, KO");
+            }
+            gStep = 1; gT = EditorApplication.timeSinceStartup;
+        }
+        else if (gStep == 1 && t > 2.5)
+        {
+            gRes.Add("  after 2.5 s: " + GState());
+            if (!read) File.WriteAllText(G_MARK, "wrote"); else File.Delete(G_MARK);
+            gRes.Add("RESULT: DONE"); EditorApplication.update -= GTick; File.AppendAllText(LOG, string.Join("\n", gRes) + "\n");
+        }
+    }
+
+
+    // Z36h — Play 중 개인 설정을 기본값으로 되돌리고 저장 (Z36g 테스트 뒤 ClientSim 저장소 정리용)
+    [MenuItem("Tools/Pyrite2/Z36h. Prefs Reset (Play)", false, 107)]
+    public static void PrefsReset()
+    {
+        if (!Application.isPlaying) return;
+        var root = GameObject.Find("SettingsProjector"); var ui = root.transform.Find("SettingsUI");
+        var st = root.GetComponents<VRC.Udon.UdonBehaviour>().FirstOrDefault(u => u.programSource != null && u.programSource.name == "PyriteSettings");
+        ui.GetComponentsInChildren<UnityEngine.UI.Slider>(true).First(x => x.name == "FlowerDist").value = 16f; st.SendCustomEvent("OnFlowerDist");
+        ui.GetComponentsInChildren<UnityEngine.UI.Toggle>(true).First(x => x.name == "LightShadows").isOn = true; st.SendCustomEvent("OnLightShadows");
+        ui.GetComponentsInChildren<UnityEngine.UI.Slider>(true).First(x => x.name.StartsWith("Bright")).value = 0f; st.SendCustomEvent("OnBright");
+        st.SendCustomEvent("SetEN");
+        File.AppendAllText(LOG, "[Z36h] " + System.DateTime.Now.ToString("HH:mm:ss") + " reset sent (flower 16, light shadows on, bright 0, EN)\n");
+    }
+
     static float Ground(Vector3 p)
     {
         Physics.SyncTransforms();

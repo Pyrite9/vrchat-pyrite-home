@@ -99,7 +99,7 @@ Material:
     - _Color: {r: 0.8, g: 0.71, b: 0.46, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
     - _GlintColor: {r: 2.125, g: 2.25, b: 2.5, a: 2.5}
-    - _GlintDir: {r: -0.22181551, g: 0.528449, b: -0.8194752, a: 0}
+    - _GlintDir: {r: -0.22229879, g: 0.52875483, b: -0.8191469, a: 0}
     - _MatCapTint: {r: 0.62, g: 0.52, b: 0.38, a: 1}
     - _NightTint: {r: 0.13, g: 0.15, b: 0.22, a: 1}
     - _RimColor: {r: 0.35, g: 0.27299997, b: 0.147, a: 0.35}

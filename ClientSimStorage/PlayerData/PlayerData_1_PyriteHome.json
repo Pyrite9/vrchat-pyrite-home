@@ -6,5 +6,85 @@
       "type": "Bool",
       "value": true
     }
+  },
+  "pl_bright": {
+    "LastUpdated": "2026-09-24T15:13:23.9853346+09:00",
+    "Key": "pl_bright",
+    "Value": {
+      "type": "Float",
+      "value": 0.5
+    }
+  },
+  "pl_bloom": {
+    "LastUpdated": "2026-09-24T15:09:30.5790831+09:00",
+    "Key": "pl_bloom",
+    "Value": {
+      "type": "Bool",
+      "value": true
+    }
+  },
+  "pl_lake": {
+    "LastUpdated": "2026-09-24T15:09:30.5790831+09:00",
+    "Key": "pl_lake",
+    "Value": {
+      "type": "Bool",
+      "value": false
+    }
+  },
+  "pl_mirror": {
+    "LastUpdated": "2026-09-24T15:09:30.5790831+09:00",
+    "Key": "pl_mirror",
+    "Value": {
+      "type": "Bool",
+      "value": false
+    }
+  },
+  "pl_sound": {
+    "LastUpdated": "2026-09-24T15:09:30.5790831+09:00",
+    "Key": "pl_sound",
+    "Value": {
+      "type": "Float",
+      "value": 1.0
+    }
+  },
+  "pl_flowerDist": {
+    "LastUpdated": "2026-09-24T15:13:23.9853346+09:00",
+    "Key": "pl_flowerDist",
+    "Value": {
+      "type": "Float",
+      "value": 4.0
+    }
+  },
+  "pl_fireflies": {
+    "LastUpdated": "2026-09-24T15:09:30.5790831+09:00",
+    "Key": "pl_fireflies",
+    "Value": {
+      "type": "Bool",
+      "value": true
+    }
+  },
+  "pl_sunShadows": {
+    "LastUpdated": "2026-09-24T15:09:30.5790831+09:00",
+    "Key": "pl_sunShadows",
+    "Value": {
+      "type": "Bool",
+      "value": true
+    }
+  },
+  "pl_lightShadows": {
+    "LastUpdated": "2026-09-24T15:13:23.9853346+09:00",
+    "Key": "pl_lightShadows",
+    "Value": {
+      "type": "Bool",
+      "value": false
+    }
+  },
+  "pl_lang": {
+    "LastUpdated": "2026-09-24T15:13:23.9853346+09:00",
+    "Key": "pl_lang",
+    "Value": {
+      "type": "Int",
+      "value": 1
+    }
   }
 }

@@ -64,6 +64,8 @@ public static class PyriteSettingsUI
         if (pj == null || panel == null) { sb.AppendLine("PyriteProjector/Panel 없음"); Flush(sb); return; }
 
         var old = root.transform.Find("SettingsUI"); if (old != null) Object.DestroyImmediate(old.gameObject);
+        foreach (var oldSt in root.GetComponents<PyriteSettings>())   // 2026-09-24 부터 PyriteSettings 는 루트(항상 켜짐)에
+        { var oub = UdonSharpEditorUtility.GetBackingUdonBehaviour(oldSt); Object.DestroyImmediate(oldSt); if (oub != null) Object.DestroyImmediate(oub); }
         pj.onObjects = pj.onObjects.Where(o => o != null).ToArray();
 
         // 1) 문구 (en, ko)
@@ -99,7 +101,7 @@ public static class PyriteSettingsUI
         go.AddComponent<VRCUiShape>();
 
         PyriteSettings st;
-        try { st = UdonSharpUndo.AddComponent<PyriteSettings>(go); }
+        try { st = UdonSharpUndo.AddComponent<PyriteSettings>(root); }   // 입장 때 저장된 개인 설정을 불러오려면 항상 켜져 있어야 한다
         catch (System.Exception e) { sb.AppendLine("AddComponent 실패 (H 로 프로그램 에셋 먼저): " + e.Message); Flush(sb); return; }
         ub = UdonSharpEditorUtility.GetBackingUdonBehaviour(st);
 
@@ -263,7 +265,7 @@ public static class PyriteSettingsUI
         st.textEn = loc.Select(x => x.en).ToArray();
         st.textKo = loc.Select(x => x.ko).ToArray();
         st.langEnBg = iEn; st.langKoBg = iKo; st.lang = 0;
-        st.assetsPopup = popup; st.guidePopup = guide;
+        st.assetsPopup = popup; st.guidePopup = guide; st.panelRoot = go;
         {   // 첫 방문 안내 (2026-09-24 관리자): 처음 온 사람에게만 패널 + 상호작용 팝업. 항상 켜져 있는 프로젝터 루트에
             var fv = root.GetComponent<PyriteFirstVisit>();
             if (fv == null) fv = UdonSharpUndo.AddComponent<PyriteFirstVisit>(root);
@@ -626,7 +628,7 @@ public static class PyriteSettingsUI
             {
                 cyc.EvaluateAt(h);
                 foreach (var x in loc) x.t.text = lang == 1 ? x.ko : x.en;
-                var st = ui.GetComponent<PyriteSettings>();
+                var st = ui.transform.parent.GetComponent<PyriteSettings>();
                 if (st != null) { st.timeText.text = string.Format("{0:00}:00", (int)h); st.timeSlider.SetValueWithoutNotify(h * 60f); }
                 string tag = string.Format("{0:00}_{1}", (int)h, lang == 1 ? "ko" : "en");
                 Shot(cam, stand, panel.position, 60f, "Assets/_preview/projector/ui_" + tag + "_table.png");
@@ -649,7 +651,7 @@ public static class PyriteSettingsUI
         finally
         {
             foreach (var x in loc) x.t.text = x.en;
-            var st0 = ui.GetComponent<PyriteSettings>();
+            var st0 = ui.transform.parent.GetComponent<PyriteSettings>();
             if (st0 != null) { st0.timeText.text = "21:00"; st0.timeSlider.SetValueWithoutNotify(1260f); }
             foreach (var o in pj.onObjects) if (o != null) o.SetActive(false);
             pj.lensRenderer.sharedMaterial = pj.lensOff;
