@@ -107,7 +107,8 @@ public class PyriteSkewer : UdonSharpBehaviour
         for (int i = 0; i < others.Length; i++)
         {
             if (others[i] == null || others[i] == transform) continue;
-            if (Vector3.Distance(others[i].position, s.position) < 0.05f) return true;
+            // 🔴 꽂이 자리 사이 간격이 4.8 cm 라 예전 기준 5 cm 로는 옆자리 꼬치 때문에 전부 "찼음" → 하나만 꽂혔다. 1.5 cm 로
+            if (Vector3.Distance(others[i].position, s.position) < 0.015f) return true;
         }
         return false;
     }
