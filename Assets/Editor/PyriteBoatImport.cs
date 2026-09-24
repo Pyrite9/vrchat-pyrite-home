@@ -1,5 +1,5 @@
 // Tools ▸ Pyrite2 ▸ Z30a. Import WoodBoat Package
-//  관리자가 산 BOOTH 에셋 (ootwn 木製ボート ¥100, 수정 허용 / 재배포 금지) 을 E:\VRC\WoodBoat 에서 임포트한다 (대화창 없이)
+//  관리자가 산 BOOTH 에셋 (ootwn 木製ボート ¥100, 수정 허용 / 재배포 금지) 을 E:\VRC\Assets\World\WoodBoat 에서 임포트한다 (대화창 없이)
 //  임포트된 경로는 Logs/pyrite_boat.txt 에 적는다 → .gitignore 와 X2 유료 경로 검사에 넣을 폴더를 정한다
 #if UNITY_EDITOR
 using System.IO;
@@ -10,7 +10,7 @@ using UnityEngine;
 
 public static class PyriteBoatImport
 {
-    const string PKG = "E:/VRC/WoodBoat/WoodBoat.unitypackage";
+    const string PKG = "E:/VRC/Assets/World/WoodBoat/WoodBoat.unitypackage";
 
     [MenuItem("Tools/Pyrite2/Z30a. Import WoodBoat Package", false, 40)]
     public static void Run()

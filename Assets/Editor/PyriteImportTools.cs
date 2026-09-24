@@ -7,7 +7,7 @@ using UnityEngine;
 public static class PyriteImportTools
 {
     const string FLOWERS_PKG =
-        @"E:\VRC\FlowersGrassland\FlowersGrassland\FlowersGrassland.unitypackage";
+        @"E:\VRC\Assets\World\FlowersGrassland\FlowersGrassland\FlowersGrassland.unitypackage";
 
     [MenuItem("Tools/Pyrite/G. Import FlowersGrassland &#7")]
     public static void ImportFlowers()
