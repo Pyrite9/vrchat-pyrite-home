@@ -1,4 +1,4 @@
-// 별똥별 — 서버 시각으로 약 1분(interval)마다 하나, 밤에만(해 고도 < nightSunEl). 네트워크 동기화 없이 모두 같은 순간·같은 궤적을 본다
+// 별똥별 — 서버 시각으로 interval 초마다 하나, 밤에만(해 고도 < nightSunEl). 네트워크 동기화 없이 모두 같은 순간·같은 궤적을 본다
 //  (이벤트 번호 k = 서버 시각 / interval, 궤적·지연은 k 로 만든 의사난수)
 //  꼬리는 TrailRenderer. 하늘 반지름 radius 의 구 위를 짧게 긋는다.
 //  분지 절벽이 캠프 뒤(북) 70°·옆 40~50° 까지 막고, 호수 쪽(남, 방위 145~215°)만 24~30° 로 트여 있다(Z34e 실측)
@@ -15,8 +15,8 @@ public class PyriteMeteors : UdonSharpBehaviour
     public TrailRenderer trail;
     public Vector3 center = new Vector3(-10f, 0f, 45f);
     public float radius = 650f;
-    public float interval = 60f;        // 초 (하루 12분 → 게임 속 2시간마다 하나)
-    public float jitter = 35f;          // 간격 안에서 흩어짐
+    public float interval = 10f;        // 초 (관리자 요청 10 s. 하루 12분 → 게임 속 20분마다 하나)
+    public float jitter = 6f;           // 간격 안에서 흩어짐. interval − (최대 1.15 s + 꼬리 0.32 s) 보다 작아야 다음 사건과 안 겹친다
     public float nightSunEl = -8f;
     public float azCenter = 180f;       // 호수 쪽
     public float azSpread = 35f;        // ±
