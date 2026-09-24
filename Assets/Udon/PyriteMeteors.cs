@@ -16,11 +16,11 @@ public class PyriteMeteors : UdonSharpBehaviour
     public Vector3 center = new Vector3(-10f, 0f, 45f);
     public float radius = 650f;
     public float interval = 10f;        // 초 (관리자 요청 10 s. 하루 12분 → 게임 속 20분마다 하나)
-    public float jitter = 6f;           // 간격 안에서 흩어짐. interval − (최대 1.15 s + 꼬리 0.32 s) 보다 작아야 다음 사건과 안 겹친다
+    public float jitter = 6f;           // 간격 안에서 흩어짐. interval − (최대 1.3 s + 꼬리 0.8 s) 보다 작아야 다음 사건과 안 겹친다
     public float nightSunEl = -8f;
     public float azCenter = 180f;       // 호수 쪽
     public float azSpread = 35f;        // ±
-    public float elMin = 30f, elMax = 44f, elFloor = 27f;
+    public float elMin = 34f, elMax = 46f, elFloor = 26f;
 
     private int activeK = -1;
     private float t0, dur;
@@ -41,13 +41,25 @@ public class PyriteMeteors : UdonSharpBehaviour
         return new Vector3(Mathf.Sin(a) * Mathf.Cos(e), Mathf.Sin(e), Mathf.Cos(a) * Mathf.Cos(e));
     }
 
+    private float nextBeat;
+
+    private void Start()
+    {
+        Debug.Log("[PyriteMeteors] start head " + (head != null) + " trail " + (trail != null) + " cycle " + (cycle != null) + " interval " + interval);
+    }
+
     private void Update()
     {
+        if (Time.time >= nextBeat)   // 진단용 심장박동 (5 s)
+        {
+            nextBeat = Time.time + 5f;
+            Debug.Log("[PyriteMeteors] beat head " + (head != null) + " trail " + (trail != null) + " hour " + (cycle != null ? cycle.currentHour.ToString("0.00") : "-") + " sunEl " + (cycle != null ? cycle.sunElNow.ToString("0.0") : "-") + " server " + Networking.GetServerTimeInSeconds().ToString("0.0") + " H " + H(12345, 1).ToString("0.000"));
+        }
         if (head == null || trail == null) return;
         double now = Networking.GetServerTimeInSeconds();
         int k = (int)(now / interval);
         float start = (float)((double)k * interval - now) + H(k, 1) * jitter;   // 이번 이벤트 시작까지 남은 초 (음수면 지남). 서버 시각이 커서 float 로 곱하면 정밀도가 날아간다 → double
-        float d = 0.55f + H(k, 2) * 0.6f;
+        float d = 0.7f + H(k, 2) * 0.6f;
         bool night = cycle == null || cycle.sunElNow < nightSunEl;
         float age = -start;
         if (night && age >= 0f && age <= d + trail.time)
@@ -57,8 +69,8 @@ public class PyriteMeteors : UdonSharpBehaviour
                 activeK = k;
                 float az = azCenter + (H(k, 3) * 2f - 1f) * azSpread;
                 float el = elMin + H(k, 4) * (elMax - elMin);
-                float daz = (H(k, 5) - 0.5f) * 30f;
-                float del = -(6f + H(k, 6) * 8f);
+                float hz = H(k, 5); float daz = (hz < 0.5f ? -1f : 1f) * (6f + Mathf.Abs(hz - 0.5f) * 24f);   // 옆으로 최소 6°
+                float del = -(8f + H(k, 6) * 8f);   // 아래로 8~16° (바닥 26° 에 막혀도 최소 8° 는 내려온다)
                 d0 = Dir(el, az);
                 d1 = Dir(Mathf.Max(elFloor, el + del), az + daz);
                 Debug.Log("[PyriteMeteors] k " + k + " az " + az.ToString("0") + " el " + el.ToString("0") + "→" + Mathf.Max(elFloor, el + del).ToString("0") + " dur " + d.ToString("0.00") + " hour " + (cycle != null ? cycle.currentHour.ToString("0.0") : "-"));

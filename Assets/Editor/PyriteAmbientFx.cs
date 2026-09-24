@@ -96,7 +96,7 @@ public static class PyriteAmbientFx
             var go = new GameObject("Meteors"); go.transform.SetParent(root.transform, false);
             var head = new GameObject("Head"); head.transform.SetParent(go.transform, false);
             var tr = head.AddComponent<TrailRenderer>();
-            tr.time = 0.32f; tr.minVertexDistance = 2f; tr.widthMultiplier = 3.2f;
+            tr.time = 0.8f; tr.minVertexDistance = 1f; tr.widthMultiplier = 6f;   // 0.32 s × 3.2 m 는 Play 실측에서 점 몇 px 로만 보였다
             tr.widthCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0f));
             var g = new Gradient();
             g.SetKeys(new[] { new GradientColorKey(new Color(1f, 1f, 1f), 0f), new GradientColorKey(new Color(0.75f, 0.85f, 1f), 1f) },
