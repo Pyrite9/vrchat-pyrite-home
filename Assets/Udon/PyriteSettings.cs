@@ -56,6 +56,7 @@ public class PyriteSettings : UdonSharpBehaviour
 
     [Header("사용한 에셋 팝업")]
     public GameObject assetsPopup;        // 메인이 닫히면 같이 닫힌다 (OnDisable)
+    public GameObject guidePopup;         // 상호작용 가능한 사물 (같은 방식)
 
     private bool updating = false;
     private bool inited = false;
@@ -65,9 +66,15 @@ public class PyriteSettings : UdonSharpBehaviour
 
     void Start() { Init(); }
 
-    void OnEnable() { if (assetsPopup != null) assetsPopup.SetActive(false); if (inited) Refresh(true); }
+    void OnEnable() { ClosePopups(); if (inited) Refresh(true); }
 
-    void OnDisable() { if (assetsPopup != null) assetsPopup.SetActive(false); }
+    void OnDisable() { ClosePopups(); }
+
+    private void ClosePopups()
+    {
+        if (assetsPopup != null) assetsPopup.SetActive(false);
+        if (guidePopup != null) guidePopup.SetActive(false);
+    }
 
     private void Init()
     {
@@ -198,12 +205,14 @@ public class PyriteSettings : UdonSharpBehaviour
         if (langKoBg != null) langKoBg.color = lang == 1 ? langOn : langOff;
     }
 
-    public void OpenAssets() { if (assetsPopup != null) assetsPopup.SetActive(true); }
+    public void OpenAssets() { ClosePopups(); if (assetsPopup != null) assetsPopup.SetActive(true); }
+    public void OpenGuide() { ClosePopups(); if (guidePopup != null) guidePopup.SetActive(true); }
+    public void CloseGuide() { if (guidePopup != null) guidePopup.SetActive(false); }
     public void CloseAssets() { if (assetsPopup != null) assetsPopup.SetActive(false); }
 
     public void Close()
     {
-        if (assetsPopup != null) assetsPopup.SetActive(false);
+        ClosePopups();
         if (projector != null) projector.TurnOff();
     }
 }

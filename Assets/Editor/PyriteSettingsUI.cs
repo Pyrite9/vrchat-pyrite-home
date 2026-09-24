@@ -2,7 +2,7 @@
 //  프로젝터 패널(3.0×1.69 m) 앞에 월드 캔버스(1920×1080 px, 1 px = 1.5625 mm)를 띄우고 설정 6칸을 만든다
 //   시간(분 슬라이더·자동 흐름, 모두에게 공유) · 화면(밝기 ±1 EV, 블룸) · 반사(호수·캠프 거울) · 소리(자연 소리 0~150%) · 성능(꽃·반딧불·해 그림자) · 정보(환경)
 //   거울: 반사 칸 '거울' 토글 = 타프 줄 손거울(Z27b)과 같은 거울. 예전 캠프 거울 기둥은 끔
-//   머리줄: 사용한 에셋(팝업, 바깥·× 로 닫힘, 메인이 꺼지면 같이 꺼짐) · EN/KO · 닫기
+//   머리줄: 상호작용(팝업, 2026-09-24) · 사용한 에셋(팝업, 바깥·× 로 닫힘, 메인이 꺼지면 같이 꺼짐) · EN/KO · 닫기
 //   EN / KO — 글꼴 Noto Sans KR Medium (OFL, ASCII + KS X 1001 한글 2350자 서브셋) → 정적 TMP 폰트(사용 글자만)
 //   후처리: SettingsPP 루트에 전역 볼륨 3개 (layer 23, priority 10, weight 0) — 밝게(노출 2.0)/어둡게(0.0)/블룸 끔(강도 0). 기존 프로필 노출 1.0 기준 ±1 EV
 //   LakeMirrorSwitch 는 렌더러·콜라이더만 끈다(스크립트는 살아서 호수 거울 상태를 쥔다) → 설정의 호수 반사 토글이 SetOn 으로 조작
@@ -51,6 +51,7 @@ public static class PyriteSettingsUI
     static List<(TextMeshProUGUI t, string en, string ko)> loc;
 
     [MenuItem("Tools/Pyrite/Z25a. Build Settings UI", false, 60)]
+    [MenuItem("Tools/Pyrite2/Z25d. Build Settings UI (= Z25a) %&#2", false, 93)]
     public static void Build()
     {
         var sb = new StringBuilder("[Z25a] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
@@ -108,8 +109,9 @@ public static class PyriteSettingsUI
         var t = go.transform;
 
         // 제목 줄
-        L(Txt(t, "Title", 90, 52, 1000, 76, "", 62, GOLD), S["title"]);
+        L(Txt(t, "Title", 90, 52, 820, 76, "", 62, GOLD), S["title"]);
         L(Txt(t, "Subtitle", 94, 128, 700, 42, "", 30, GREY), S["subtitle"]);
+        var (_, _, guideLabel) = Btn(t, "GuideButton", 936, 66, 240, 66, "", "OpenGuide"); L(guideLabel, S["guide"]);
         var (_, _, assetsLabel) = Btn(t, "AssetsButton", 1196, 66, 240, 66, "", "OpenAssets"); L(assetsLabel, S["assets"]);
         var (bEn, iEn, _) = Btn(t, "LangEN", 1464, 66, 116, 66, "EN", "SetEN");
         var (bKo, iKo, _) = Btn(t, "LangKO", 1590, 66, 116, 66, "KO", "SetKO");
@@ -193,6 +195,30 @@ public static class PyriteSettingsUI
         L(Txt(box.transform, "Foot", 60, 680, bw - 120, 50, "", 24, GREY), S["assetsFoot"]);
         popup.SetActive(false);
 
+        // 상호작용 가능한 사물 팝업 (2026-09-24 관리자 요청) — 같은 방식: 캔버스 자식, 바깥 어둠·× 로 닫힘
+        var guide = Rect(t, "GuidePopup", 0, 0, W, H).gameObject;
+        {
+            var (_, gdim, _) = Btn(guide.transform, "Dim", 0, 0, W, H, "", "CloseGuide");
+            gdim.sprite = null; gdim.type = Image.Type.Simple; gdim.color = new Color(0f, 0f, 0f, 0.8f);
+            var gcb = gdim.GetComponent<Button>().colors; gcb.highlightedColor = Color.white; gcb.pressedColor = Color.white; gdim.GetComponent<Button>().colors = gcb;
+            const float gx0 = 200f, gy0 = 80f, gw = 1520f, gh = 920f;
+            var gbox = Img(guide.transform, "Box", gx0, gy0, gw, gh, new Color(0.045f, 0.05f, 0.06f, 1f), spr); gbox.raycastTarget = true;
+            Img(gbox.transform, "Edge", 0, 0, gw, 3, new Color(GOLD.r, GOLD.g, GOLD.b, 0.6f), null);
+            L(Txt(gbox.transform, "Title", 60, 36, 1100, 60, "", 42, GOLD, spacing: 6f), S["guideTitle"]);
+            Btn(gbox.transform, "Close", gw - 60 - 90, 34, 90, 66, "×", "CloseGuide");
+            Img(gbox.transform, "Divider", 60, 116, gw - 120, 2, new Color(GOLD.r, GOLD.g, GOLD.b, 0.3f), null);
+            for (int i = 0; i < GUIDE.Length; i++)
+            {
+                int col = i / 7, row = i % 7;
+                float ix = 60f + col * 720f, iy = 136f + row * 104f;   // 두 줄 설명이 다음 이름에 붙지 않게 104
+                L(Txt(gbox.transform, "Name" + i, ix, iy, 680, 36, "", 28, GOLD), S[GUIDE[i] + "N"]);
+                var d = Txt(gbox.transform, "Desc" + i, ix, iy + 36, 680, 54, "", 21, GREY); d.alignment = TextAlignmentOptions.TopLeft;
+                L(d, S[GUIDE[i] + "D"]);
+            }
+            L(Txt(gbox.transform, "Foot", 60, 860, gw - 120, 40, "", 22, GREY), S["guideFoot"]);
+        }
+        guide.SetActive(false);
+
         foreach (var x in loc) x.t.text = x.en;
 
         // 6) 연결
@@ -217,7 +243,7 @@ public static class PyriteSettingsUI
         st.textEn = loc.Select(x => x.en).ToArray();
         st.textKo = loc.Select(x => x.ko).ToArray();
         st.langEnBg = iEn; st.langKoBg = iKo; st.lang = 0;
-        st.assetsPopup = popup;
+        st.assetsPopup = popup; st.guidePopup = guide;
         UdonSharpEditorUtility.CopyProxyToUdon(st); EditorUtility.SetDirty(st);
         ub.interactText = "Settings"; EditorUtility.SetDirty(ub);
         iEn.color = st.langOn; iKo.color = st.langOff;
@@ -327,7 +353,39 @@ public static class PyriteSettingsUI
         ["aCode"] = ("Scripting", "스크립트"),
         ["assetsFoot"] = ("Terrain, crystals, dock, and shaders by Pyrite9.", "지형 · 결정 · 부두 · 셰이더는 Pyrite9 가 직접 만들었습니다."),
         ["credit"] = ("Made by Pyrite9", "제작 Pyrite9"),
+        ["guide"] = ("Interactions", "상호작용"),
+        ["guideTitle"] = ("THINGS YOU CAN USE", "상호작용 가능한 사물"),
+        ["gSetN"] = ("Settings projector", "설정 프로젝터"),
+        ["gSetD"] = ("On the table. Press to open this panel. Only you see it.", "테이블 위. 누르면 이 패널이 열립니다. 나에게만 보입니다."),
+        ["gVidN"] = ("Video projector", "영상 프로젝터"),
+        ["gVidD"] = ("Next to it. Press to turn the screen on or off for everyone.", "그 옆. 누르면 모두의 스크린이 켜지고 꺼집니다."),
+        ["gMirN"] = ("Hand mirror", "손거울"),
+        ["gMirD"] = ("Hangs on the tarp rope. Press for a mirror. Only you see it.", "타프 줄에 걸려 있습니다. 누르면 거울이 켜집니다. 나에게만 보입니다."),
+        ["gLanN"] = ("Lanterns", "랜턴"),
+        ["gLanD"] = ("Grab to carry. Drop near a hook to hang it.", "들고 다닐 수 있습니다. 걸이 근처에서 놓으면 걸립니다."),
+        ["gChrN"] = ("Folding chairs", "접이식 의자"),
+        ["gChrD"] = ("Grab the backrest to move. Press the seat to sit.", "등받이를 잡아 옮기고, 앉는 자리를 누르면 앉습니다."),
+        ["gCotN"] = ("Cot", "야전침대"),
+        ["gCotD"] = ("Press to lie down.", "누르면 눕습니다."),
+        ["gMatN"] = ("Picnic mat", "돗자리"),
+        ["gMatD"] = ("Press to lie down. Grab the foot end to move it.", "누르면 눕습니다. 발치 쪽을 잡으면 옮길 수 있습니다."),
+        ["gSkwN"] = ("Marshmallows", "마시멜로"),
+        ["gSkwD"] = ("Hold over the fire to roast. Use to eat, use again for a new one.", "불에 대면 익습니다. 사용하면 먹고, 다시 사용하면 새로 꽂힙니다."),
+        ["gKetN"] = ("Kettle & stove", "주전자 · 스토브"),
+        ["gKetD"] = ("Steams on the stove. Use over a mug to pour.", "스토브 위에서 김이 납니다. 머그 위에서 사용하면 따릅니다."),
+        ["gMugN"] = ("Mugs", "머그"),
+        ["gMugD"] = ("Use to take a sip. Six sips empty it.", "사용하면 한 모금. 여섯 모금이면 비웁니다."),
+        ["gScpN"] = ("Telescope", "망원경"),
+        ["gScpD"] = ("Bring your face to the eyepiece. The tube follows your view.", "접안렌즈에 얼굴을 대면 경통이 시선을 따라 돕니다."),
+        ["gStnN"] = ("Skipping stones", "물수제비 돌"),
+        ["gStnD"] = ("On the dock tray. Throw low and fast across the water.", "부두 끝 쟁반에 있습니다. 물 위로 낮고 빠르게 던지세요."),
+        ["gBtN"] = ("Rowboat", "나룻배"),
+        ["gBtD"] = ("Press a seat to sit.", "자리를 누르면 앉습니다."),
+        ["guideFoot"] = ("Grab, Use, and Drop are your usual VRChat pickup controls.", "잡기 · 사용 · 놓기는 VRChat 기본 조작입니다."),
     };
+
+    // 상호작용 사물 목록 (문구 키 앞부분 — N 이름 / D 설명). 왼쪽 열 7개 → 오른쪽 열
+    static readonly string[] GUIDE = { "gSet", "gVid", "gMir", "gLan", "gChr", "gCot", "gMat", "gSkw", "gKet", "gMug", "gScp", "gStn", "gBt" };
 
     static void L(TextMeshProUGUI t, (string en, string ko) s) { loc.Add((t, s.en, s.ko)); }
 
@@ -548,8 +606,14 @@ public static class PyriteSettingsUI
                     Shot(cam, near, panel.position, 40f, "Assets/_preview/projector/ui_" + tag + "_assets.png");
                     st.assetsPopup.SetActive(false);
                 }
+                if (h > 20f && st != null && st.guidePopup != null)
+                {
+                    st.guidePopup.SetActive(true);
+                    Shot(cam, near, panel.position, 40f, "Assets/_preview/projector/ui_" + tag + "_guide.png");
+                    st.guidePopup.SetActive(false);
+                }
             }
-            sb.AppendLine("  shots ui_{21_en,21_ko,12_en}_{table,panel} + ui_21_{en,ko}_assets");
+            sb.AppendLine("  shots ui_{21_en,21_ko,12_en}_{table,panel} + ui_21_{en,ko}_{assets,guide}");
         }
         finally
         {
