@@ -62,6 +62,7 @@ public class PyriteMeteors : UdonSharpBehaviour
         if (head == null || trail == null) return;
         double now = Networking.GetServerTimeInSeconds();
         int k = (int)(now / interval);
+        if ((double)k * interval > now) k--;   // 내림. VRChat 서버 시각은 음수일 수 있다(실측 −151731 s) → (int) 는 0 쪽으로 잘라서 start 가 늘 양수 → 한 번도 안 떨어졌다
         float start = (float)((double)k * interval - now) + H(k, 1) * jitter;   // 이번 이벤트 시작까지 남은 초 (음수면 지남). 서버 시각이 커서 float 로 곱하면 정밀도가 날아간다 → double
         float d = 0.7f + H(k, 2) * 0.6f;
         bool night = cycle == null || cycle.sunElNow < nightSunEl;
