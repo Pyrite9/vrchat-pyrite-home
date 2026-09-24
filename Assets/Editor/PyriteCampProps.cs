@@ -50,7 +50,7 @@ public static class PyriteCampProps
     }
 
     // ───────────────────────── 메뉴 ─────────────────────────
-    [MenuItem("Tools/Pyrite2/Z31b. Build Camp Props &#9", false, 51)]   // Alt+Shift+9 — 메뉴 팝업이 화면 캡처에서 가려질 때 단축키로
+    [MenuItem("Tools/Pyrite2/Z31b. Build Camp Props %&#9", false, 51)]   // Ctrl+Alt+Shift+9 (Alt+Shift+9 는 E 와 충돌) — 메뉴가 캡처에서 가려질 때 단축키로
     public static void Build()
     {
         sb = new StringBuilder("[Z31b] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
@@ -328,12 +328,12 @@ public static class PyriteCampProps
             sb.AppendLine(string.Format("kettle {0} | spout tip {1} | tris {2}", go.transform.position.ToString("F3"), spout.position.ToString("F3"), Tris(meshGo.GetComponent<MeshFilter>().sharedMesh)));
         }
 
-        // 6) 망원경
+        // 6) 망원경 — 접안렌즈 들여다보기 (머리 앞 화면 방식 폐기: 사진에 찍혀 불쾌)
         {
             var go = new GameObject("Telescope");
             go.transform.SetParent(root.transform, false);
             go.transform.position = new Vector3(SCOPE.x, Ground(SCOPE), SCOPE.z);
-            const float HEAD = 1.30f, PIVOT = 1.38f;
+            const float HEAD = 1.46f, PIVOT = 1.54f;          // 접안부가 눈높이(약 1.4 m)에 오도록 전보다 16 cm 높임
             var legs = new List<Part> {
                 new Part(Lathe(new[] { V(0, HEAD - 0.05f), V(0.05f, HEAD - 0.05f), V(0.05f, HEAD), V(0.03f, HEAD + 0.02f), V(0.03f, PIVOT - 0.03f), V(0, PIVOT - 0.03f) }, 16), Matrix4x4.identity, mBlack),
             };
@@ -342,7 +342,7 @@ public static class PyriteCampProps
                 float a = (30f + i * 120f) * Mathf.Deg2Rad;
                 var rdir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
                 var top = new Vector3(0, HEAD - 0.03f, 0) + rdir * 0.035f;
-                var foot = rdir * 0.45f;
+                var foot = rdir * 0.48f;
                 float L = (top - foot).magnitude;
                 legs.Add(new Part(Lathe(new[] { V(0, 0), V(0.011f, 0), V(0.014f, L), V(0, L) }, 8), Matrix4x4.TRS(foot, Quaternion.FromToRotation(Vector3.up, top - foot), Vector3.one), mWood));
                 legs.Add(new Part(cube, Matrix4x4.TRS(foot + Vector3.up * 0.012f, Quaternion.identity, new Vector3(0.03f, 0.024f, 0.03f)), mBlack));
@@ -361,46 +361,45 @@ public static class PyriteCampProps
                 new Part(Lathe(new[] { V(0, -0.30f), V(0.038f, -0.30f), V(0.042f, -0.28f), V(0.042f, 0.40f), V(0, 0.40f) }, 24), alongZ, mBrass),
                 new Part(Lathe(new[] { V(0.043f, 0.39f), V(0.05f, 0.40f), V(0.05f, 0.56f), V(0.046f, 0.56f), V(0.046f, 0.42f) }, 24), alongZ, mBlack),
                 new Part(Lathe(new[] { V(0.046f, 0.52f), V(0, 0.52f) }, 24), alongZ, mGlass),
-                new Part(Lathe(new[] { V(0, -0.43f), V(0.02f, -0.43f), V(0.02f, -0.40f), V(0.015f, -0.39f), V(0.015f, -0.29f), V(0, -0.29f) }, 14), alongZ, mBlack),
+                // 접안부: 가는 통 + 넓은 눈받이(속이 빈 고리) + 안쪽 바닥판 → 그 앞에 화면
+                new Part(Lathe(new[] { V(0.015f, -0.29f), V(0.018f, -0.30f), V(0.018f, -0.385f), V(0.030f, -0.395f) }, 16), alongZ, mBlack),
+                new Part(Lathe(new[] { V(0.030f, -0.395f), V(0.035f, -0.40f), V(0.035f, -0.445f), V(0.031f, -0.447f), V(0.031f, -0.41f) }, 24), alongZ, mBlack),
+                new Part(Lathe(new[] { V(0, -0.405f), V(0.031f, -0.405f) }, 24), alongZ, mBlack),
                 new Part(Torus(0.043f, 0.004f, 24, 6, 0f, 360f), Matrix4x4.Translate(new Vector3(0, 0, -0.12f)), mBlack),
                 new Part(Torus(0.043f, 0.004f, 24, 6, 0f, 360f), Matrix4x4.Translate(new Vector3(0, 0, 0.18f)), mBlack),
             });
-            // 경통 끝 카메라 → RT
+            // 경통 끝 카메라 → RT (작은 화면이라 512² + MSAA 2)
             var rtPath = DIR + "/RT_Telescope.renderTexture";
-            // 화질: 512² → 1024² + MSAA 4 (관리자: 망원경 화질이 매우 나쁨). 원 지름이 데스크톱 화면 세로의 약 90% 라 512 는 1.7배 늘어났다
             var rt = AssetDatabase.LoadAssetAtPath<RenderTexture>(rtPath);
-            if (rt != null && (rt.width != 1024 || rt.antiAliasing != 4)) { AssetDatabase.DeleteAsset(rtPath); rt = null; }
+            if (rt != null && (rt.width != 512 || rt.antiAliasing != 2)) { AssetDatabase.DeleteAsset(rtPath); rt = null; }
             bool rtNew = rt == null;
             if (rtNew)
             {
-                rt = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4, useMipMap = false, filterMode = FilterMode.Bilinear, anisoLevel = 0 };
+                rt = new RenderTexture(512, 512, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2, useMipMap = false, filterMode = FilterMode.Bilinear };
                 rt.name = "RT_Telescope"; AssetDatabase.CreateAsset(rt, rtPath);
             }
             var camGo = new GameObject("ScopeCam"); camGo.transform.SetParent(pitch, false); camGo.transform.localPosition = new Vector3(0, 0, 0.57f);
             var cam = camGo.AddComponent<Camera>();
             cam.fieldOfView = 18f; cam.nearClipPlane = 0.35f; cam.farClipPlane = 3000f; cam.targetTexture = rt; cam.depth = -5;   // 화각 6°·10° 는 하늘 별이 막대처럼 늘어났다 → 18° (약 3배)
             cam.clearFlags = CameraClearFlags.Skybox; cam.allowHDR = false; cam.allowMSAA = true;
-            cam.cullingMask = ~((1 << 5) | (1 << 10) | (1 << 12) | (1 << 18) | (1 << 19));
-            string tt0 = cam.targetTexture != null ? cam.targetTexture.name : "NULL";
+            cam.cullingMask = ~((1 << 5) | (1 << 12) | (1 << 18) | (1 << 19));
             camGo.SetActive(false);
-            sb.AppendLine(string.Format("scope rt {0} (new {1}) → cam.targetTexture active {2} / inactive {3}", rt != null ? rt.width + "x" + rt.height : "NULL", rtNew, tt0, cam.targetTexture != null ? cam.targetTexture.name : "NULL"));
-            var view = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            view.name = "ScopeView"; Object.DestroyImmediate(view.GetComponent<Collider>());
-            view.transform.SetParent(go.transform, false); view.transform.localScale = Vector3.one * 0.6f;
-            var vm = AssetDatabase.LoadAssetAtPath<Material>(DIR + "/Materials/M_ScopeView.mat");
-            if (vm == null) { vm = new Material(Shader.Find("Pyrite/ScopeView")); AssetDatabase.CreateAsset(vm, DIR + "/Materials/M_ScopeView.mat"); }
-            vm.shader = Shader.Find("Pyrite/ScopeView"); vm.SetTexture("_MainTex", rt); vm.SetFloat("_Radius", 0.1f); vm.SetFloat("_Soft", 0.006f); EditorUtility.SetDirty(vm);
-            var vr = view.GetComponent<MeshRenderer>(); vr.sharedMaterial = vm; vr.shadowCastingMode = ShadowCastingMode.Off; vr.receiveShadows = false;
-            view.SetActive(false);
+            // 접안 화면: 지름 6 cm, 경통 뒤(-Z)를 향함 → 경통 방향(+Z)으로 보는 사람에게 앞면
+            var screen = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            screen.name = "EyepieceScreen"; Object.DestroyImmediate(screen.GetComponent<Collider>());
+            screen.transform.SetParent(pitch, false); screen.transform.localPosition = new Vector3(0, 0, -0.407f); screen.transform.localScale = Vector3.one * 0.062f;
+            var em = AssetDatabase.LoadAssetAtPath<Material>(DIR + "/Materials/M_ScopeEyepiece.mat");
+            if (em == null) { em = new Material(Shader.Find("Pyrite/ScopeEyepiece")); AssetDatabase.CreateAsset(em, DIR + "/Materials/M_ScopeEyepiece.mat"); }
+            em.shader = Shader.Find("Pyrite/ScopeEyepiece"); em.SetTexture("_MainTex", rt); em.SetFloat("_Brightness", 1.0f); EditorUtility.SetDirty(em);
+            var sr = screen.GetComponent<MeshRenderer>(); sr.sharedMaterial = em; sr.shadowCastingMode = ShadowCastingMode.Off; sr.receiveShadows = false;
             var bc = go.AddComponent<BoxCollider>();
             bc.center = new Vector3(0, PIVOT - 0.02f, 0); bc.size = new Vector3(0.24f, 0.36f, 0.95f);
             var tel = UdonSharpUndo.AddComponent<PyriteTelescope>(go);
-            tel.yawPivot = yaw; tel.pitchPivot = pitch; tel.cam = camGo; tel.view = view.transform;
+            tel.yawPivot = yaw; tel.pitchPivot = pitch; tel.cam = camGo; tel.eyepiece = screen.transform;
+            tel.yaw = 180f; tel.pitch = 18f;
             UdonSharpEditorUtility.CopyProxyToUdon(tel); EditorUtility.SetDirty(tel);
-            var ub = UdonSharpEditorUtility.GetBackingUdonBehaviour(tel);
-            if (ub != null) { ub.interactText = "Telescope (Jump to exit)"; ub.proximity = 2f; EditorUtility.SetDirty(ub); }
-            sb.AppendLine(string.Format("telescope {0} | fire dist {1:F2} m | eyepiece y {2:F2} | rt {3}", go.transform.position.ToString("F2"),
-                Vector2.Distance(new Vector2(go.transform.position.x, go.transform.position.z), new Vector2(FIRE.x, FIRE.z)), pitch.TransformPoint(0, 0, -0.43f).y - go.transform.position.y, rtPath));
+            sb.AppendLine(string.Format("telescope {0} | fire dist {1:F2} m | eyepiece y {2:F2} (지면 기준) | screen Ø0.062 m | rt {3} {4}x{5} aa{6}", go.transform.position.ToString("F2"),
+                Vector2.Distance(new Vector2(go.transform.position.x, go.transform.position.z), new Vector2(FIRE.x, FIRE.z)), screen.transform.position.y - go.transform.position.y, rtPath, rt.width, rt.height, rt.antiAliasing));
         }
 
         // 7) 돗자리 (타프 밑)
@@ -540,7 +539,24 @@ public static class PyriteCampProps
                     File.WriteAllBytes(string.Format("Assets/_preview/props/props_scope_{0:00}.png", h), tx.EncodeToPNG()); Object.DestroyImmediate(tx);
                 }
             }
-            sb.AppendLine("  shots props_{overview,table,stove,rack,telescope,mat}_{13,20} + props_scope_{13,20}");
+            // 접안 화면 가까이 (얼굴 대고 보는 거리 15 cm)
+            var ep = root.transform.Find("Telescope/Yaw/Tube/EyepieceScreen");
+            if (ep != null && scope != null)
+            {
+                if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(20.5f); }
+                scope.gameObject.SetActive(true); scope.GetComponent<Camera>().Render();
+                var tube = ep.parent;
+                var eye = ep.position - tube.forward * 0.15f + Vector3.up * 0.01f;
+                cam.fieldOfView = 60f;
+                cam.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(tube.forward, Vector3.up));
+                Shot(cam, "Assets/_preview/props/props_eyepiece_21.png", 1280, 720);
+                var side = ep.position + tube.right * 0.9f - tube.forward * 0.5f + Vector3.up * 0.1f;
+                cam.fieldOfView = 45f;
+                cam.transform.SetPositionAndRotation(side, Quaternion.LookRotation(ep.position + tube.forward * 0.1f - side));
+                Shot(cam, "Assets/_preview/props/props_eyepiece_side_21.png", 1280, 720);
+                scope.gameObject.SetActive(false);
+            }
+            sb.AppendLine("  shots props_{overview,table,stove,rack,telescope,mat}_{13,20} + props_scope_{13,20} + props_eyepiece(_side)_21");
         }
         finally
         {
