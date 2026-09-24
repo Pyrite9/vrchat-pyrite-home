@@ -23,10 +23,12 @@ public class PyriteSkewer : UdonSharpBehaviour
     public Transform visual;            // 몸체 (피벗 = 손잡이). 들 때 방향은 손을 그대로 따른다 — 관리자: 초기 버전이 더 좋음 (머리 기준 세우기 폐기)
 
     private bool held;
+    private Transform snapSlot;         // 꽂은 자리 — 놓은 직후 VRChat 이 리지드바디 상태를 되돌려 빠지는 걸 막으려고 몇 프레임 뒤 다시 꽂는다
 
     public override void OnPickup()
     {
         held = true;
+        snapSlot = null;
         if (state != null && !Networking.IsOwner(state.gameObject)) Networking.SetOwner(Networking.LocalPlayer, state.gameObject);
     }
 
@@ -44,13 +46,26 @@ public class PyriteSkewer : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject)) return;
         VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         Transform s = FreeSlotNear();
+        Debug.Log("[PyriteSkewer] " + gameObject.name + " drop → " + (s != null ? s.name : "없음(떨어뜨림)"));
         if (s != null)
         {
-            transform.SetPositionAndRotation(s.position, s.rotation);
-            if (sync != null) { sync.SetGravity(false); sync.SetKinematic(true); sync.FlagDiscontinuity(); }
+            snapSlot = s;
+            ReSnap();
+            SendCustomEventDelayedFrames(nameof(ReSnap), 1);
+            SendCustomEventDelayedFrames(nameof(ReSnap), 10);
             return;
         }
         if (sync != null) { sync.SetKinematic(false); sync.SetGravity(true); }
+    }
+
+    public void ReSnap()
+    {
+        if (snapSlot == null || held || !Networking.IsOwner(gameObject)) return;
+        VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        transform.SetPositionAndRotation(snapSlot.position, snapSlot.rotation);
+        if (sync != null) { sync.SetGravity(false); sync.SetKinematic(true); sync.FlagDiscontinuity(); }
+        Rigidbody rb = (Rigidbody)GetComponent(typeof(Rigidbody));
+        if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
     }
 
     private void Update()
