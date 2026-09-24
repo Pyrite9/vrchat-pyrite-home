@@ -422,6 +422,36 @@ public static class PyriteJudge
         Directory.CreateDirectory("Logs"); File.AppendAllText(LOG, log.ToString());
     }
 
+
+    // ───────── Z36e 꽃 거리 Play 확인 — Play(ClientSim) 중에 FlowerField 의 PyriteFlowerCull.distance 를 160/80/40/20 으로 바꿔 켜진 렌더러 수·Game 뷰 삼각형
+    static int eStep, eWait; static List<string> eRes; static readonly float[] EDist = { 160f, 80f, 40f, 20f };
+    [MenuItem("Tools/Pyrite2/Z36e. Flower Cull Play Test", false, 104)]
+    public static void FlowerPlay()
+    {
+        eRes = new List<string> { "[Z36e] " + System.DateTime.Now.ToString("HH:mm:ss") + " playing " + Application.isPlaying };
+        if (!Application.isPlaying) { File.AppendAllText(LOG, string.Join("\n", eRes) + "\n"); return; }
+        eStep = 0; eWait = 0;
+        EditorApplication.update -= ETick; EditorApplication.update += ETick;
+    }
+    static void ETick()
+    {
+        var ff = GameObject.Find("FlowerField");
+        var ub = ff != null ? ff.GetComponents<VRC.Udon.UdonBehaviour>().FirstOrDefault(u => u.programSource != null && u.programSource.name.Contains("FlowerCull")) : null;
+        if (ub == null) { eRes.Add("FlowerCull UdonBehaviour 없음"); EditorApplication.update -= ETick; File.AppendAllText(LOG, string.Join("\n", eRes) + "\n"); return; }
+        if (eStep >= EDist.Length)
+        {
+            ub.SetProgramVariable("distance", 160f); ub.SendCustomEvent("_onEnable");
+            EditorApplication.update -= ETick; eRes.Add("RESULT: DONE"); File.AppendAllText(LOG, string.Join("\n", eRes) + "\n"); return;
+        }
+        if (eWait == 0) { ub.SetProgramVariable("distance", EDist[eStep]); if (EDist[eStep] >= 160f) { foreach (var r in ff.GetComponentsInChildren<Renderer>()) r.enabled = true; } }
+        UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+        if (++eWait < 90) return;   // Update 가 0.5 초마다 판정
+        var rs = ff.GetComponentsInChildren<Renderer>(true);
+        var lp = VRC.SDKBase.Networking.LocalPlayer;
+        eRes.Add(string.Format("  distance {0,4} m: renderers on {1}/{2}, player {3}, game view tris {4:N0}", EDist[eStep], rs.Count(r => r.enabled), rs.Length, lp != null ? lp.GetPosition().ToString("F0") : "-", UnityStats.triangles));
+        eWait = 0; eStep++;
+    }
+
     static float Ground(Vector3 p)
     {
         Physics.SyncTransforms();

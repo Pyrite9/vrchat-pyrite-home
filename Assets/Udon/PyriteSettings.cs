@@ -37,9 +37,14 @@ public class PyriteSettings : UdonSharpBehaviour
     public TextMeshProUGUI soundText;
 
     [Header("성능")]
-    public Toggle flowersToggle;
+    public Toggle flowersToggle;           // (옛 꽃 켬/끔 — 2026-09-24 부터 거리 바로 대체, 비어 있음)
+    public Slider flowerDistSlider;        // 0..16 → ×10 m. 0 = 끔, 16 = 전부
+    public TextMeshProUGUI flowerDistText;
+    public PyriteFlowerCull flowerCull;
     public Toggle firefliesToggle;
     public Toggle shadowsToggle;
+    public Toggle lightShadowsToggle;      // 모닥불·들고 다니는 랜턴 점광 그림자
+    public Light[] shadowLights;
     public Renderer[] flowerRenderers;
     public Renderer[] fireflyRenderers;
     public Light sunLight;
@@ -63,6 +68,7 @@ public class PyriteSettings : UdonSharpBehaviour
     private float lastUserTime = -10f;
     private float nextTick = 0f;
     private LightShadows sunShadowMode = LightShadows.Soft;
+    public LightShadows lightShadowOn = LightShadows.Soft;   // 켤 때 모드 (LightShadows[] 는 Udon 미노출 — 둘 다 Soft 였다)
 
     void Start() { Init(); }
 
@@ -108,6 +114,9 @@ public class PyriteSettings : UdonSharpBehaviour
             if (campMirrorToggle != null && campMirror != null) campMirrorToggle.isOn = campMirror.IsOn();
             if (soundSlider != null) soundSlider.value = cycle.soundScale;
             SoundLabel();
+            if (flowerDistSlider != null && flowerCull != null) flowerDistSlider.value = Mathf.Round(flowerCull.distance / 10f);
+            FlowerLabel();
+            if (lightShadowsToggle != null && shadowLights != null && shadowLights.Length > 0 && shadowLights[0] != null) lightShadowsToggle.isOn = shadowLights[0].shadows != LightShadows.None;
         }
         updating = false;
     }
@@ -180,6 +189,30 @@ public class PyriteSettings : UdonSharpBehaviour
         for (int i = 0; i < flowerRenderers.Length; i++) if (flowerRenderers[i] != null) flowerRenderers[i].enabled = on;
     }
 
+    public void OnFlowerDist()
+    {
+        if (updating || flowerDistSlider == null || flowerCull == null) return;
+        flowerCull.SetDistance(flowerDistSlider.value * 10f);
+        FlowerLabel();
+    }
+
+    private void FlowerLabel()
+    {
+        if (flowerDistText == null || flowerDistSlider == null) return;
+        float v = flowerDistSlider.value;
+        if (v <= 0f) flowerDistText.text = lang == 1 ? "끔" : "Off";
+        else if (v >= flowerDistSlider.maxValue) flowerDistText.text = lang == 1 ? "전부" : "All";
+        else flowerDistText.text = Mathf.RoundToInt(v * 10f) + " m";
+    }
+
+    public void OnLightShadows()
+    {
+        if (updating || lightShadowsToggle == null || shadowLights == null) return;
+        bool on = lightShadowsToggle.isOn;
+        for (int i = 0; i < shadowLights.Length; i++)
+            if (shadowLights[i] != null) shadowLights[i].shadows = on ? lightShadowOn : LightShadows.None;
+    }
+
     public void OnFireflies()
     {
         if (updating || firefliesToggle == null) return;
@@ -203,6 +236,7 @@ public class PyriteSettings : UdonSharpBehaviour
         for (int i = 0; i < texts.Length; i++) if (texts[i] != null && i < src.Length) texts[i].text = src[i];
         if (langEnBg != null) langEnBg.color = lang == 0 ? langOn : langOff;
         if (langKoBg != null) langKoBg.color = lang == 1 ? langOn : langOff;
+        FlowerLabel();
     }
 
     public void OpenAssets() { ClosePopups(); if (assetsPopup != null) assetsPopup.SetActive(true); }

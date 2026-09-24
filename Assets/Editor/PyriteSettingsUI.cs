@@ -160,10 +160,15 @@ public static class PyriteSettingsUI
 
         // 성능
         var cPerf = Card("CardPerf", 1, 1, "perf");
-        var (flT, flL) = Tgl(cPerf, "Flowers", 32, 86, 489, true, "OnFlowers"); L(flL, S["flowers"]);
-        var (ffT, ffL) = Tgl(cPerf, "Fireflies", 32, 152, 489, true, "OnFireflies"); L(ffL, S["fireflies"]);
-        var (shT, shL) = Tgl(cPerf, "Shadows", 32, 218, 489, true, "OnShadows"); L(shL, S["shadows"]);
-        L(Txt(cPerf, "Note", 32, 300, 489, 50, "", 20, GREY, TextAlignmentOptions.TopLeft), S["perfNote"]);
+        // 성능 칸 (2026-09-24 관리자): 꽃 켬/끔 → 꽃 보이는 거리 바, 불빛(점광) 그림자 켬/끔 추가
+        L(Txt(cPerf, "FlowerDistLabel", 32, 76, 360, 44, "", 30, WHITE), S["flowerDist"]);
+        var flDistText = Txt(cPerf, "FlowerDistValue", 380, 76, 141, 44, "All", 28, GOLD, TextAlignmentOptions.Right);
+        var flDist = Sld(cPerf, "FlowerDist", 32, 122, 489, 0f, 16f, 16f, true, "OnFlowerDist");
+        var (ffT, ffL) = Tgl(cPerf, "Fireflies", 32, 170, 489, true, "OnFireflies"); L(ffL, S["fireflies"]);
+        var (shT, shL) = Tgl(cPerf, "Shadows", 32, 224, 489, true, "OnShadows"); L(shL, S["shadows"]);
+        var (lsT, lsL) = Tgl(cPerf, "LightShadows", 32, 278, 489, true, "OnLightShadows"); L(lsL, S["lightShadows"]);
+        L(Txt(cPerf, "Note", 32, 336, 489, 28, "", 18, GREY, TextAlignmentOptions.TopLeft), S["perfNote"]);
+        Toggle flT = null;
 
         // 정보
         var cAbout = Card("CardAbout", 2, 1, "about");
@@ -236,6 +241,21 @@ public static class PyriteSettingsUI
         st.lakeToggle = lakeT; st.lakeMirror = lakeMirror; st.campMirrorToggle = mirT; st.campMirror = campMirror;
         st.soundSlider = soundSlider; st.soundText = soundText;
         st.flowersToggle = flT; st.firefliesToggle = ffT; st.shadowsToggle = shT;
+        st.flowerDistSlider = flDist; st.flowerDistText = flDistText; st.lightShadowsToggle = lsT;
+        st.shadowLights = Object.FindObjectsOfType<Light>(true).Where(l => l.type == LightType.Point && l.shadows != LightShadows.None).ToArray();
+        {   // 꽃밭 거리 컬링 — 항상 켜져 있는 꽃밭 루트에
+            var ff = GameObject.Find("FlowerField");
+            var fc = ff != null ? ff.GetComponent<PyriteFlowerCull>() : null;
+            if (ff != null && fc == null) fc = UdonSharpUndo.AddComponent<PyriteFlowerCull>(ff);
+            if (fc != null)
+            {
+                fc.renderers = (cyc.flowerRenderers ?? new Renderer[0]).Where(r => r != null).ToArray();
+                fc.maxDistance = 160f; fc.distance = 160f;
+                UdonSharpEditorUtility.CopyProxyToUdon(fc); EditorUtility.SetDirty(fc);
+            }
+            st.flowerCull = fc;
+            sb.AppendLine("flower cull: " + (fc != null ? fc.renderers.Length + " renderers on " + ff.name : "FlowerField 없음") + ", light shadows: " + string.Join(", ", st.shadowLights.Select(l => l.name + " " + l.shadows)));
+        }
         st.flowerRenderers = (cyc.flowerRenderers ?? new Renderer[0]).Where(r => r != null).ToArray();
         st.fireflyRenderers = (cyc.fireflies ?? new ParticleSystem[0]).Where(p => p != null).Select(p => (Renderer)p.GetComponent<ParticleSystemRenderer>()).Where(r => r != null).ToArray();
         st.sunLight = cyc.sun;
@@ -338,6 +358,10 @@ public static class PyriteSettingsUI
         ["fireflies"] = ("Fireflies", "반딧불이"),
         ["shadows"] = ("Sun shadows", "햇빛 그림자"),
         ["perfNote"] = ("Turn these off if your frame rate drops.", "프레임이 떨어지면 꺼 보세요."),
+        ["flowerDist"] = ("Flower distance", "꽃 보이는 거리"),
+        ["flowerOff"] = ("Off m", "끔"),
+        ["flowerAll"] = ("All", "전부"),
+        ["lightShadows"] = ("Firelight shadows", "불빛 그림자"),
         ["about"] = ("ABOUT", "정보"),
         ["world"] = ("Pyrite Lake", "파이라이트 호수"),
         ["aboutBody"] = ("Pyrite, lake, and basalt columns.\nA lakeside camp ringed by columnar cliffs,\nnemophila fields, and fireflies.\nA full day passes every 12 minutes.", "황철석과 호수와 주상절리.\n기둥 절벽에 둘러싸인 호숫가 캠프,\n네모필라 꽃밭과 반딧불이.\n12분마다 하루가 흐릅니다."),
