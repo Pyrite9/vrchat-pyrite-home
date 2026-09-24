@@ -19,7 +19,7 @@ public class PyriteSkewer : UdonSharpBehaviour
     public float cookSeconds = 20f;     // 0 → 1(탄) 까지 (불 가운데일수록 빠르다)
     public Transform[] slots;           // 꽂이 자리
     public Transform[] others;          // 다른 꼬치 (자리 점유 확인)
-    public float snapRadius = 0.6f;
+    public float snapRadius = 0.6f;      // 꽂이 자리와의 수평 거리
     public Transform visual;            // 몸체 (피벗 = 손잡이). 들 때 방향은 손을 그대로 따른다 — 관리자: 초기 버전이 더 좋음 (머리 기준 세우기 폐기)
 
     private bool held;
@@ -75,7 +75,11 @@ public class PyriteSkewer : UdonSharpBehaviour
         {
             Transform s = slots[i];
             if (s == null) continue;
-            float d = Vector3.Distance(transform.position, s.position);
+            // 🔴 3D 거리 0.6 m 로는 손 높이(꽂이보다 1 m 위)에서 놓으면 안 꽂혔다 → 수평 거리만 보고, 높이는 꽂이 위 1.8 m 까지 허용
+            Vector3 v = transform.position - s.position;
+            float dy = v.y; v.y = 0f;
+            float d = v.magnitude;
+            if (dy < -0.3f || dy > 1.8f) continue;
             if (d > bestD || Occupied(s)) continue;
             best = s; bestD = d;
         }
