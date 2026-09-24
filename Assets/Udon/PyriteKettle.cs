@@ -27,7 +27,6 @@ public class PyriteKettle : UdonSharpBehaviour
     private float tilt;
     private bool placeNext;
     private VRCPickup pk;
-    private bool onStoveSnap;           // 스토브에 올린 직후 몇 프레임 뒤 다시 올린다 (VRChat 이 놓은 뒤 리지드바디 상태를 되돌림)
 
     private void Update()
     {
@@ -70,18 +69,7 @@ public class PyriteKettle : UdonSharpBehaviour
         }
     }
 
-    public override void OnPickup() { placeNext = false; onStoveSnap = false; }
-
-    public void ReSnap()
-    {
-        if (!onStoveSnap || stoveSlot == null || !Networking.IsOwner(gameObject)) return;
-        if (pk != null && pk.IsHeld) return;
-        VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
-        transform.SetPositionAndRotation(stoveSlot.position, stoveSlot.rotation);
-        if (sync != null) { sync.SetGravity(false); sync.SetKinematic(true); sync.FlagDiscontinuity(); }
-        Rigidbody rb = (Rigidbody)GetComponent(typeof(Rigidbody));
-        if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
-    }
+    public override void OnPickup() { placeNext = false; }
 
     public override void OnPickupUseDown()
     {
@@ -111,10 +99,8 @@ public class PyriteKettle : UdonSharpBehaviour
         placeNext = false;
         if (toStove && stoveSlot != null)
         {
-            onStoveSnap = true;
-            ReSnap();
-            SendCustomEventDelayedFrames(nameof(ReSnap), 1);
-            SendCustomEventDelayedFrames(nameof(ReSnap), 10);
+            transform.SetPositionAndRotation(stoveSlot.position, stoveSlot.rotation);
+            if (sync != null) { sync.SetGravity(false); sync.SetKinematic(true); sync.FlagDiscontinuity(); }
             return;
         }
         // 들고 있을 때 보이던 모양(똑바로, 시선 쪽) 그대로 내려놓는다
