@@ -31,6 +31,6 @@ Material:
     m_Floats:
     - _AngSize: 5
     m_Colors:
-    - _Color: {r: 0, g: 0, b: 0, a: 0}
-    - _Dir: {r: -0.9476182, g: -0.309017, b: -0.08079855, a: 0}
+    - _Color: {r: 3, g: 1.6800001, b: 0.78, a: 3}
+    - _Dir: {r: -0.074862964, g: 0.17271097, b: -0.98212343, a: 0}
   m_BuildTextureStacks: []

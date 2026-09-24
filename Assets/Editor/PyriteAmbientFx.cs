@@ -107,6 +107,15 @@ public static class PyriteAmbientFx
             head.SetActive(false);
             var m = UdonSharpUndo.AddComponent<PyriteMeteors>(go);
             m.cycle = cyc; m.head = head.transform; m.trail = tr;
+            {   // 진단 글자판 (캠프 모닥불 옆, 머리 쪽으로 돈다). 확인 끝나면 debugText 를 비우고 지운다
+                var dtGo = new GameObject("MeteorDebugText"); dtGo.transform.SetParent(go.transform, false);
+                dtGo.transform.position = new Vector3(-9.2f, 3.2f, 51.2f);
+                var tm = dtGo.AddComponent<TMPro.TextMeshPro>();   // TextMesh.text 는 Udon 미노출 → TMP
+                tm.fontSize = 1.1f; tm.alignment = TMPro.TextAlignmentOptions.Left; tm.color = new Color(1f, 0.95f, 0.6f);
+                tm.rectTransform.sizeDelta = new Vector2(3.2f, 1.4f); tm.enableWordWrapping = false;
+                tm.text = "meteor debug";
+                m.debugText = tm; m.debugTf = dtGo.transform;
+            }
             UdonSharpEditorUtility.CopyProxyToUdon(m); EditorUtility.SetDirty(m);
             sb.AppendLine("meteors: interval " + m.interval + " s ± " + m.jitter + ", radius " + m.radius + " m, trail " + tr.time + " s × " + tr.widthMultiplier + " m");
         }

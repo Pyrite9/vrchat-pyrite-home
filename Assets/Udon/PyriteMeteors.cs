@@ -22,6 +22,10 @@ public class PyriteMeteors : UdonSharpBehaviour
     public float azSpread = 35f;        // ±
     public float elMin = 34f, elMax = 46f, elFloor = 26f;
 
+    public TMPro.TextMeshPro debugText;
+    public Transform debugTf;           // 글자판 transform (TMP.transform 은 Udon 미노출)          // 진단: 인게임에서 상태를 글자로 (null 이면 안 씀)
+    private float nextDbg;
+
     private int activeK = -1;
     private float t0, dur;
     private Vector3 d0, d1;
@@ -62,6 +66,21 @@ public class PyriteMeteors : UdonSharpBehaviour
         float d = 0.7f + H(k, 2) * 0.6f;
         bool night = cycle == null || cycle.sunElNow < nightSunEl;
         float age = -start;
+        if (debugText != null && Time.time >= nextDbg)
+        {
+            nextDbg = Time.time + 0.2f;
+            VRCPlayerApi lp = Networking.LocalPlayer;
+            if (debugTf != null && Utilities.IsValid(lp))
+            {
+                Vector3 hp = lp.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
+                debugTf.rotation = Quaternion.LookRotation(debugTf.position - hp);
+            }
+            debugText.text = "meteor debug\nserver " + now.ToString("0.0") + "  k " + k
+                + "\nstart " + start.ToString("0.00") + "  age " + age.ToString("0.00") + "  d " + d.ToString("0.00")
+                + "\nhour " + (cycle != null ? cycle.currentHour.ToString("0.00") : "-") + "  sunEl " + (cycle != null ? cycle.sunElNow.ToString("0.0") : "-") + "  night " + night
+                + "\nactiveK " + activeK + "  head " + head.gameObject.activeSelf + "  emit " + trail.emitting + "  pts " + trail.positionCount
+                + "\nheadPos " + head.position.ToString("F0");
+        }
         if (night && age >= 0f && age <= d + trail.time)
         {
             if (activeK != k)
