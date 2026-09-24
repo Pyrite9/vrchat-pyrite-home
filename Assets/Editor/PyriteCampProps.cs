@@ -50,7 +50,7 @@ public static class PyriteCampProps
     }
 
     // ───────────────────────── 메뉴 ─────────────────────────
-    [MenuItem("Tools/Pyrite2/Z31b. Build Camp Props", false, 51)]
+    [MenuItem("Tools/Pyrite2/Z31b. Build Camp Props &#9", false, 51)]   // Alt+Shift+9 — 메뉴 팝업이 화면 캡처에서 가려질 때 단축키로
     public static void Build()
     {
         sb = new StringBuilder("[Z31b] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
@@ -108,7 +108,7 @@ public static class PyriteCampProps
         var mSteel = Mat("M_PropSteel", new Color(0.74f, 0.74f, 0.76f), 0.9f, 0.70f);
         var mBlack = Mat("M_PropBlack", new Color(0.05f, 0.05f, 0.055f), 0.4f, 0.55f);
         var mMarsh = Mat("M_PropMarsh", new Color(0.97f, 0.95f, 0.91f), 0f, 0.15f);
-        var mCopper = Mat("M_PropCopper", new Color(0.80f, 0.46f, 0.30f), 0.9f, 0.62f);
+        var mCopper = Mat("M_PropStainless", new Color(0.80f, 0.81f, 0.82f), 0.92f, 0.58f);   // 주전자: 관리자 요청으로 구리 → 스테인리스 (헤어라인 느낌으로 광택 조금 낮춤)
         var mBrass = Mat("M_PropBrass", new Color(0.80f, 0.62f, 0.32f), 1f, 0.68f);
         var mNavy = Mat("M_PropEnamelNavy", new Color(0.10f, 0.17f, 0.30f), 0f, 0.78f);
         var mCream = Mat("M_PropEnamelCream", new Color(0.90f, 0.85f, 0.72f), 0f, 0.78f);
