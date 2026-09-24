@@ -37,7 +37,7 @@ Material:
     - _CampR1: 16
     m_Colors:
     - _CampCenter: {r: -10.5, g: 0, b: 54.5, a: 0}
-    - _CampTint: {r: 0.62, g: 0.5, b: 0.4, a: 1}
+    - _CampTint: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _NightTint: {r: 0.13, g: 0.15, b: 0.22, a: 1}
+    - _NightTint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

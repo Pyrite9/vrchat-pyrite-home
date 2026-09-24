@@ -559,6 +559,42 @@ public static class PyriteJudge
         File.AppendAllText(LOG, "[Z36h] " + System.DateTime.Now.ToString("HH:mm:ss") + " reset sent (flower 16, light shadows on, bright 0, EN)\n");
     }
 
+
+    // Z36i — Play 중 효과음: 머그 Fill/Sip, 꼬치 Eat 을 불러 AudioSource 가 울리는지
+    static int iStep; static double iT; static List<string> iRes;
+    [MenuItem("Tools/Pyrite2/Z36i. SFX Play Test", false, 108)]
+    public static void SfxPlay()
+    {
+        iRes = new List<string> { "[Z36i] " + System.DateTime.Now.ToString("HH:mm:ss") + " playing " + Application.isPlaying };
+        if (!Application.isPlaying) { File.AppendAllText(LOG, string.Join("\n", iRes) + "\n"); return; }
+        iStep = 0; iT = EditorApplication.timeSinceStartup; EditorApplication.update -= ITick; EditorApplication.update += ITick;
+    }
+    static VRC.Udon.UdonBehaviour UB(string path) { var g = GameObject.Find(path); return g != null ? g.GetComponents<VRC.Udon.UdonBehaviour>().FirstOrDefault(u => u.programSource != null) : null; }
+    static void ITick()
+    {
+        if (EditorApplication.timeSinceStartup - iT < 0.12) return;
+        iT = EditorApplication.timeSinceStartup;
+        string[] act = { "CampProps/Mug_0/Visual/Body/../../State|Fill", "CampProps/Mug_0/State|Sip", "CampProps/Skewer_0/State|Eat", "CampProps/Skewer_0/State|Renew" };
+        if (iStep > 0)
+        {
+            var prev = act[iStep - 1].Split('|')[0]; var g = FindState(prev);
+            var a = g != null ? g.GetComponent<AudioSource>() : null;
+            iRes.Add(string.Format("  {0}: audio {1} playing {2}", act[iStep - 1], a != null, a != null && a.isPlaying));
+        }
+        if (iStep >= act.Length) { EditorApplication.update -= ITick; iRes.Add("RESULT: DONE"); File.AppendAllText(LOG, string.Join("\n", iRes) + "\n"); return; }
+        var p = act[iStep].Split('|'); var go = FindState(p[0]);
+        var ub = go != null ? go.GetComponents<VRC.Udon.UdonBehaviour>().FirstOrDefault(u => u.programSource != null) : null;
+        if (ub != null) ub.SendCustomEvent(p[1]); else iRes.Add("  없음 " + p[0]);
+        iStep++;
+    }
+    static GameObject FindState(string path)
+    {
+        var parts = path.Split('/'); var root = GameObject.Find("CampProps"); if (root == null) return null;
+        var holder = root.transform.Find(parts[1]); if (holder == null) return null;
+        var st = holder.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "State");
+        return st != null ? st.gameObject : null;
+    }
+
     static float Ground(Vector3 p)
     {
         Physics.SyncTransforms();

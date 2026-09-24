@@ -19,6 +19,8 @@ public class PyriteSkipStone : UdonSharpBehaviour
     public float minSpeed = 2.5f;
     public float maxAngle = 35f;
     public int maxSkips = 12;
+    public AudioSource splashAudio;       // 효과음 (2026-09-24) — 물보라 파티클과 같은 오브젝트, 모든 돌이 같이 쓴다
+    public AudioClip splashClip;
 
     private Rigidbody rb;
     private Collider col;
@@ -110,5 +112,11 @@ public class PyriteSkipStone : UdonSharpBehaviour
         if (splash != null) { splash.transform.position = p; splash.Emit((int)(12f * s)); }
         if (ring != null) { ring.transform.position = p + Vector3.up * 0.01f; ring.Emit(1); }
         if (ripple != null) ripple.AddDrop(p.x, p.z, 0.012f * s);
+        if (splashAudio != null && splashClip != null)
+        {
+            splashAudio.transform.position = p;
+            splashAudio.pitch = Random.Range(0.9f, 1.12f) * (s >= 1f ? 0.8f : 1f);   // 가라앉을 땐 낮고 굵게
+            splashAudio.PlayOneShot(splashClip, Mathf.Clamp01(0.45f + 0.5f * s));
+        }
     }
 }
