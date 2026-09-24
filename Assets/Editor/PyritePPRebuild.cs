@@ -80,7 +80,7 @@ public static class PyritePPRebuild
 
         var dusk = Fresh(DUSK);
         BloomSet(AddS<Bloom>(dusk), 1.0f, 1.0f, new Color(1f, 0.93f, 0.84f));
-        Grading(AddS<ColorGrading>(dusk), EXP_DUSK, 8f, -3f, 3f, 4f, new Vector4(0.97f, 1.00f, 1.07f, 0.015f), new Vector4(1.05f, 1.01f, 0.95f, 0.02f));
+        Grading(AddS<ColorGrading>(dusk), EXP_DUSK, 20f, -3f, 3f, 15f, new Vector4(0.97f, 1.00f, 1.07f, 0.015f), new Vector4(1.08f, 1.00f, 0.90f, 0.02f));   // 노을 4단계(2026-09-24, Z37e): 온도 8→20, 채도 4→15, 게인 따뜻하게 — 하늘 채도 0.04~0.08 → 0.20~0.22
         Vig(AddS<Vignette>(dusk), 0.24f);
         EditorUtility.SetDirty(dusk);
 

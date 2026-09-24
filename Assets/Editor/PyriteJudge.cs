@@ -339,7 +339,7 @@ public static class PyriteJudge
     };
     static Light[] cPoint; static LightShadows[] cPointSh; static Renderer[] cFlowers;
 
-    [MenuItem("Tools/Pyrite2/Z36c. Judge Perf What-if", false, 102)]
+    [MenuItem("Tools/Pyrite2/Z36c. Judge Perf What-if %&#j", false, 102)]
     public static void PerfWhatIf()
     {
         var cam = Camera.main; cp0 = cam.transform.position; cr0 = cam.transform.rotation; cf0 = cam.fieldOfView;
@@ -379,6 +379,47 @@ public static class PyriteJudge
         string[] names = { "base", "pointShadowsOff", "flowersOff", "bothOff" };
         cRes.Add(string.Format("  {0,-10} {1,-16} tris {2,9:N0} batches {3,5} setpass {4,4} shadowCasters {5,5}", CViews[vi].n, names[cfg], UnityStats.triangles, UnityStats.batches, UnityStats.setPassCalls, UnityStats.shadowCasters));
         cWait = 0; cStep++;
+    }
+
+
+    // ───────── Z36d 노을 시리즈 — 캠프 눈높이에서 해 지는 방위(sunSetAz)로, 17.0~19.6 시, 후처리 켬/끔
+    [MenuItem("Tools/Pyrite2/Z36d. Sunset Series", false, 103)]
+    public static void SunsetSeries()
+    {
+        var log = new StringBuilder("[Z36d] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
+        var cam = Camera.main; var cyc = Object.FindObjectOfType<PyriteDayCycle>();
+        var ppl = cam.GetComponent<UnityEngine.Rendering.PostProcessing.PostProcessLayer>();
+        var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
+        const string OUT = "Assets/_preview/judge/sunset/"; Directory.CreateDirectory(OUT);
+        var sky = RenderSettings.skybox;
+        try
+        {
+            float az = cyc.sunSetAz * Mathf.Deg2Rad;
+            var eye = new Vector3(-10.0f, 3.65f, 49.0f);
+            var dir = new Vector3(Mathf.Sin(az), Mathf.Tan(12f * Mathf.Deg2Rad), Mathf.Cos(az));
+            foreach (var h in new[] { 17.0f, 17.5f, 18.0f, 18.33f, 18.6f, 18.8f, 19.0f, 19.2f, 19.4f, 19.6f })
+            {
+                cyc.ResetCache(); cyc.EvaluateAt(h);
+                log.AppendLine(string.Format("  {0:00.00}h sunEl {1,6:0.0}  sky _SunElevation {2:0.000} _Exposure {3:0.00} _HorizonHaze {4:0.00} _MieStrength {5:0.00} _MieG {6:0.00} cloud {7:0.00}  ppDay {8:0.00} ppNight {9:0.00}",
+                    h, cyc.sunElNow, sky.GetFloat("_SunElevation"), sky.GetFloat("_Exposure"), sky.GetFloat("_HorizonHaze"), sky.GetFloat("_MieStrength"), sky.GetFloat("_MieG"), sky.GetFloat("_CloudCoverage"),
+                    cyc.ppDay != null ? cyc.ppDay.weight : -1f, cyc.ppNight != null ? cyc.ppNight.weight : -1f));
+                foreach (bool pp in new[] { true, false })
+                {
+                    if (ppl != null) ppl.enabled = pp;
+                    Shot(cam, eye, eye + dir, 60f, OUT + h.ToString("00.00") + (pp ? "_pp" : "_raw") + ".png");
+                }
+            }
+            log.AppendLine("  sunSetAz " + cyc.sunSetAz + ", setHour " + cyc.setHour + ", view el 12°");
+            log.AppendLine("RESULT: DONE");
+        }
+        catch (System.Exception e) { log.AppendLine("EXCEPTION " + e); }
+        finally
+        {
+            if (ppl != null) ppl.enabled = true;
+            cam.transform.SetPositionAndRotation(p0, r0); cam.fieldOfView = f0; cam.targetTexture = null;
+            cyc.ResetCache(); cyc.EvaluateAt(PyriteDayCycleSetup.EDITOR_HOUR);
+        }
+        Directory.CreateDirectory("Logs"); File.AppendAllText(LOG, log.ToString());
     }
 
     static float Ground(Vector3 p)

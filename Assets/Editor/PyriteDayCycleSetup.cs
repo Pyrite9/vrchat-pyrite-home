@@ -152,6 +152,9 @@ public static class PyriteDayCycleSetup
         sunset.cliff = Color.Lerp(dusk.cliff, blue.cliff, 0.3f); sunset.flower = Color.Lerp(dusk.flower, blue.flower, 0.3f);
         sunset.ffRate = 1.2f; sunset.camp = 1.1f; sunset.nightAmb = 0.5f; sunset.crLight = 0.2f;
         sunset.nightTint = Color.Lerp(dusk.nightTint, blue.nightTint, 0.3f); sunset.campTint = Color.Lerp(dusk.campTint, blue.campTint, 0.3f);
+        // 노을 2단계 (2026-09-24, Z37a 와 같은 값) — 번짐·연무·구름을 낮춰 우윳빛 하늘을 걷어낸다
+        dusk.skyMie = 1.4f; dusk.skyHaze = 0.9f; dusk.skyCloud = 0.25f;
+        sunset.skyMie = 1.3f; sunset.skyHaze = 0.8f; sunset.skyCloud = 0.30f;
         var predawn = blue.Clone("predawn", 5.5f, 2);
         predawn.skyHaze = 1.5f; predawn.ambSky = RGB(0.20f, 0.18f, 0.28f); predawn.fogCol = RGB(0.24f, 0.20f, 0.28f);
         predawn.ffRate = 0.3f; predawn.camp = 0.9f; predawn.nightAmb = 0.4f;

@@ -275,6 +275,23 @@ public class PyriteDayCycle : UdonSharpBehaviour
     // 하늘 셰이더에 넘기는 해 고도 — 박명 늘이기.
     // Sorafield 는 해가 -5° 쯤만 내려가도 별 하늘이 된다(1차: 19:00 하늘 91 → 19:20 37).
     // 지평선 아래는 0.35 배로 눌러 -12° 까지 -4.2°, 그 뒤 -18° 에서 -14.5°(밤 노출 3.4 를 맞춘 깊이)로.
+    // 노을 (2026-09-24 관리자): 저녁(12시 이후)에만 하늘에 넘기는 해 고도를 낮춘다 — 조명·그림자 방향은 그대로.
+    //  물리 하늘은 해가 ~3° 아래여야 붉어지는데 '노을' 키 18:20 의 해가 10° 였다(Z36d: 채도 0.01~0.08, 붉은 구간 실제 9초)
+    //  s × (skyDuskMin → 1), skyDuskFrom~skyDuskTo° 사이에서 부드럽게 원래 고도로 돌아간다 (10° → 2°, 14.8° → 4.6°, 22° → 20.6°)
+    public float skyDuskMin = 0.2f;
+    public float skyDuskFrom = 12f, skyDuskTo = 24f;
+
+    public float SkyElAt(float s, float h)
+    {
+        if (h >= 12f && s > 0f)
+        {
+            float t = Mathf.Clamp01((s - skyDuskFrom) / (skyDuskTo - skyDuskFrom));
+            t = t * t * (3f - 2f * t);
+            return s * (skyDuskMin + (1f - skyDuskMin) * t);
+        }
+        return SkyEl(s);
+    }
+
     public float SkyEl(float s)
     {
         if (s >= 0f) return s;
@@ -370,7 +387,7 @@ public class PyriteDayCycle : UdonSharpBehaviour
 
         if (sky != null)
         {
-            sky.SetFloat("_SunElevation", Mathf.Max(Mathf.Sin(SkyEl(sEl) * Mathf.Deg2Rad), skySinMin));
+            sky.SetFloat("_SunElevation", Mathf.Max(Mathf.Sin(SkyElAt(sEl, h) * Mathf.Deg2Rad), skySinMin));
             sky.SetFloat("_SunAzimuth", sAz);
             sky.SetFloat("_Exposure", F(skyExposure));
             sky.SetFloat("_HorizonHaze", F(skyHaze));
