@@ -362,8 +362,9 @@ public static class PyriteCampProps
                 new Part(Lathe(new[] { V(0.043f, 0.39f), V(0.05f, 0.40f), V(0.05f, 0.56f), V(0.046f, 0.56f), V(0.046f, 0.42f) }, 24), alongZ, mBlack),
                 new Part(Lathe(new[] { V(0.046f, 0.52f), V(0, 0.52f) }, 24), alongZ, mGlass),
                 // 접안부: 가는 통 + 넓은 눈받이(속이 빈 고리) + 안쪽 바닥판 → 그 앞에 화면
-                new Part(Lathe(new[] { V(0.015f, -0.29f), V(0.018f, -0.30f), V(0.018f, -0.385f), V(0.030f, -0.395f) }, 16), alongZ, mBlack),
-                new Part(Lathe(new[] { V(0.030f, -0.395f), V(0.035f, -0.40f), V(0.035f, -0.445f), V(0.031f, -0.447f), V(0.031f, -0.41f) }, 24), alongZ, mBlack),
+                // 🔴 회전체 프로필은 높이가 커지는 쪽으로 그려야 법선이 바깥을 본다 (거꾸로 그리면 안팎이 뒤집힘 — 관리자 스크린샷)
+                new Part(Lathe(new[] { V(0.030f, -0.395f), V(0.018f, -0.385f), V(0.018f, -0.30f), V(0.015f, -0.29f) }, 16), alongZ, mBlack),
+                new Part(Lathe(new[] { V(0.031f, -0.41f), V(0.031f, -0.447f), V(0.035f, -0.445f), V(0.035f, -0.40f), V(0.030f, -0.395f) }, 24), alongZ, mBlack),
                 new Part(Lathe(new[] { V(0, -0.405f), V(0.031f, -0.405f) }, 24), alongZ, mBlack),
                 new Part(Torus(0.043f, 0.004f, 24, 6, 0f, 360f), Matrix4x4.Translate(new Vector3(0, 0, -0.12f)), mBlack),
                 new Part(Torus(0.043f, 0.004f, 24, 6, 0f, 360f), Matrix4x4.Translate(new Vector3(0, 0, 0.18f)), mBlack),
@@ -554,6 +555,10 @@ public static class PyriteCampProps
                 cam.fieldOfView = 45f;
                 cam.transform.SetPositionAndRotation(side, Quaternion.LookRotation(ep.position + tube.forward * 0.1f - side));
                 Shot(cam, "Assets/_preview/props/props_eyepiece_side_21.png", 1280, 720);
+                var back = ep.position - tube.forward * 0.55f + tube.right * 0.12f + Vector3.up * 0.12f;   // 관리자 스크린샷과 비슷한 뒤쪽 시점
+                cam.fieldOfView = 50f;
+                cam.transform.SetPositionAndRotation(back, Quaternion.LookRotation(ep.position + tube.forward * 0.2f - back));
+                Shot(cam, "Assets/_preview/props/props_eyepiece_back_21.png", 1280, 720);
                 scope.gameObject.SetActive(false);
             }
             sb.AppendLine("  shots props_{overview,table,stove,rack,telescope,mat}_{13,20} + props_scope_{13,20} + props_eyepiece(_side)_21");
