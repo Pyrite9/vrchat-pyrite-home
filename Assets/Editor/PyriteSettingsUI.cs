@@ -363,7 +363,7 @@ public static class PyriteSettingsUI
         ["gMirD"] = ("Hangs on the tarp rope. Press for a mirror. Only you see it.", "타프 줄에 걸려 있습니다. 누르면 거울이 켜집니다. 나에게만 보입니다."),
         ["gLanN"] = ("Lanterns", "랜턴"),
         ["gLanD"] = ("Grab to carry. Drop near a hook to hang it.", "들고 다닐 수 있습니다. 걸이 근처에서 놓으면 걸립니다."),
-        ["gChrN"] = ("Folding chairs", "접이식 의자"),
+        ["gChrN"] = ("Chairs", "의자"),
         ["gChrD"] = ("Grab the backrest to move. Press the seat to sit.", "등받이를 잡아 옮기고, 앉는 자리를 누르면 앉습니다."),
         ["gCotN"] = ("Cot", "야전침대"),
         ["gCotD"] = ("Press to lie down.", "누르면 눕습니다."),
