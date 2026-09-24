@@ -75,6 +75,26 @@ public static class PyriteFxDiag
         sb.AppendLine("trail positionCount(after far) " + tr.positionCount);
         tr.emitting = em0; tr.widthMultiplier = w0; tr.Clear(); head.gameObject.SetActive(false);
 
+        // 지평선(절벽 윗선) 앙각 — 방위 5° 마다. 별똥별을 어디에 그을지 정하려고
+        Physics.SyncTransforms();
+        foreach (var (label, e0) in new[] { ("camp", new Vector3(-10.5f, 3.6f, 53f)), ("dock", new Vector3(-9.4f, 2.1f, 31f)), ("lakeC", new Vector3(0f, 1.7f, -14f)) })
+        {
+            var line = new StringBuilder("horizon " + label + " " + e0 + ":");
+            var hitNames = new System.Collections.Generic.HashSet<string>();
+            for (int az = 0; az < 360; az += 10)
+            {
+                float top = -1f;
+                for (float el = 0f; el <= 70f; el += 0.5f)
+                {
+                    RaycastHit hit;
+                    if (Physics.Raycast(e0, D(el, az), out hit, 2000f, ~0, QueryTriggerInteraction.Ignore) && hit.distance > 25f) { top = el; if (hitNames.Count < 12) hitNames.Add(hit.collider.name); }
+                }
+                line.Append(" " + az + ":" + top.ToString("0.0"));
+            }
+            sb.AppendLine(line.ToString());
+            sb.AppendLine("  hit colliders " + string.Join(", ", hitNames));
+        }
+
         cam.transform.SetPositionAndRotation(p0, r0); cam.fieldOfView = f0; cam.farClipPlane = far0; cam.targetTexture = null;
         cyc.ResetCache(); cyc.EvaluateAt(PyriteDayCycleSetup.EDITOR_HOUR);
         sb.AppendLine("  shots fx/diag_*");

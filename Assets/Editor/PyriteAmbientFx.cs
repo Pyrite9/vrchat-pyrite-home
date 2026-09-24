@@ -1,7 +1,7 @@
 // Tools ▸ Pyrite2 ▸ Z34b. Build Ambient FX / Z34c. Ambient FX Revert / Z34d. Ambient FX Renders
 //  새 루트 AmbientFX 아래:
 //   - 별똥별  Meteors   : 서버 시각 기준 약 1분마다 하나, 밤에만 (PyriteMeteors, 동기화 없이 모두 같은 순간)
-//   - 물안개  LakeMist  : 새벽 04:18~08:00, 가장 짙은 때 05:18~06:48 (PyriteMist), 수평 판 파티클
+//   - 물안개  LakeMist  : 새벽 04:18~08:00, 가장 짙은 때 05:18~06:48 (PyriteMist), 수면 위 낮은 안개 판 5장(Pyrite/LowFog)
 //   - 불티    CampEmbers: 모닥불에서 튀어 오르는 불꽃 (Udon 없음)
 //   - 물수제비 SkipStones: 부두 끝 쟁반 + 돌 5개 (PyriteSkipStone) + 물보라·물결 고리 + 호수 파문(PyriteLakeRipple.AddDrop)
 //  재실행 안전: AmbientFX 를 지우고 다시 만든다. Z34c 는 AmbientFX 만 지운다
@@ -24,7 +24,9 @@ public static class PyriteAmbientFx
     const string ROOT = "AmbientFX";
     const int PICKUP_LAYER = 13;
     static readonly Vector3 FIRE = new Vector3(-10.5f, 2.05f, 51.5f);
-    static readonly Vector3 LAKE = new Vector3(0f, 0.9f, -14f);
+    static readonly Vector2 MASK_MIN = new Vector2(-62f, -76f);          // 안개 판·마스크 범위 (WaterWalk x −60..60, z −74..46 + 여유)
+    const float MASK_SIZE = 124f;
+    const float WATER_Y = 0.05f;
     static readonly Vector3 TRAY = new Vector3(-9.40f, 0f, 31.42f);     // 부두 끝(z 30.9) 오른쪽, 끝 랜턴(-10.7, 31.3) 반대편
     static StringBuilder sb;
 
@@ -109,39 +111,42 @@ public static class PyriteAmbientFx
             sb.AppendLine("meteors: interval " + m.interval + " s ± " + m.jitter + ", radius " + m.radius + " m, trail " + tr.time + " s × " + tr.widthMultiplier + " m");
         }
 
-        // 2) 물안개
+        // 2) 물안개 — 낮은 안개(수면 위 0.06~0.66 m 겹친 판 5장, Pyrite/LowFog). 1차 파티클 판은 "막처럼 보임"(관리자) → 교체
         {
             var go = new GameObject("LakeMist"); go.transform.SetParent(root.transform, false);
-            go.transform.position = LAKE; go.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);   // 원 모양 방출면을 수평으로
-            var ps = go.AddComponent<ParticleSystem>();
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            var main = ps.main;
-            main.loop = true; main.prewarm = true; main.playOnAwake = true; main.duration = 20f;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(45f, 70f);
-            main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(18f, 34f);
-            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1, 1, 1, 0.55f), new Color(1, 1, 1, 0.85f));
-            main.maxParticles = 90; main.simulationSpace = ParticleSystemSimulationSpace.World;
-            var em = ps.emission; em.rateOverTime = 1.6f;
-            var sh = ps.shape; sh.shapeType = ParticleSystemShapeType.Circle; sh.radius = 48f; sh.randomPositionAmount = 0.6f;
-            var vel = ps.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.World;
-            vel.x = new ParticleSystem.MinMaxCurve(0.08f, 0.16f); vel.y = new ParticleSystem.MinMaxCurve(0f, 0f); vel.z = new ParticleSystem.MinMaxCurve(0.02f, 0.07f);
-            var col = ps.colorOverLifetime; col.enabled = true;
-            var cg = new Gradient();
-            cg.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                       new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.2f), new GradientAlphaKey(1f, 0.8f), new GradientAlphaKey(0f, 1f) });
-            col.color = cg;
-            var sz = ps.sizeOverLifetime; sz.enabled = true; sz.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.85f, 1f, 1.15f));
-            var rot = ps.rotationOverLifetime; rot.enabled = true; rot.z = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
-            var r = go.GetComponent<ParticleSystemRenderer>();
-            r.renderMode = ParticleSystemRenderMode.HorizontalBillboard; r.sharedMaterial = mMist;
-            r.shadowCastingMode = ShadowCastingMode.Off; r.receiveShadows = false; r.maxParticleSize = 10f;
+            var noise = TileNoise("T_FogNoise", 256);
+            var mask = LakeMask("T_FogLakeMask", 128, out int wet);
+            var mFog = AssetDatabase.LoadAssetAtPath<Material>(DIR + "/Materials/M_FxLowFog.mat");
+            var fogSh = Shader.Find("Pyrite/LowFog");
+            if (mFog == null) { mFog = new Material(fogSh); AssetDatabase.CreateAsset(mFog, DIR + "/Materials/M_FxLowFog.mat"); }
+            mFog.shader = fogSh;
+            mFog.SetTexture("_Noise", noise); mFog.SetTexture("_Mask", mask);
+            mFog.SetVector("_MaskRect", new Vector4(MASK_MIN.x, MASK_MIN.y, MASK_SIZE, MASK_SIZE));
+            mFog.SetColor("_Color", new Color(0.6f, 0.66f, 0.76f, 1f)); mFog.SetFloat("_Alpha", 0f);
+            mFog.SetFloat("_Density", 0.2f); mFog.SetFloat("_Scale", 38f); mFog.SetFloat("_Threshold", 0.42f); mFog.SetFloat("_Contrast", 2.4f);
+            mFog.SetFloat("_NearFade", 2.5f); EditorUtility.SetDirty(mFog);
+            float[] hs = { 0.06f, 0.18f, 0.32f, 0.48f, 0.66f };
+            float[] ws = { 1f, 0.85f, 0.62f, 0.4f, 0.2f };
+            var v = new List<Vector3>(); var c = new List<Color>(); var t = new List<int>();
+            for (int l = 0; l < hs.Length; l++)
+            {
+                int b = v.Count; float y = WATER_Y + hs[l];
+                v.Add(new Vector3(MASK_MIN.x, y, MASK_MIN.y)); v.Add(new Vector3(MASK_MIN.x + MASK_SIZE, y, MASK_MIN.y));
+                v.Add(new Vector3(MASK_MIN.x, y, MASK_MIN.y + MASK_SIZE)); v.Add(new Vector3(MASK_MIN.x + MASK_SIZE, y, MASK_MIN.y + MASK_SIZE));
+                var col = new Color(l / (float)hs.Length, 0, 0, ws[l]); for (int q = 0; q < 4; q++) c.Add(col);
+                t.AddRange(new[] { b, b + 2, b + 1, b + 1, b + 2, b + 3 });
+            }
+            var fm = new Mesh(); fm.SetVertices(v); fm.SetColors(c); fm.SetTriangles(t, 0); fm.RecalculateNormals(); fm.RecalculateBounds();
+            fm = SaveMesh(fm, "LakeLowFog");
+            go.AddComponent<MeshFilter>().sharedMesh = fm;
+            var r = go.AddComponent<MeshRenderer>(); r.sharedMaterial = mFog;
+            r.shadowCastingMode = ShadowCastingMode.Off; r.receiveShadows = false; r.lightProbeUsage = LightProbeUsage.Off; r.reflectionProbeUsage = ReflectionProbeUsage.Off;
             r.enabled = false;
             var mist = UdonSharpUndo.AddComponent<PyriteMist>(go);
             mist.cycle = cyc; mist.mistRenderer = r;
             UdonSharpEditorUtility.CopyProxyToUdon(mist); EditorUtility.SetDirty(mist);
-            sb.AppendLine("mist: circle r 48 at " + LAKE + ", 90 particles 18~34 m, " + mist.inStart + "→" + mist.inEnd + " … " + mist.outStart + "→" + mist.outEnd + "h, max α " + mist.maxAlpha);
+            sb.AppendLine(string.Format("mist: low fog 5 layers y +{0}..+{1} m over {2} m², lake mask wet {3}/{4} texels, density {5}, {6}→{7} … {8}→{9}h, max α {10}",
+                hs[0], hs[hs.Length - 1], MASK_SIZE * MASK_SIZE, wet, 128 * 128, 0.2f, mist.inStart, mist.inEnd, mist.outStart, mist.outEnd, mist.maxAlpha));
         }
 
         // 3) 불티
@@ -257,19 +262,18 @@ public static class PyriteAmbientFx
         Directory.CreateDirectory("Assets/_preview/fx/");
         var cam = Camera.main; var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
         var cyc = Object.FindObjectOfType<PyriteDayCycle>();
-        var mistPs = root.transform.Find("LakeMist").GetComponent<ParticleSystem>();
-        var mistR = mistPs.GetComponent<ParticleSystemRenderer>();
+        var mistGo = root.transform.Find("LakeMist");
+        var mistR = mistGo.GetComponent<Renderer>();
         var mistMat = mistR.sharedMaterial;
         var ember = root.transform.Find("CampEmbers").GetComponent<ParticleSystem>();
         var head = root.transform.Find("Meteors/Head");
         var tr = head.GetComponent<TrailRenderer>();
         var splash = root.transform.Find("SkipStones/SkipSplash").GetComponent<ParticleSystem>();
         var ring = root.transform.Find("SkipStones/SkipRing").GetComponent<ParticleSystem>();
-        var mistComp = mistPs.GetComponent<PyriteMist>();
+        var mistComp = mistGo.GetComponent<PyriteMist>();
         try
         {
             // 물안개: 05:50(가장 짙음·푸른 회색), 06:40(해 뜬 뒤 따뜻한 색), 07:40(옅어짐)
-            mistPs.Simulate(90f, true, true);
             mistR.enabled = true;
             foreach (var (h, a, w) in new[] { (5.8f, 1f, 0f), (6.6f, 1f, 1f), (7.6f, 0.2f, 1f) })
             {
@@ -277,17 +281,20 @@ public static class PyriteAmbientFx
                 mistMat.SetColor("_Color", Color.Lerp(mistComp.cool, mistComp.warm, w)); mistMat.SetFloat("_Alpha", a * mistComp.maxAlpha);
                 Shot(cam, new Vector3(-10.6f, 3.4f, 55f), new Vector3(-6f, 0.5f, 10f), 60f, string.Format("mist_{0:0.0}.png", h));
                 Shot(cam, new Vector3(-10.2f, 1.2f, 38f), new Vector3(-4f, 0.4f, 0f), 60f, string.Format("mist_dock_{0:0.0}.png", h));
+                Shot(cam, new Vector3(-4f, 1.65f, 12f), new Vector3(2f, 0.6f, -20f), 60f, string.Format("mist_onwater_{0:0.0}.png", h));
             }
-            mistMat.SetFloat("_Alpha", 0f); mistR.enabled = false; mistPs.Clear();
+            mistMat.SetFloat("_Alpha", 0f); mistR.enabled = false;
             // 별똥별: 22시, 하늘 방위 200° 고도 50° 쪽으로 궤적을 찍어 둔다
             cyc.ResetCache(); cyc.EvaluateAt(22f);
             head.gameObject.SetActive(true);
             var met = root.GetComponentInChildren<PyriteMeteors>();
             System.Func<float, float, Vector3> D = (el, az) => { float e = el * Mathf.Deg2Rad, a2 = az * Mathf.Deg2Rad; return new Vector3(Mathf.Sin(a2) * Mathf.Cos(e), Mathf.Sin(e), Mathf.Cos(a2) * Mathf.Cos(e)); };
-            var pts = Enumerable.Range(0, 24).Select(i => met.center + Vector3.Slerp(D(52f, 190f), D(44f, 204f), i / 23f) * met.radius).ToArray();
+            var pts = Enumerable.Range(0, 24).Select(i => met.center + Vector3.Slerp(D(40f, 172f), D(31f, 190f), i / 23f) * met.radius).ToArray();
             tr.emitting = true; tr.Clear(); tr.AddPositions(pts); head.position = pts[pts.Length - 1];   // emitting=false 면 AddPositions 가 렌더되지 않음(Z34e 실측)
-            var eye = new Vector3(-10.6f, 3.4f, 53.8f);
-            Shot(cam, eye, eye + D(45f, 198f), 60f, "meteor_22.png");
+            var eye = new Vector3(-10.6f, 3.65f, 53.8f);     // 캠프에 선 눈높이, 호수 쪽을 조금 올려다본 데스크톱 화면(FOV 60)
+            Shot(cam, eye, eye + D(14f, 180f), 60f, "meteor_22.png");
+            var eyeD = new Vector3(-9.6f, 2.15f, 31.5f);     // 부두 끝
+            Shot(cam, eyeD, eyeD + D(14f, 180f), 60f, "meteor_22_dock.png");
             tr.emitting = false; tr.Clear(); head.gameObject.SetActive(false);
             // 불티: 21시
             cyc.ResetCache(); cyc.EvaluateAt(21f);
@@ -303,7 +310,7 @@ public static class PyriteAmbientFx
             splash.Simulate(0.18f, true, false); ring.Simulate(0.35f, true, false);
             Shot(cam, new Vector3(-9.2f, 1.3f, 31.2f), sp, 45f, "stones_splash.png");
             splash.Clear(); ring.Clear();
-            sb.AppendLine("  shots fx/mist_{5.8,6.6,7.6}, mist_dock_*, meteor_22, embers_21, stones_tray, stones_splash");
+            sb.AppendLine("  shots fx/mist_{5.8,6.6,7.6}, mist_dock_*, mist_onwater_*, meteor_22(_dock), embers_21, stones_tray, stones_splash");
         }
         finally
         {
@@ -363,6 +370,72 @@ public static class PyriteAmbientFx
         AssetDatabase.ImportAsset(p, ImportAssetOptions.ForceUpdate);
         var ti = (TextureImporter)AssetImporter.GetAtPath(p);
         ti.alphaIsTransparency = alpha; ti.wrapMode = TextureWrapMode.Clamp; ti.mipmapEnabled = true; ti.alphaSource = TextureImporterAlphaSource.FromInput;
+        ti.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(p);
+    }
+
+    // 이음매 없는 값 노이즈(격자 주기 4·8·16·32, 가장자리 감김) → 0~1
+    static Texture2D TileNoise(string name, int n)
+    {
+        var rnd = new System.Random(4242);
+        int[] periods = { 4, 8, 16, 32 }; float[] amps = { 0.5f, 0.27f, 0.15f, 0.08f };
+        var grids = periods.Select(pp => { var g = new float[pp, pp]; for (int a = 0; a < pp; a++) for (int b2 = 0; b2 < pp; b2++) g[a, b2] = (float)rnd.NextDouble(); return g; }).ToArray();
+        var vals = new float[n, n]; float lo = 9, hi = -9;
+        for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
+        {
+            float s2 = 0f;
+            for (int o = 0; o < periods.Length; o++)
+            {
+                int pp = periods[o]; float fx = x * pp / (float)n, fy = y * pp / (float)n;
+                int x0 = (int)fx, y0 = (int)fy; float tx = fx - x0, ty = fy - y0; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+                var g = grids[o]; int x1 = (x0 + 1) % pp, y1 = (y0 + 1) % pp;
+                s2 += amps[o] * Mathf.Lerp(Mathf.Lerp(g[x0, y0], g[x1, y0], tx), Mathf.Lerp(g[x0, y1], g[x1, y1], tx), ty);
+            }
+            vals[x, y] = s2; lo = Mathf.Min(lo, s2); hi = Mathf.Max(hi, s2);
+        }
+        return WriteTex(name, n, (x, y) => { float q = (vals[x, y] - lo) / (hi - lo); return new Color(q, q, q, 1f); }, TextureWrapMode.Repeat);
+    }
+
+    // 호수 마스크: 바닥(WaterWalk 제외)이 수면보다 낮으면 1, 물가 0.35 m 에 걸쳐 0 으로, 흐리게 3 번
+    static Texture2D LakeMask(string name, int n, out int wet)
+    {
+        Physics.SyncTransforms();
+        var water = GameObject.Find("Water/WaterWalk")?.GetComponent<Collider>();
+        var m = new float[n, n]; wet = 0;
+        for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
+        {
+            float wx = MASK_MIN.x + (x + 0.5f) / n * MASK_SIZE, wz = MASK_MIN.y + (y + 0.5f) / n * MASK_SIZE;
+            float g = -99f;
+            foreach (var h in Physics.RaycastAll(new Vector3(wx, 30f, wz), Vector3.down, 60f, 1 | (1 << 11), QueryTriggerInteraction.Ignore))
+                if (h.collider != water && h.point.y > g) g = h.point.y;
+            if (g < -98f) g = 5f;   // 바닥 없음(범위 밖) = 뭍 취급
+            float q = Mathf.Clamp01((WATER_Y - g) / 0.35f);
+            m[x, y] = q; if (q > 0.5f) wet++;
+        }
+        for (int it = 0; it < 3; it++)
+        {
+            var b = new float[n, n];
+            for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
+            {
+                float s2 = 0; int c2 = 0;
+                for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) { int xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= n || yy >= n) continue; s2 += m[xx, yy]; c2++; }
+                b[x, y] = s2 / c2;
+            }
+            m = b;
+        }
+        var mm = m;
+        return WriteTex(name, n, (x, y) => new Color(mm[x, y], mm[x, y], mm[x, y], 1f), TextureWrapMode.Clamp);
+    }
+
+    static Texture2D WriteTex(string name, int n, System.Func<int, int, Color> f, TextureWrapMode wrap)
+    {
+        string p = DIR + "/Textures/" + name + ".png";
+        var tx = new Texture2D(n, n, TextureFormat.RGBA32, false);
+        for (int y = 0; y < n; y++) for (int x = 0; x < n; x++) tx.SetPixel(x, y, f(x, y));
+        tx.Apply(); File.WriteAllBytes(p, tx.EncodeToPNG()); Object.DestroyImmediate(tx);
+        AssetDatabase.ImportAsset(p, ImportAssetOptions.ForceUpdate);
+        var ti = (TextureImporter)AssetImporter.GetAtPath(p);
+        ti.sRGBTexture = false; ti.wrapMode = wrap; ti.mipmapEnabled = true; ti.textureCompression = TextureImporterCompression.Uncompressed;
         ti.SaveAndReimport();
         return AssetDatabase.LoadAssetAtPath<Texture2D>(p);
     }

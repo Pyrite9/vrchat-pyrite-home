@@ -1,6 +1,8 @@
 // 별똥별 — 서버 시각으로 약 1분(interval)마다 하나, 밤에만(해 고도 < nightSunEl). 네트워크 동기화 없이 모두 같은 순간·같은 궤적을 본다
 //  (이벤트 번호 k = 서버 시각 / interval, 궤적·지연은 k 로 만든 의사난수)
-//  꼬리는 TrailRenderer. 하늘 반지름 radius 의 구 위를 짧게 긋는다. 절벽(최대 앙각 약 30°) 위로만 지나가게 고도 32° 이상
+//  꼬리는 TrailRenderer. 하늘 반지름 radius 의 구 위를 짧게 긋는다.
+//  분지 절벽이 캠프 뒤(북) 70°·옆 40~50° 까지 막고, 호수 쪽(남, 방위 145~215°)만 24~30° 로 트여 있다(Z34e 실측)
+//  → 호수 쪽 하늘, 절벽 바로 위(고도 30~44°)에서 긋는다. 캠프에서 호수를 보면 화면 위쪽에 들어온다
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -16,6 +18,9 @@ public class PyriteMeteors : UdonSharpBehaviour
     public float interval = 60f;        // 초 (하루 12분 → 게임 속 2시간마다 하나)
     public float jitter = 35f;          // 간격 안에서 흩어짐
     public float nightSunEl = -8f;
+    public float azCenter = 180f;       // 호수 쪽
+    public float azSpread = 35f;        // ±
+    public float elMin = 30f, elMax = 44f, elFloor = 27f;
 
     private int activeK = -1;
     private float t0, dur;
@@ -50,12 +55,13 @@ public class PyriteMeteors : UdonSharpBehaviour
             if (activeK != k)
             {
                 activeK = k;
-                float az = H(k, 3) * 360f;
-                float el = 42f + H(k, 4) * 26f;
-                float daz = (H(k, 5) - 0.5f) * 36f;
-                float del = -(9f + H(k, 6) * 10f);
+                float az = azCenter + (H(k, 3) * 2f - 1f) * azSpread;
+                float el = elMin + H(k, 4) * (elMax - elMin);
+                float daz = (H(k, 5) - 0.5f) * 30f;
+                float del = -(6f + H(k, 6) * 8f);
                 d0 = Dir(el, az);
-                d1 = Dir(Mathf.Max(32f, el + del), az + daz);
+                d1 = Dir(Mathf.Max(elFloor, el + del), az + daz);
+                Debug.Log("[PyriteMeteors] k " + k + " az " + az.ToString("0") + " el " + el.ToString("0") + "→" + Mathf.Max(elFloor, el + del).ToString("0") + " dur " + d.ToString("0.00") + " hour " + (cycle != null ? cycle.currentHour.ToString("0.0") : "-"));
                 head.position = center + d0 * radius;
                 trail.Clear();
                 trail.emitting = true;

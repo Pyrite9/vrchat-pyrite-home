@@ -32,5 +32,5 @@ Material:
     - _Alpha: 0
     - _NearFade: 8
     m_Colors:
-    - _Color: {r: 0.98, g: 0.88, b: 0.78, a: 1}
+    - _Color: {r: 0.6, g: 0.66, b: 0.76, a: 1}
   m_BuildTextureStacks: []
