@@ -1,6 +1,6 @@
 // 물수제비 돌 — 부두 끝 쟁반에서 집어 던진다
 //  데스크톱 (2026-09-24): 클릭 = 집기(AutoHold), 우클릭 = 놓기(VRChat 기본), 좌클릭 꾹 → 떼면 던지기. 오래 누를수록 세게, 시선 방향으로 낮게
-//  VR 은 손으로 던진다 (Use 무시)
+//  VR 은 손으로 던진다 (Use 무시). 2026-09-27: VR 만 AutoHold No — 쥐고 있는 동안만 들고, 손을 펴는 순간 던진다 (AutoHold Yes 는 놓으려면 한 번 더 눌러야 해서 던지기 어려웠다)
 //  수면(WaterWalk 콜라이더)에 닿을 때: 수평 속도 minSpeed 이상 + 입사각 maxAngle 이하면 튀고(속도 82%), 아니면 가라앉는다(콜라이더 끔 → 2.5초 뒤 쟁반으로)
 //  물보라·물결 고리·호수 파문. 던진 사람(주인)은 충돌로, 다른 사람은 수면 통과로 물보라를 낸다
 //  멀리 놓인 채 30초 가만있으면 쟁반으로 돌아온다
@@ -47,6 +47,8 @@ public class PyriteSkipStone : UdonSharpBehaviour
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         pickup = (VRCPickup)GetComponent(typeof(VRCPickup));
         prevY = transform.position.y;
+        VRCPlayerApi lp = Networking.LocalPlayer;
+        if (pickup != null && Utilities.IsValid(lp) && lp.IsUserInVR()) pickup.AutoHold = VRC_Pickup.AutoHoldMode.No;
     }
 
     public override void OnPickup() { held = true; skips = 0; sinking = false; if (col != null) col.enabled = true; if (rb != null) rb.drag = 0.05f; }
