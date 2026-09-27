@@ -462,7 +462,7 @@ public static class PyriteSettingsUI
         ["pensBack"] = ("Return all pens", "펜 모두 제자리로"),
         ["penNote"] = ("The pen stand is behind the tarp.", "펜 거치대는 타프 뒤에 있습니다."),
         ["gPenN"] = ("QvPen", "QvPen"),
-        ["gPenD"] = ("On a stand behind the tarp. Use to draw. Page 2 brings one to you.", "타프 뒤 거치대에 있습니다. 사용하면 그리고, 설정 2쪽에서 불러옵니다."),
+        ["gPenD"] = ("On a stand behind the tarp. You can also call one from page 2.", "타프 뒤 거치대에 있습니다. 설정 2페이지에서 불러올 수도 있습니다."),   // 관리자 문구 (2026-09-27)
         ["guideFoot"] = ("Grab, Use, and Drop are your usual VRChat pickup controls.", "잡기 · 사용 · 놓기는 VRChat 기본 조작입니다."),
     };
 
