@@ -196,7 +196,6 @@ public static class PyriteSettingsUI
         var matCnt = Txt(cCamp, "MatCount", 352, 164, 106, 60, "1 / 6", 28, GOLD, TextAlignmentOptions.Center);
         Btn(cCamp, "MatPlus", 459, 164, 62, 60, "+", "MatPlus");
         var (_, _, backL) = Btn(cCamp, "PropsBack", 32, 244, 489, 62, "", "PropsBack"); L(backL, S["propsBack"]);
-        L(Txt(cCamp, "Note", 32, 322, 489, 32, "", 20, GREY), S["campNote"]);
 
         var cPen = Card("CardQvPen", 1, 0, "penHead", content2);
         var (_, _, penL) = Btn(cPen, "SummonPen", 32, 86, 489, 62, "", "SummonPen"); L(penL, S["penBring"]);
@@ -228,12 +227,12 @@ public static class PyriteSettingsUI
         Img(box.transform, "Divider", 60, 124, bw - 120, 2, new Color(GOLD.r, GOLD.g, GOLD.b, 0.3f), null);
         for (int i = 0; i < ASSETS.Length; i++)
         {
-            float ry = 146f + i * 64f;
+            float ry = 146f + i * 58f;   // 2026-09-27 QvPen 추가로 9줄 (64 → 58)
             Txt(box.transform, "Name" + i, 60, ry, 560, 60, ASSETS[i].name, 30, WHITE);
             Txt(box.transform, "Author" + i, 640, ry, 330, 60, ASSETS[i].author, 26, GOLD);
             L(Txt(box.transform, "Use" + i, 990, ry, 270, 60, "", 24, GREY, TextAlignmentOptions.Right), S[ASSETS[i].use]);
         }
-        L(Txt(box.transform, "Foot", 60, 680, bw - 120, 50, "", 24, GREY), S["assetsFoot"]);
+        L(Txt(box.transform, "Foot", 60, 692, bw - 120, 50, "", 24, GREY), S["assetsFoot"]);
         popup.SetActive(false);
 
         // 상호작용 가능한 사물 팝업 (2026-09-24 관리자 요청) — 같은 방식: 캔버스 자식, 바깥 어둠·× 로 닫힘
@@ -422,6 +421,7 @@ public static class PyriteSettingsUI
         ["aTV"] = ("Video player", "영상 플레이어"),
         ["aFont"] = ("Font", "글꼴"),
         ["aCode"] = ("Scripting", "스크립트"),
+        ["aPen"] = ("World pens", "월드 펜"),
         ["assetsFoot"] = ("Terrain, crystals, dock, and shaders by Pyrite9.", "지형 · 결정 · 부두 · 셰이더는 Pyrite9 가 직접 만들었습니다."),
         ["credit"] = ("Made by Pyrite9", "제작 Pyrite9"),
         ["guide"] = ("Interactions", "상호작용"),
@@ -456,14 +456,13 @@ public static class PyriteSettingsUI
         ["chairs"] = ("Chairs", "의자"),
         ["mats"] = ("Picnic mats", "돗자리"),
         ["propsBack"] = ("Put everything back", "모두 제자리로"),
-        ["campNote"] = ("For everyone · items in use stay put", "모두에게 적용 · 사용 중인 건 그대로"),
         ["penHead"] = ("QVPEN", "QvPen"),
         ["penBring"] = ("Bring a pen", "펜 가져오기"),
         ["eraserBring"] = ("Bring an eraser", "지우개 가져오기"),
         ["pensBack"] = ("Return all pens", "펜 모두 제자리로"),
         ["penNote"] = ("The pen stand is behind the tarp.", "펜 거치대는 타프 뒤에 있습니다."),
         ["gPenN"] = ("QvPen", "QvPen"),
-        ["gPenD"] = ("Grab and use to draw. Settings page 2 brings one to you.", "잡고 사용하면 그립니다. 설정 2쪽에서 불러올 수 있습니다."),
+        ["gPenD"] = ("On a stand behind the tarp. Use to draw. Page 2 brings one to you.", "타프 뒤 거치대에 있습니다. 사용하면 그리고, 설정 2쪽에서 불러옵니다."),
         ["guideFoot"] = ("Grab, Use, and Drop are your usual VRChat pickup controls.", "잡기 · 사용 · 놓기는 VRChat 기본 조작입니다."),
     };
 
@@ -482,6 +481,7 @@ public static class PyriteSettingsUI
         ("Sorafield Atmosphere Sky", "Sorafield", "aSky"),
         ("ProTV", "ArchiTech", "aTV"),
         ("Noto Sans KR", "Google Fonts · OFL", "aFont"),
+        ("QvPen", "ureishi", "aPen"),
         ("UdonSharp · VRChat SDK", "Merlin · VRChat", "aCode"),
     };
 
