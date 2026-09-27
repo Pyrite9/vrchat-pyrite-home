@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-216510154538796263
+--- !u!114 &-1531650694955848250
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
@@ -60,4 +60,4 @@ MonoBehaviour:
   m_Name: PP_UserNoBloom
   m_EditorClassIdentifier: 
   settings:
-  - {fileID: -216510154538796263}
+  - {fileID: -1531650694955848250}

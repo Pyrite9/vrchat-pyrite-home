@@ -461,7 +461,7 @@ public static class PyriteSettingsUI
         ["penBring"] = ("Bring a pen", "펜 가져오기"),
         ["eraserBring"] = ("Bring an eraser", "지우개 가져오기"),
         ["pensBack"] = ("Return all pens", "펜 모두 제자리로"),
-        ["penNote"] = ("The pen stand is east of the fire.", "펜 거치대는 모닥불 동쪽에 있습니다."),
+        ["penNote"] = ("The pen stand is behind the tarp.", "펜 거치대는 타프 뒤에 있습니다."),
         ["gPenN"] = ("QvPen", "QvPen"),
         ["gPenD"] = ("Grab and use to draw. Settings page 2 brings one to you.", "잡고 사용하면 그립니다. 설정 2쪽에서 불러올 수 있습니다."),
         ["guideFoot"] = ("Grab, Use, and Drop are your usual VRChat pickup controls.", "잡기 · 사용 · 놓기는 VRChat 기본 조작입니다."),

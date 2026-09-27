@@ -33,7 +33,8 @@ public static class PyriteCampPoolBuild
     {
         new Vector3(-13.0f, 0, 57.6f), new Vector3(-5.6f, 0, 56.95f), new Vector3(-5.8f, 0, 58.3f), new Vector3(-16.5f, 0, 52.2f), new Vector3(-16.5f, 0, 53.8f),
     };
-    static readonly Vector3 QVPEN_AT = new Vector3(-5.5f, 0f, 51.8f);
+    // 2026-09-27 17:19 관리자: QvPen 은 타프 뒤로. 타프 뒤 천 끝 z 59.5 (지면 +1.23 m), 평지는 z 61.0 까지(Z42a), 말뚝 x -12.05 / -6.55 → 가운데 x -9.3, 앞면이 캠프(-Z)를 보게
+    static readonly Vector3 QVPEN_AT = new Vector3(-9.3f, 0f, 60.6f);
     const string QVPEN_PREFAB = "Packages/net.ureishi.qvpen/QvPen.prefab";
     const string LOG = "Logs/pyrite_pool.txt";
     static StringBuilder sb;
@@ -143,7 +144,7 @@ public static class PyriteCampPoolBuild
             var qp = QVPEN_AT; qp.y = Ground(qp);
             var f = FIRE - qp; f.y = 0;
             qv.transform.position = qp + (qv.transform.position);   // 프리팹 루트 로컬 y 0.8 유지
-            qv.transform.rotation = Quaternion.LookRotation(-f.normalized, Vector3.up);
+            PlaceQvPen(qv);
             foreach (var mb in qv.GetComponentsInChildren<MonoBehaviour>(true))
             {
                 if (mb == null) continue;
@@ -173,6 +174,69 @@ public static class PyriteCampPoolBuild
         EditorSceneManager.SaveOpenScenes();
         sb.AppendLine(string.Format("chairs {0} (켜짐 3) | mats {1} (켜짐 1) | syncs {2}", chairs.Count, mats.Count, root.GetComponentsInChildren<VRCObjectSync>(true).Length));
         return true;
+    }
+
+    // 렌더(Z43b 첫 판)로 확인: 프리팹 앞면 = 로컬 -Z → 캠프(-Z)를 보려면 yaw 0. 보이는 렌더러 bounds 가운데를 QVPEN_AT 에 맞춘다
+    static void PlaceQvPen(GameObject qv)
+    {
+        var qp = QVPEN_AT; qp.y = Ground(qp);
+        qv.transform.rotation = Quaternion.identity;
+        qv.transform.position = qp + new Vector3(0f, 0.8f, 0f);
+        var rs = qv.GetComponentsInChildren<Renderer>(true).Where(r => r.enabled && r.gameObject.activeInHierarchy).ToArray();
+        if (rs.Length > 0)
+        {
+            var b = rs.Select(r => r.bounds).Aggregate((a, c) => { a.Encapsulate(c); return a; });
+            qv.transform.position += new Vector3(qp.x - b.center.x, 0f, qp.z - b.center.z);
+            b = rs.Select(r => r.bounds).Aggregate((a, c) => { a.Encapsulate(c); return a; });
+            sb.AppendLine(string.Format("QvPen placed {0} | visible bounds {1} .. {2}", qv.transform.position.ToString("F2"), b.min.ToString("F2"), b.max.ToString("F2")));
+        }
+    }
+
+    [MenuItem("Tools/Pyrite3/Z43f. Move QvPen (behind tarp)", false, 25)]
+    public static void MoveQvPen()
+    {
+        sb = new StringBuilder("[Z43f] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
+        try
+        {
+            var qv = RootByName("QvPen");
+            if (qv == null) sb.AppendLine("QvPen 없음 (Z43b)");
+            else
+            {
+                sb.AppendLine("before " + qv.transform.position.ToString("F2") + " yaw " + qv.transform.eulerAngles.y.ToString("0"));
+                Undo.RecordObject(qv.transform, "move qvpen");
+                PlaceQvPen(qv);
+                EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                EditorSceneManager.SaveOpenScenes();
+                // 확인 렌더: 타프 밑 사용자 눈높이 · 캠프에서 · 21:00
+                var cam = Camera.main; var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
+                var cyc = Object.FindObjectOfType<PyriteDayCycle>();
+                var psr = Object.FindObjectsOfType<ParticleSystemRenderer>().Where(r => r.enabled).ToArray();
+                foreach (var r in psr) r.enabled = false;
+                try
+                {
+                    var q = new Vector3(QVPEN_AT.x, Ground(QVPEN_AT) + 0.8f, QVPEN_AT.z);
+                    foreach (var (tag, h) in new[] { ("12", 12f), ("21", 21f) })
+                    {
+                        if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(h); }
+                        cam.fieldOfView = 60f;
+                        var e1 = new Vector3(-9.3f, 3.3f, 59.0f); cam.transform.SetPositionAndRotation(e1, Quaternion.LookRotation(q - e1));
+                        PyriteSpawnAudit.Shot(cam, "Assets/_preview/pool/qvpen_near_" + tag + ".png", 1280, 720);
+                        var e2 = new Vector3(-9.0f, 3.6f, 52.5f); cam.transform.SetPositionAndRotation(e2, Quaternion.LookRotation(q - e2));
+                        PyriteSpawnAudit.Shot(cam, "Assets/_preview/pool/qvpen_camp_" + tag + ".png", 1280, 720);
+                    }
+                }
+                finally
+                {
+                    foreach (var r in psr) r.enabled = true;
+                    cam.fieldOfView = f0; cam.transform.SetPositionAndRotation(p0, r0);
+                    if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(PyriteDayCycleSetup.EDITOR_HOUR); }
+                }
+                sb.AppendLine("shots Assets/_preview/pool/qvpen_{near,camp}_{12,21}.png");
+            }
+            sb.AppendLine("RESULT: DONE");
+        }
+        catch (System.Exception e) { sb.AppendLine("EXCEPTION " + e); }
+        Flush();
     }
 
     static Transform Marker(Transform parent, string n, Vector3 p, Quaternion r)
