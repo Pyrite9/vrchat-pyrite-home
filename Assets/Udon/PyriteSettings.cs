@@ -2,6 +2,7 @@
 //  UI 이벤트(Slider/Toggle/Button) → UdonBehaviour.SendCustomEvent("On...") 로 들어온다 (에디터 Z25a 가 연결)
 //  2026-09-24: 스크립트는 항상 켜진 프로젝터 루트에 있다(패널 캔버스 = panelRoot). 입장 때 개인 설정을 PlayerData 에서 불러와 적용하고,
 //  바꿀 때마다 1 초 모아서 저장한다. 시간·시간 흐름은 방 전체 공유라 저장 안 함
+//  2026-09-27: 패널을 좌우로 넓히고 << >> 로 쪽을 넘긴다. 2쪽 = 캠프(의자·돗자리 개수 + / −, 모두 제자리) · QvPen(펜·지우개 불러오기, 제자리) → PyriteCampPool
 using TMPro;
 using UdonSharp;
 using UnityEngine;
@@ -69,6 +70,16 @@ public class PyriteSettings : UdonSharpBehaviour
     public GameObject assetsPopup;        // 메인이 닫히면 같이 닫힌다 (OnDisable)
     public GameObject guidePopup;         // 상호작용 가능한 사물 (같은 방식)
 
+    [Header("쪽 (2026-09-27)")]
+    public GameObject[] pages;
+    public GameObject prevButton;
+    public GameObject nextButton;
+    public TextMeshProUGUI pageText;
+    public PyriteCampPool pool;
+    public TextMeshProUGUI chairCountText;
+    public TextMeshProUGUI matCountText;
+    private int page = 0;
+
     private bool updating = false;
     private bool inited = false;
     private float lastUserTime = -10f;
@@ -95,6 +106,7 @@ public class PyriteSettings : UdonSharpBehaviour
         inited = true;
         if (sunLight != null && sunLight.shadows != LightShadows.None) sunShadowMode = sunLight.shadows;
         ApplyLang();
+        SetPage(0);
         Refresh(true);
     }
 
@@ -112,7 +124,41 @@ public class PyriteSettings : UdonSharpBehaviour
         if (Time.time < nextTick) return;
         nextTick = Time.time + 0.25f;
         Refresh(false);
+        RefreshCounts();
     }
+
+    // ── 쪽 ──
+    public void PrevPage() { SetPage(page - 1); }
+    public void NextPage() { SetPage(page + 1); }
+
+    private void SetPage(int p)
+    {
+        if (pages == null || pages.Length == 0) return;
+        page = Mathf.Clamp(p, 0, pages.Length - 1);
+        for (int i = 0; i < pages.Length; i++) if (pages[i] != null) pages[i].SetActive(i == page);
+        if (prevButton != null) prevButton.SetActive(page > 0);
+        if (nextButton != null) nextButton.SetActive(page < pages.Length - 1);
+        if (pageText != null) pageText.text = (page + 1) + " / " + pages.Length;
+        ClosePopups();
+        RefreshCounts();
+    }
+
+    // ── 캠프 소품 · QvPen (PyriteCampPool, 모두에게 동기화) ──
+    private void RefreshCounts()
+    {
+        if (pool == null) return;
+        if (chairCountText != null) chairCountText.text = pool.ChairCount() + " / " + pool.ChairMax();
+        if (matCountText != null) matCountText.text = pool.MatCount() + " / " + pool.MatMax();
+    }
+
+    public void ChairPlus() { if (pool != null) { pool.AddChair(); RefreshCounts(); } }
+    public void ChairMinus() { if (pool != null) { pool.RemoveChair(); RefreshCounts(); } }
+    public void MatPlus() { if (pool != null) { pool.AddMat(); RefreshCounts(); } }
+    public void MatMinus() { if (pool != null) { pool.RemoveMat(); RefreshCounts(); } }
+    public void PropsBack() { if (pool != null) pool.ResetProps(); }
+    public void SummonPen() { if (pool != null) pool.SummonPen(); }
+    public void SummonEraser() { if (pool != null) pool.SummonEraser(); }
+    public void PensBack() { if (pool != null) pool.ReturnPens(); }
 
     // 현재 상태 → UI (이벤트가 다시 들어오지 않게 updating 으로 막는다)
     private void Refresh(bool all)

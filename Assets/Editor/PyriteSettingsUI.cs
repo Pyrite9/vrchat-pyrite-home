@@ -7,6 +7,8 @@
 //   후처리: SettingsPP 루트에 전역 볼륨 3개 (layer 23, priority 10, weight 0) — 밝게(노출 2.0)/어둡게(0.0)/블룸 끔(강도 0). 기존 프로필 노출 1.0 기준 ±1 EV
 //   LakeMirrorSwitch 는 렌더러·콜라이더만 끈다(스크립트는 살아서 호수 거울 상태를 쥔다) → 설정의 호수 반사 토글이 SetOn 으로 조작
 //   패널 queue 2990 / 빛줄기 2980 → UI(3000) 가 패널 유리 위에 그려진다
+//  2026-09-27: 패널 3.0 → 3.5 m (캔버스 1920 → 2240 px, 1 px 크기 그대로). 기존 칸은 Frame(가운데 1920) 안, 양옆 160 px 에 << >> 쪽 넘김
+//   2쪽(Content2) = 캠프(의자 · 돗자리 개수 + / −, 모두 제자리) · QvPen(펜 · 지우개 불러오기, 펜 제자리) → CampPool(Z43b) 이 먼저 있어야 한다
 //  렌더 Assets/_preview/projector/ui_*.png (테이블에 선 눈높이 1.6 m, FOV 60 = VRChat 데스크톱 기본)
 #if UNITY_EDITOR
 using System.Collections.Generic;
@@ -38,6 +40,7 @@ public static class PyriteSettingsUI
     const string HIDDEN_LOG = "Logs/pyrite_settings_hidden.txt";
     const int PP_LAYER = 23;
     const float W = 1920f, H = 1080f;
+    const float CW = 2240f, PAD = 160f, PANEL_W_NEW = 3.5f;   // 2026-09-27 좌우로 넓힘
 
     static readonly Color GOLD = new Color(0.96f, 0.80f, 0.45f, 1f);
     static readonly Color WHITE = new Color(0.94f, 0.94f, 0.92f, 1f);
@@ -84,6 +87,9 @@ public static class PyriteSettingsUI
         panel.GetComponent<Renderer>().sharedMaterial.SetColor("_Glass", new Color(0.02f, 0.025f, 0.032f, 0.93f));
         if (beam != null) beam.GetComponent<Renderer>().sharedMaterial.renderQueue = 2980;
 
+        // 4.5) 패널 넓히기 (재실행 안전: 이미 넓으면 k = 1)
+        WidenPanel(root.transform, panel, beam, sb);
+
         // 5) 캔버스
         var go = new GameObject("SettingsUI", typeof(RectTransform));
         go.layer = 0;
@@ -92,12 +98,12 @@ public static class PyriteSettingsUI
         var dir = panel.forward;
         rt.position = panel.position - dir * 0.01f;
         rt.rotation = panel.rotation;
-        rt.sizeDelta = new Vector2(W, H);
-        rt.localScale = Vector3.one * (panel.lossyScale.x / W);
+        rt.sizeDelta = new Vector2(CW, H);
+        rt.localScale = Vector3.one * (panel.lossyScale.x / CW);
         var canvas = go.AddComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace;
         var cs = go.AddComponent<CanvasScaler>(); cs.dynamicPixelsPerUnit = 1f; cs.referencePixelsPerUnit = 100f;
         go.AddComponent<GraphicRaycaster>();
-        var bc = go.AddComponent<BoxCollider>(); bc.size = new Vector3(W, H, 2f);
+        var bc = go.AddComponent<BoxCollider>(); bc.size = new Vector3(CW, H, 2f);
         go.AddComponent<VRCUiShape>();
 
         PyriteSettings st;
@@ -108,7 +114,7 @@ public static class PyriteSettingsUI
         spr = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
         knob = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
         loc = new List<(TextMeshProUGUI, string, string)>();
-        var t = go.transform;
+        var t = Rect(go.transform, "Frame", PAD, 0, W, H).transform;   // 기존 1920 배치 그대로, 가운데로
 
         // 제목 줄
         L(Txt(t, "Title", 90, 52, 820, 76, "", 62, GOLD), S["title"]);
@@ -123,10 +129,11 @@ public static class PyriteSettingsUI
         // 칸 (3 × 2) — Content 아래 (거울 모드에서 통째로 숨김)
         var content = Rect(t, "Content", 0, 0, W, H);
         const float cw = 553f, ch = 370f, gx = 40f, top = 215f, gy = 40f;
-        Transform Card(string n, int c, int r, string key)
+        var content2 = Rect(t, "Content2", 0, 0, W, H);
+        Transform Card(string n, int c, int r, string key, Transform parent = null)
         {
             float x = 90f + c * (cw + gx), y = top + r * (ch + gy);
-            var card = Img(content, n, x, y, cw, ch, CARD, spr).transform;
+            var card = Img(parent ?? content, n, x, y, cw, ch, CARD, spr).transform;
             L(Txt(card, "Head", 32, 24, cw - 64, 44, "", 30, GOLD, spacing: 6f), S[key]);
             return card;
         }
@@ -178,12 +185,39 @@ public static class PyriteSettingsUI
         L(Txt(cAbout, "Body", 32, 146, 489, 150, "", 22, GREY, TextAlignmentOptions.TopLeft), S["aboutBody"]);
         L(Txt(cAbout, "Credit", 32, 312, 489, 32, "", 22, GOLD), S["credit"]);
 
+        // ── 2쪽 (2026-09-27): 캠프 · QvPen ──
+        var cCamp = Card("CardCamp", 0, 0, "campHead", content2);
+        L(Txt(cCamp, "ChairLabel", 32, 86, 250, 60, "", 30, WHITE), S["chairs"]);
+        Btn(cCamp, "ChairMinus", 290, 86, 62, 60, "-", "ChairMinus");
+        var chairCnt = Txt(cCamp, "ChairCount", 352, 86, 106, 60, "3 / 10", 28, GOLD, TextAlignmentOptions.Center);
+        Btn(cCamp, "ChairPlus", 459, 86, 62, 60, "+", "ChairPlus");
+        L(Txt(cCamp, "MatLabel", 32, 164, 250, 60, "", 30, WHITE), S["mats"]);
+        Btn(cCamp, "MatMinus", 290, 164, 62, 60, "-", "MatMinus");
+        var matCnt = Txt(cCamp, "MatCount", 352, 164, 106, 60, "1 / 6", 28, GOLD, TextAlignmentOptions.Center);
+        Btn(cCamp, "MatPlus", 459, 164, 62, 60, "+", "MatPlus");
+        var (_, _, backL) = Btn(cCamp, "PropsBack", 32, 244, 489, 62, "", "PropsBack"); L(backL, S["propsBack"]);
+        L(Txt(cCamp, "Note", 32, 322, 489, 32, "", 20, GREY), S["campNote"]);
+
+        var cPen = Card("CardQvPen", 1, 0, "penHead", content2);
+        var (_, _, penL) = Btn(cPen, "SummonPen", 32, 86, 489, 62, "", "SummonPen"); L(penL, S["penBring"]);
+        var (_, _, erL) = Btn(cPen, "SummonEraser", 32, 164, 489, 62, "", "SummonEraser"); L(erL, S["eraserBring"]);
+        var (_, _, pbL) = Btn(cPen, "PensBack", 32, 244, 489, 62, "", "PensBack"); L(pbL, S["pensBack"]);
+        L(Txt(cPen, "Note", 32, 322, 489, 32, "", 20, GREY), S["penNote"]);
+        content2.gameObject.SetActive(false);
+
+        // 쪽 넘김 (캔버스 양옆 여백) + 쪽 번호
+        var (prevB, _, prevL) = Btn(go.transform, "PrevPage", 28, 440, 104, 200, "<<", "PrevPage"); prevL.fontSize = 44;
+        var (nextB, _, nextL) = Btn(go.transform, "NextPage", CW - 132, 440, 104, 200, ">>", "NextPage"); nextL.fontSize = 44;
+        var pageText = Txt(t, "PageNum", 700, 118, 200, 42, "1 / 2", 26, GREY, TextAlignmentOptions.Right);   // 아래 가장자리는 패널 테두리에 가려졌다 → 머리줄 오른쪽 끝(상호작용 버튼 왼쪽)
+        prevB.transform.SetSiblingIndex(0); nextB.transform.SetSiblingIndex(0);   // Frame(팝업 어둠 포함)보다 먼저 그려서 팝업이 화살표를 덮게
+        prevB.gameObject.SetActive(false);
+
         // (거울 모드 폐기 2026-09-24 — 거울은 타프 줄 손거울 Z27b. 반사 칸 '거울' 토글은 그 거울을 켠다)
         var oldPm = root.transform.Find("PanelMirror"); if (oldPm != null) Object.DestroyImmediate(oldPm.gameObject);
 
         // 사용한 에셋 팝업 (캔버스 자식 → 메인이 꺼지면 같이 꺼짐. 바깥 어둠을 누르면 닫힘)
         var popup = Rect(t, "AssetsPopup", 0, 0, W, H).gameObject;
-        var (_, dim, _) = Btn(popup.transform, "Dim", 0, 0, W, H, "", "CloseAssets");
+        var (_, dim, _) = Btn(popup.transform, "Dim", -PAD, 0, CW, H, "", "CloseAssets");
         dim.sprite = null; dim.type = Image.Type.Simple; dim.color = new Color(0f, 0f, 0f, 0.8f);   // 선형 색공간이라 알파 0.55 는 거의 안 어두워 보였다(아래 글자 밝기 0.70)
         var cb = dim.GetComponent<Button>().colors; cb.highlightedColor = Color.white; cb.pressedColor = Color.white; dim.GetComponent<Button>().colors = cb;
         const float bx = 300f, by = 150f, bw = 1320f, bh = 790f;
@@ -205,7 +239,7 @@ public static class PyriteSettingsUI
         // 상호작용 가능한 사물 팝업 (2026-09-24 관리자 요청) — 같은 방식: 캔버스 자식, 바깥 어둠·× 로 닫힘
         var guide = Rect(t, "GuidePopup", 0, 0, W, H).gameObject;
         {
-            var (_, gdim, _) = Btn(guide.transform, "Dim", 0, 0, W, H, "", "CloseGuide");
+            var (_, gdim, _) = Btn(guide.transform, "Dim", -PAD, 0, CW, H, "", "CloseGuide");
             gdim.sprite = null; gdim.type = Image.Type.Simple; gdim.color = new Color(0f, 0f, 0f, 0.8f);
             var gcb = gdim.GetComponent<Button>().colors; gcb.highlightedColor = Color.white; gcb.pressedColor = Color.white; gdim.GetComponent<Button>().colors = gcb;
             const float gx0 = 200f, gy0 = 80f, gw = 1520f, gh = 920f;
@@ -266,6 +300,10 @@ public static class PyriteSettingsUI
         st.textKo = loc.Select(x => x.ko).ToArray();
         st.langEnBg = iEn; st.langKoBg = iKo; st.lang = 0;
         st.assetsPopup = popup; st.guidePopup = guide; st.panelRoot = go;
+        st.pages = new[] { content.gameObject, content2.gameObject }; st.prevButton = prevB.gameObject; st.nextButton = nextB.gameObject; st.pageText = pageText;
+        st.pool = Object.FindObjectOfType<PyriteCampPool>(true); st.chairCountText = chairCnt; st.matCountText = matCnt;
+        if (st.pool == null) sb.AppendLine("!! CampPool 없음 — Z43b 먼저 (2쪽 버튼이 동작 안 함)");
+        else sb.AppendLine(string.Format("pool: chairs {0} mats {1} pens {2} erasers {3}", st.pool.chairs.Length, st.pool.mats.Length, st.pool.pens.Length, st.pool.erasers.Length));
         {   // 첫 방문 안내 (2026-09-24 관리자): 처음 온 사람에게만 패널 + 상호작용 팝업. 항상 켜져 있는 프로젝터 루트에
             var fv = root.GetComponent<PyriteFirstVisit>();
             if (fv == null) fv = UdonSharpUndo.AddComponent<PyriteFirstVisit>(root);
@@ -397,7 +435,7 @@ public static class PyriteSettingsUI
         ["gLanN"] = ("Lanterns", "랜턴"),
         ["gLanD"] = ("Grab to carry. Drop near a hook to hang it.", "들고 다닐 수 있습니다. 걸이 근처에서 놓으면 걸립니다."),
         ["gChrN"] = ("Chairs", "의자"),
-        ["gChrD"] = ("Grab the backrest to move. Press the seat to sit.", "등받이를 잡아 옮기고, 앉는 자리를 누르면 앉습니다."),
+        ["gChrD"] = ("Grab the backrest to move, press the seat to sit. More on page 2.", "등받이를 잡아 옮기고 자리를 누르면 앉습니다. 설정 2쪽에서 개수를 바꿉니다."),
         ["gCotN"] = ("Cot", "야전침대"),
         ["gCotD"] = ("Press to lie down.", "누르면 눕습니다."),
         ["gMatN"] = ("Picnic mat", "돗자리"),
@@ -414,11 +452,23 @@ public static class PyriteSettingsUI
         ["gStnD"] = ("On the dock tray. Throw low and fast across the water.", "부두 끝 쟁반에 있습니다. 물 위로 낮고 빠르게 던지세요."),
         ["gBtN"] = ("Rowboat", "나룻배"),
         ["gBtD"] = ("Press a seat to sit.", "자리를 누르면 앉습니다."),
+        ["campHead"] = ("CAMP", "캠프"),
+        ["chairs"] = ("Chairs", "의자"),
+        ["mats"] = ("Picnic mats", "돗자리"),
+        ["propsBack"] = ("Put everything back", "모두 제자리로"),
+        ["campNote"] = ("For everyone · items in use stay put", "모두에게 적용 · 사용 중인 건 그대로"),
+        ["penHead"] = ("QVPEN", "QvPen"),
+        ["penBring"] = ("Bring a pen", "펜 가져오기"),
+        ["eraserBring"] = ("Bring an eraser", "지우개 가져오기"),
+        ["pensBack"] = ("Return all pens", "펜 모두 제자리로"),
+        ["penNote"] = ("The pen stand is east of the fire.", "펜 거치대는 모닥불 동쪽에 있습니다."),
+        ["gPenN"] = ("QvPen", "QvPen"),
+        ["gPenD"] = ("Grab and use to draw. Settings page 2 brings one to you.", "잡고 사용하면 그립니다. 설정 2쪽에서 불러올 수 있습니다."),
         ["guideFoot"] = ("Grab, Use, and Drop are your usual VRChat pickup controls.", "잡기 · 사용 · 놓기는 VRChat 기본 조작입니다."),
     };
 
     // 상호작용 사물 목록 (문구 키 앞부분 — N 이름 / D 설명). 왼쪽 열 7개 → 오른쪽 열
-    static readonly string[] GUIDE = { "gSet", "gVid", "gMir", "gLan", "gChr", "gCot", "gMat", "gSkw", "gKet", "gMug", "gScp", "gStn", "gBt" };
+    static readonly string[] GUIDE = { "gSet", "gVid", "gMir", "gLan", "gChr", "gCot", "gMat", "gSkw", "gKet", "gMug", "gScp", "gStn", "gBt", "gPen" };
 
     static void L(TextMeshProUGUI t, (string en, string ko) s) { loc.Add((t, s.en, s.ko)); }
 
@@ -526,6 +576,33 @@ public static class PyriteSettingsUI
         sb.AppendLine("LakeMirrorSwitch hidden: " + lines.Count + " (toggle " + (lake ? lake.name : "null") + " 유지)");
     }
 
+    // ── 패널 넓히기 (2026-09-27) — 패널 가로 스케일, 유리 셰이더 비율, 빛줄기 메시의 패널 쪽 모서리 ──
+    static void WidenPanel(Transform root, Transform panel, Transform beam, StringBuilder sb)
+    {
+        float oldW = panel.localScale.x;
+        float k = PANEL_W_NEW / oldW;
+        if (Mathf.Abs(k - 1f) < 0.001f) { sb.AppendLine("panel already " + oldW.ToString("F2") + " m"); return; }
+        var pc = panel.position; var right = panel.right; var fwd = panel.forward;
+        var s = panel.localScale; s.x = PANEL_W_NEW; panel.localScale = s; EditorUtility.SetDirty(panel);
+        var mat = panel.GetComponent<Renderer>().sharedMaterial;
+        if (mat.HasProperty("_Aspect")) { mat.SetFloat("_Aspect", PANEL_W_NEW / s.y); EditorUtility.SetDirty(mat); }
+        int moved = 0;
+        var mf = beam != null ? beam.GetComponent<MeshFilter>() : null;
+        if (mf != null && mf.sharedMesh != null)
+        {
+            var m = mf.sharedMesh; var v = m.vertices;
+            for (int i = 0; i < v.Length; i++)
+            {
+                var w = root.TransformPoint(v[i]); var d = w - pc;
+                if (Mathf.Abs(Vector3.Dot(d, fwd)) > 0.05f) continue;   // 렌즈 쪽 모서리는 그대로
+                w += right * Vector3.Dot(d, right) * (k - 1f);
+                v[i] = root.InverseTransformPoint(w); moved++;
+            }
+            m.vertices = v; m.RecalculateBounds(); EditorUtility.SetDirty(m);
+        }
+        sb.AppendLine(string.Format("panel width {0:F2} → {1:F2} m (x{2:F3}), aspect {3:F3}, beam verts moved {4}", oldW, PANEL_W_NEW, k, PANEL_W_NEW / s.y, moved));
+    }
+
     // ── 위젯 ──
     static RectTransform Rect(Transform parent, string name, float x, float y, float w, float h)
     {
@@ -617,7 +694,7 @@ public static class PyriteSettingsUI
         var terr = Terrain.activeTerrain;
         var stand = root.position - dir * 1.0f;
         stand.y = (terr ? terr.SampleHeight(stand) + terr.transform.position.y : root.position.y - 0.4f) + 1.6f;
-        var near = panel.position - panel.forward * 2.4f;
+        var near = panel.position - panel.forward * 2.8f;
         Directory.CreateDirectory("Assets/_preview/projector/");
         foreach (var o in pj.onObjects) if (o != null) o.SetActive(true);
         pj.lensRenderer.sharedMaterial = pj.lensOn;
@@ -638,6 +715,12 @@ public static class PyriteSettingsUI
                     st.assetsPopup.SetActive(true);
                     Shot(cam, near, panel.position, 40f, "Assets/_preview/projector/ui_" + tag + "_assets.png");
                     st.assetsPopup.SetActive(false);
+                }
+                if (st != null && st.pages != null && st.pages.Length > 1)
+                {
+                    st.pages[0].SetActive(false); st.pages[1].SetActive(true); st.prevButton.SetActive(true); st.nextButton.SetActive(false); st.pageText.text = "2 / 2";
+                    Shot(cam, near, panel.position, 40f, "Assets/_preview/projector/ui_" + tag + "_page2.png");
+                    st.pages[0].SetActive(true); st.pages[1].SetActive(false); st.prevButton.SetActive(false); st.nextButton.SetActive(true); st.pageText.text = "1 / 2";
                 }
                 if (h > 20f && st != null && st.guidePopup != null)
                 {
