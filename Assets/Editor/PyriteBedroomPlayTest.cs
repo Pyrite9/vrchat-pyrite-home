@@ -1,5 +1,5 @@
 // PyriteBedroomPlayTest.cs — Tools ▸ Pyrite3 ▸ Z49e. Bedroom Play Test (ClientSim)
-//  Play 진입 → 6 s 뒤 TentDoor 의 _interact → 2 s 뒤 위치 기록 → DoorFlap 의 _interact → 2 s 뒤 위치 기록 → Play 종료
+//  Play 진입 → 6 s 뒤 TentDoor → 침실 → Bed_2 눕기 Station → ExitStation → DoorFlap → 캠프 (단계마다 2 s, 위치 기록) → Play 종료
 //  결과: Logs/pyrite_bedroom.txt + 클립보드
 //  🔴 Play 진입 때 "VideoPlayerShim Missing" 대화상자 → No. Console Error Pause 는 꺼 둘 것
 #if UNITY_EDITOR
@@ -71,16 +71,32 @@ public static class PyriteBedroomPlayTest
             }
             else if (stage == 1 && t > 8)
             {
-                log += "after TentDoor → " + Pos() + "  (기대 (2000.00, 0.0x, -2.00) yaw 0)\n";
-                var ub = UB("TentBedroom", "DoorFlap");
-                log += "DoorFlap udon " + (ub != null) + "\n";
-                if (ub != null) ub.SendCustomEvent("_interact");
+                log += "after TentDoor → " + Pos() + "  (기대 (1997.60, 0.02, 1.30) yaw 90)\n";
+                var lie = UB("TentBedroom", "Beds/Bed_2/Lie");
+                log += "Bed_2 Lie udon " + (lie != null) + "\n";
+                if (lie != null) lie.SendCustomEvent("_interact");
                 stage = 2;
             }
             else if (stage == 2 && t > 10)
             {
-                log += "after DoorFlap → " + Pos() + "  (기대 (-5.56, 1.83, 54.35) yaw 240)\n";
+                var lp = GameObject.Find("TentBedroom/Beds/Bed_2/Lie/LiePoint");
+                log += "after Lie → " + Pos() + "  (LiePoint " + (lp ? lp.transform.position.ToString("F2") : "?") + ")\n";
+                var st = GameObject.Find("TentBedroom/Beds/Bed_2/Lie").GetComponent<VRC.SDK3.Components.VRCStation>();
+                if (st != null) st.ExitStation(Networking.LocalPlayer);
                 stage = 3;
+            }
+            else if (stage == 3 && t > 12)
+            {
+                log += "after ExitStation → " + Pos() + "  (ExitPoint 기대 z 0.25)\n";
+                var ub = UB("TentBedroom", "DoorFlap");
+                log += "DoorFlap udon " + (ub != null) + "\n";
+                if (ub != null) ub.SendCustomEvent("_interact");
+                stage = 4;
+            }
+            else if (stage == 4 && t > 14)
+            {
+                log += "after DoorFlap → " + Pos() + "  (기대 (-5.56, 1.83, 54.35) yaw 240)\n";
+                stage = 5;
                 Finish();
             }
             else if (EditorApplication.timeSinceStartup - t0 > 120) { log += "TIMEOUT stage " + stage + "\n"; Finish(); }
