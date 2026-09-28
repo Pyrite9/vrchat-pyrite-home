@@ -1,5 +1,6 @@
 // PyriteWindowCamBuild.cs — 침실 창밖 실시간 카메라 (Z49w 빌드 / Z49x 되돌리기). 재실행 안전
-//  루트 BedroomWindowCam: 캠프 텐트 앞 (−4.9, 2.55, 54.6), yaw 210(호수 + 오른쪽 캠프), 수직 화각 90° · 가로 127°, RT 1536×768
+//  루트 BedroomWindowCam: 캠프 텐트 앞 (−4.9, 2.55, 54.6), yaw 210(호수 + 오른쪽 캠프), 수직 화각 100° · 가로 125°, RT 1536×960
+//  v2 (19:02): 카메라가 머리를 따라간다(침실 머리 위치·방향 → 캠프). 창에 붙어 옆을 봐도 카메라가 같이 옆을 봐서 경계가 시야 밖으로
 //  M_Backdrop: _Live(RT) 를 화면 안이면 우선, 밖·가장자리는 파노라마. 침실 +Z(창) ↔ 월드 yaw 210 (_Yaw 210)
 //  U# PyriteWindowCam: 로컬 플레이어가 침실 12 m 안이면 카메라 켬 (Z49u 실측: 1024×512 1회 3.6~3.9 ms, 꽃 끄면 2.6 ms)
 #if UNITY_EDITOR
@@ -19,8 +20,9 @@ public static class PyriteWindowCamBuild
     const string PREV = "Assets/_preview/bedroom/";
     const string ROOT = "BedroomWindowCam";
     static readonly Vector3 POS = new Vector3(-4.9f, 2.55f, 54.6f);
-    const float YAW = 210f, VFOV = 90f;
-    const int W = 1536, H = 768;
+    const float YAW = 210f, VFOV = 100f, PLANE_Z = 2.55f;
+    const int W = 1536, H = 960;
+    static readonly Vector3 EYE_LOCAL = new Vector3(0f, 0.74f, 0f);   // 침실 이 점 ↔ 캠프 POS (머리 따라가기의 기준)
     static StringBuilder sb;
 
     [MenuItem("Tools/Pyrite3/Z49w. Window Live Cam Build", false, 4921)]
@@ -91,6 +93,7 @@ public static class PyriteWindowCamBuild
 
         var wc = UdonSharpUndo.AddComponent<PyriteWindowCam>(go);
         wc.cam = cam; wc.room = room.transform; wc.mat = mat; wc.radius = 12f; wc.allowLive = true;
+        wc.followHead = true; wc.camPos = POS; wc.camYaw = YAW; wc.eyeLocal = EYE_LOCAL; wc.planeZ = PLANE_Z;
         UdonSharpEditorUtility.CopyProxyToUdon(wc); EditorUtility.SetDirty(wc);
 
         float tanV = Mathf.Tan(VFOV * 0.5f * Mathf.Deg2Rad), tanH = tanV * W / (float)H;
@@ -134,17 +137,25 @@ public static class PyriteWindowCamBuild
                 c.transform.position = new Vector3(p.x, gy + 0.85f, p.z); c.transform.localScale = new Vector3(0.45f, 0.85f, 0.45f);
                 Object.DestroyImmediate(c.GetComponent<Collider>()); c.GetComponent<Renderer>().sharedMaterial = skin; stand.Add(c);
             }
-            wcam.Render();
             var o = room.transform;
             System.Func<float, float, float, Vector3> Wp = (x, y, z) => o.TransformPoint(new Vector3(x, y, z));
             cam.fieldOfView = 75f;
-            foreach (var live in new[] { false, true })
+            mat.SetFloat("_LiveOn", 1f);
+            // 머리 따라가기 흉내 (U# PostLateUpdate 와 같은 식)
+            var views = new[] {
+                new { e = Wp(-0.28f, 0.42f, -2.05f), a = Wp(0, 1.2f, PyriteBedroomBuild.B), n = "lie" },
+                new { e = Wp(0.3f, 1.6f, -1.2f), a = Wp(0, 1.2f, PyriteBedroomBuild.B), n = "stand" },
+                new { e = Wp(1.6f, 1.3f, 2.05f), a = Wp(-2.0f, 1.0f, 2.6f), n = "near_left" },
+                new { e = Wp(-1.4f, 1.3f, 2.05f), a = Wp(2.5f, 1.2f, 2.6f), n = "near_right" },
+                new { e = Wp(0f, 1.2f, 2.1f), a = Wp(0f, 2.8f, 2.4f), n = "near_up" },
+            };
+            foreach (var v in views)
             {
-                mat.SetFloat("_LiveOn", live ? 1f : 0f);
-                string s = live ? "live" : "pano";
-                Shot(cam, Wp(-0.28f, 0.42f, -2.05f), Wp(0, 1.2f, PyriteBedroomBuild.B), "wl_" + s + "_lie");
-                Shot(cam, Wp(0.3f, 1.6f, -1.2f), Wp(0, 1.2f, PyriteBedroomBuild.B), "wl_" + s + "_stand");
-                Shot(cam, Wp(0.8f, 1.3f, 1.3f), Wp(-1.2f, 1.1f, PyriteBedroomBuild.B), "wl_" + s + "_near");
+                var rot = Quaternion.LookRotation(v.a - v.e);
+                Aim(wcam, o, v.e, rot, mat);
+                wcam.Render();
+                Shot(cam, v.e, v.a, "wl_follow_" + v.n);
+                sb.AppendLine("    cam " + V(wcam.transform.position) + " near " + wcam.nearClipPlane.ToString("F2"));
             }
             // 카메라 원본 화면
             var a = RenderTexture.active; var rt = wcam.targetTexture; RenderTexture.active = rt;
@@ -157,10 +168,25 @@ public static class PyriteWindowCamBuild
         {
             foreach (var g in stand) if (g) Object.DestroyImmediate(g);
             mat.SetFloat("_LiveOn", 0f);
+            wcam.transform.SetPositionAndRotation(POS, Quaternion.Euler(0f, YAW, 0f)); wcam.nearClipPlane = 0.1f;
+            var tt = wcam.transform; mat.SetVector("_LiveFwd", tt.forward); mat.SetVector("_LiveRight", tt.right); mat.SetVector("_LiveUp", tt.up);
             foreach (var r in psr) r.enabled = true;
             cam.fieldOfView = f0; cam.transform.SetPositionAndRotation(p0, r0);
             if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(PyriteDayCycleSetup.EDITOR_HOUR); }
         }
+    }
+
+    static void Aim(Camera wcam, Transform room, Vector3 eye, Quaternion rot, Material mat)
+    {
+        Vector3 local = room.InverseTransformPoint(eye);
+        Quaternion lrot = Quaternion.Inverse(room.rotation) * rot;
+        Quaternion yaw = Quaternion.Euler(0f, YAW, 0f);
+        wcam.transform.SetPositionAndRotation(POS + yaw * (local - EYE_LOCAL), yaw * lrot);
+        Vector3 fwdLocal = lrot * Vector3.forward; float d = PLANE_Z - local.z; float near = 0.05f;
+        if (d > 0f && fwdLocal.z > 0.2f) near = Mathf.Max(0.05f, (d * fwdLocal.z - 0.35f) * 0.9f);
+        wcam.nearClipPlane = near;
+        var t = wcam.transform;
+        mat.SetVector("_LiveFwd", t.forward); mat.SetVector("_LiveRight", t.right); mat.SetVector("_LiveUp", t.up);
     }
 
     static void Shot(Camera cam, Vector3 eye, Vector3 at, string tag)
