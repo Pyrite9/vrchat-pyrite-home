@@ -12,6 +12,7 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
+  - ENABLE_COLOR_ADJUST
   - ENABLE_COLOR_VARIATION
   - ENABLE_EMISSION
   - ENABLE_HEIGHT_VARIATION
@@ -151,7 +152,7 @@ Material:
     - _EnaAtlas: 0
     - _EnaAvd: 0
     - _EnaBtm: 0
-    - _EnaColAdj: 0
+    - _EnaColAdj: 1
     - _EnaEmi: 1
     - _EnaFar: 1
     - _EnaHei: 1
@@ -199,7 +200,7 @@ Material:
     - _Parallax: 0.02
     - _Rad: 50
     - _Radius: 100
-    - _Sat: 1
+    - _Sat: 0.65
     - _SmoothnessTextureChannel: 0
     - _SoftParticlesEnabled: 0
     - _SoftParticlesFarFadeDistance: 1

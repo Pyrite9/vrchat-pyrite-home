@@ -315,6 +315,10 @@ public static class PyriteFloraDense
         string glow = "-";
         if (m.name.Contains("Nemophila"))
         {
+            // 2026-09-28 Z47: 후처리(ACES + 채도 보정)가 파랑을 끝까지 채워 참고 월드보다 쨍했다(정오 채도 0.99 vs 0.72)
+            //  → 꽃만 채도 0.65 (Z47b 실측: 0.7 → 0.79, 0.6 → 0.72 정오 / 0.68·0.62 노을). 밤은 조명 뒤라 효과 없음 — 밤 색은 발광이 정한다
+            m.SetFloat("_EnaColAdj", 1f); m.EnableKeyword("ENABLE_COLOR_ADJUST");
+            m.SetFloat("_Sat", 0.65f); m.SetFloat("_Con", 1f); m.SetFloat("_Hue", 0f);
             var night = AssetDatabase.LoadAssetAtPath<Material>(NIGHT_MAT);
             if (night != null)
             {
@@ -327,7 +331,7 @@ public static class PyriteFloraDense
             else glow = "!! night mat 없음";
         }
         EditorUtility.SetDirty(m);
-        return m.name + ": avoidance off, glow " + glow;
+        return m.name + ": avoidance off, sat " + m.GetFloat("_Sat") + (m.IsKeywordEnabled("ENABLE_COLOR_ADJUST") ? " (on)" : "") + ", glow " + glow;
     }
 
     [MenuItem("Tools/Pyrite3/Z45d. Flower Material (no bend + night glow) + Sweep", false, 153)]
