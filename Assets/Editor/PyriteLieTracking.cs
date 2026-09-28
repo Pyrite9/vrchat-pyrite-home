@@ -30,6 +30,9 @@ public static class PyriteLieTracking
     const string LOG = "Logs/pyrite_lie_tracking.txt";
     const string T_TRACK = "VRC_AnimatorTrackingControl";
     const string T_POSE  = "VRC_AnimatorTemporaryPoseSpace";
+    // 2026-09-28 인게임 A/B(Z49q): Seated 켬 + Pose Space 켬 = 데스크톱 시점이 바닥 밑으로 꺼짐(앉기 보정과 이중으로 내려감).
+    //   Seated 켬 + Pose Space 끔 = 정상 → Pose Space 는 넣지 않는다. 다시 넣으려면 true (그럼 Station Seated 를 꺼야 함)
+    const bool USE_POSE_SPACE = false;
 
     // Animation 으로 잡을 부위. 나머지는 NoChange
     static readonly string[] ANIM_PARTS = { "trackingHip", "trackingLeftFoot", "trackingRightFoot" };
@@ -145,13 +148,17 @@ public static class PyriteLieTracking
                 f.SetValue(tc, Enum.Parse(f.FieldType, want));
             }
 
-            var ps = state.AddStateMachineBehaviour(tPose);
-            SetField(ps, "enterPoseSpace", true, sb);
-            SetField(ps, "fixedDelay", true, sb);
-            SetField(ps, "delayTime", POSE_DELAY, sb);
-
-            EditorUtility.SetDirty(tc); EditorUtility.SetDirty(ps);
-            sb.AppendLine("  " + layer.name + " / " + state.name + " ← " + Describe(tc) + " + " + Describe(ps));
+            EditorUtility.SetDirty(tc);
+            string psDesc = "Pose Space 없음";
+            if (USE_POSE_SPACE)
+            {
+                var ps = state.AddStateMachineBehaviour(tPose);
+                SetField(ps, "enterPoseSpace", true, sb);
+                SetField(ps, "fixedDelay", true, sb);
+                SetField(ps, "delayTime", POSE_DELAY, sb);
+                EditorUtility.SetDirty(ps); psDesc = Describe(ps);
+            }
+            sb.AppendLine("  " + layer.name + " / " + state.name + " ← " + Describe(tc) + " + " + psDesc);
         }
         EditorUtility.SetDirty(ctrl);
         AssetDatabase.SaveAssets();
