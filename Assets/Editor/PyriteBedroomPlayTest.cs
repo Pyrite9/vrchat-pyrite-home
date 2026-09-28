@@ -83,6 +83,7 @@ public static class PyriteBedroomPlayTest
             {
                 var lp = GameObject.Find("TentBedroom/Beds/Lie_2/LiePoint");
                 log += "after Lie → " + Pos() + "  (LiePoint " + (lp ? lp.transform.position.ToString("F2") : "?") + ")\n";
+                log += "window cam (침실 안) " + WinCam() + "\n";
                 var sack = UB("TentBedroom", "Beds/StuffSack");
                 log += "StuffSack udon " + (sack != null) + "\n";
                 if (sack != null) sack.SendCustomEvent("_interact");
@@ -116,11 +117,25 @@ public static class PyriteBedroomPlayTest
             {
                 log += "after DoorFlap → " + Pos() + "  (기대 (-5.56, 1.83, 54.35) yaw 240)\n";
                 stage = 6;
+            }
+            else if (stage == 6 && t > 19)
+            {
+                log += "window cam (캠프) " + WinCam() + "\n";
+                stage = 7;
                 Finish();
             }
             else if (EditorApplication.timeSinceStartup - t0 > 120) { log += "TIMEOUT stage " + stage + "\n"; Finish(); }
         }
         catch (System.Exception e) { log += "EXCEPTION " + e.Message + "\n"; Finish(); }
+    }
+
+    static string WinCam()
+    {
+        var root = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects().FirstOrDefault(g => g.name == "BedroomWindowCam");
+        if (root == null) return "없음";
+        var c = root.GetComponent<Camera>();
+        var m = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/M_Backdrop.mat");
+        return "camera.enabled " + (c ? c.enabled.ToString() : "?") + " _LiveOn " + (m ? m.GetFloat("_LiveOn").ToString("F0") : "?");
     }
 
     static void Finish()

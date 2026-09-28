@@ -25,7 +25,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Drop: 1
+    - _Drop: 0.026924193
     - _Fuzz: 0.5
     - _Scale: 0.5
     - _SegCount: 0
