@@ -90,7 +90,7 @@ public static class PyriteWindowCamBuild
         go.transform.SetPositionAndRotation(anchor, Quaternion.Euler(0f, yawA, 0f));
         cam.targetTexture = rt;
         cam.fieldOfView = VFOV; cam.nearClipPlane = 0.1f; cam.farClipPlane = main.farClipPlane;
-        int drop = (1 << 5) | (1 << 10) | (1 << 12) | (1 << 18) | (1 << PyriteBedroomV3.LAYER);
+        int drop = (1 << 5) | (1 << 10) | (1 << 12) | (1 << 18) | (1 << PyriteBedroomV3.LAYER) | (1 << 25);   // 25 = WindowCamHide (Z49y, 캠프 텐트)
         cam.cullingMask = main.cullingMask & ~drop;
         cam.stereoTargetEye = StereoTargetEyeMask.None;
         cam.allowMSAA = false; cam.depth = -10; cam.useOcclusionCulling = true;
