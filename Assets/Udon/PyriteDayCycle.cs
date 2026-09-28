@@ -85,7 +85,7 @@ public class PyriteDayCycle : UdonSharpBehaviour
     public Material flowerMat;
     public Color[] flowerColor;
     // 밤 꽃 빛 (2026-09-28 관리자): 벤더 Night 머티리얼의 발광을 같은 머티리얼에서 _EmiInt 로만 켠다(키워드는 에디터 Z45d 가 켜 둠)
-    //  세기 = flowerGlowInt × flowerGlow(설정 토글, 로컬) × 해 고도 페이드(−1° → −9° 에서 0 → 1)
+    //  세기 = flowerGlowInt × flowerGlow(설정 슬라이더 0~2, 로컬) × 해 고도 페이드(−1° → −9° 에서 0 → 1)
     public float flowerGlowInt = 1.0f;
     [HideInInspector] public float flowerGlow = 1f;
 
@@ -231,7 +231,7 @@ public class PyriteDayCycle : UdonSharpBehaviour
 
     public void SetFlowerGlow(float v)
     {
-        flowerGlow = Mathf.Clamp01(v);
+        flowerGlow = Mathf.Clamp(v, 0f, 2f);
         EvaluateAt(CurrentHour());
     }
 

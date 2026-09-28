@@ -29,7 +29,8 @@ public class PyriteSettings : UdonSharpBehaviour
     public PostProcessVolume ppDark;
     public Toggle bloomToggle;
     public PostProcessVolume ppNoBloom;
-    public Toggle nightFlowersToggle;     // 밤에 빛나는 꽃 (2026-09-28) → cycle.SetFlowerGlow
+    public Slider nightFlowersSlider;     // 밤에 빛나는 꽃 0..2 (0 = 끔, 1 = 100%) → cycle.SetFlowerGlow (2026-09-28)
+    public TextMeshProUGUI nightFlowersText;
 
     [Header("반사")]
     public Toggle lakeToggle;
@@ -180,7 +181,8 @@ public class PyriteSettings : UdonSharpBehaviour
             if (flowerDistSlider != null && flowerCull != null) flowerDistSlider.value = Mathf.Round(flowerCull.distance / 10f);
             FlowerLabel();
             if (lightShadowsToggle != null && shadowLights != null && shadowLights.Length > 0 && shadowLights[0] != null) lightShadowsToggle.isOn = shadowLights[0].shadows != LightShadows.None;
-            if (nightFlowersToggle != null) nightFlowersToggle.isOn = cycle.flowerGlow > 0.5f;
+            if (nightFlowersSlider != null) nightFlowersSlider.value = cycle.flowerGlow;
+            GlowLabel();
         }
         updating = false;
     }
@@ -223,9 +225,20 @@ public class PyriteSettings : UdonSharpBehaviour
 
     public void OnNightFlowers()
     {
-        if (updating || nightFlowersToggle == null || cycle == null) return;
-        cycle.SetFlowerGlow(nightFlowersToggle.isOn ? 1f : 0f);
+        if (updating || nightFlowersSlider == null || cycle == null) return;
+        float v = nightFlowersSlider.value;
+        if (v < 0.05f) v = 0f;
+        cycle.SetFlowerGlow(v);
+        GlowLabel();
         MarkDirty();
+    }
+
+    private void GlowLabel()
+    {
+        if (nightFlowersText == null || nightFlowersSlider == null) return;
+        float v = nightFlowersSlider.value;
+        if (v < 0.05f) nightFlowersText.text = lang == 1 ? "끔" : "Off";
+        else nightFlowersText.text = Mathf.RoundToInt(v * 100f) + "%";
     }
 
     // ── 반사 ──
@@ -308,7 +321,7 @@ public class PyriteSettings : UdonSharpBehaviour
     // ── 개인 설정 저장 (PlayerData) ──
     private const string K_BRIGHT = "pl_bright", K_BLOOM = "pl_bloom", K_LAKE = "pl_lake", K_SOUND = "pl_sound",
         K_FLOWER = "pl_flowerDist", K_FIREFLY = "pl_fireflies", K_SUNSH = "pl_sunShadows", K_LIGHTSH = "pl_lightShadows", K_LANG = "pl_lang",
-        K_GLOW = "pl_nightFlowers";
+        K_GLOW = "pl_nightGlow";
 
     private void MarkDirty()
     {
@@ -329,7 +342,7 @@ public class PyriteSettings : UdonSharpBehaviour
         if (firefliesToggle != null) PlayerData.SetBool(K_FIREFLY, firefliesToggle.isOn);
         if (shadowsToggle != null) PlayerData.SetBool(K_SUNSH, shadowsToggle.isOn);
         if (lightShadowsToggle != null) PlayerData.SetBool(K_LIGHTSH, lightShadowsToggle.isOn);
-        if (nightFlowersToggle != null) PlayerData.SetBool(K_GLOW, nightFlowersToggle.isOn);
+        if (nightFlowersSlider != null) PlayerData.SetFloat(K_GLOW, nightFlowersSlider.value);
         PlayerData.SetInt(K_LANG, lang);
     }
 
@@ -346,7 +359,7 @@ public class PyriteSettings : UdonSharpBehaviour
         if (firefliesToggle != null && PlayerData.HasKey(player, K_FIREFLY)) { updating = true; firefliesToggle.isOn = PlayerData.GetBool(player, K_FIREFLY); updating = false; OnFireflies(); }
         if (shadowsToggle != null && PlayerData.HasKey(player, K_SUNSH)) { updating = true; shadowsToggle.isOn = PlayerData.GetBool(player, K_SUNSH); updating = false; OnShadows(); }
         if (lightShadowsToggle != null && PlayerData.HasKey(player, K_LIGHTSH)) { updating = true; lightShadowsToggle.isOn = PlayerData.GetBool(player, K_LIGHTSH); updating = false; OnLightShadows(); }
-        if (nightFlowersToggle != null && PlayerData.HasKey(player, K_GLOW)) { updating = true; nightFlowersToggle.isOn = PlayerData.GetBool(player, K_GLOW); updating = false; OnNightFlowers(); }
+        if (nightFlowersSlider != null && PlayerData.HasKey(player, K_GLOW)) { updating = true; nightFlowersSlider.value = PlayerData.GetFloat(player, K_GLOW); updating = false; OnNightFlowers(); }
         if (PlayerData.HasKey(player, K_LANG)) { lang = PlayerData.GetInt(player, K_LANG); ApplyLang(); }
         restored = true;   // 이 뒤로 바꾸는 것만 저장 (불러오기 자체는 저장 안 함)
     }
@@ -362,6 +375,7 @@ public class PyriteSettings : UdonSharpBehaviour
         if (langEnBg != null) langEnBg.color = lang == 0 ? langOn : langOff;
         if (langKoBg != null) langKoBg.color = lang == 1 ? langOn : langOff;
         FlowerLabel();
+        GlowLabel();
     }
 
     public void OpenAssets() { ClosePopups(); if (assetsPopup != null) assetsPopup.SetActive(true); }

@@ -153,9 +153,11 @@ public static class PyriteSettingsUI
         var brightSlider = Sld(cView, "BrightSlider", 32, 136, 489, -1f, 1f, 0f, false, "OnBright");
         L(Txt(cView, "Darker", 32, 178, 240, 28, "", 20, GREY), S["darker"]);
         L(Txt(cView, "Brighter", 281, 178, 240, 28, "", 20, GREY, TextAlignmentOptions.Right), S["brighter"]);
-        var (bloomT, bloomL) = Tgl(cView, "Bloom", 32, 240, 489, true, "OnBloom"); L(bloomL, S["bloom"]);
-        // 2026-09-28 관리자: 밤 꽃 빛 (벤더 Night 발광, 로컬, 기본 켬) — DayCycle.SetFlowerGlow
-        var (glowT, glowL) = Tgl(cView, "NightFlowers", 32, 300, 489, true, "OnNightFlowers"); L(glowL, S["nightFlowers"]);
+        var (bloomT, bloomL) = Tgl(cView, "Bloom", 32, 212, 489, true, "OnBloom"); L(bloomL, S["bloom"]);
+        // 2026-09-28 관리자: 밤 꽃 빛 슬라이더 0~200% (0 = 끔, 기본 100%, 로컬) — DayCycle.SetFlowerGlow. 블룸 240 → 212 로 올려 자리 확보
+        L(Txt(cView, "NightFlowersLabel", 32, 272, 380, 40, "", 28, WHITE), S["nightFlowers"]);
+        var glowText = Txt(cView, "NightFlowersValue", 412, 272, 109, 40, "100%", 28, GOLD, TextAlignmentOptions.Right);
+        var glowSlider = Sld(cView, "NightFlowers", 32, 314, 489, 0f, 2f, 1f, false, "OnNightFlowers");
 
         // 반사
         var cRefl = Card("CardReflect", 2, 0, "refl");
@@ -276,7 +278,7 @@ public static class PyriteSettingsUI
         st.timeSlider = timeSlider; st.timeText = timeText; st.autoToggle = autoT;
         st.brightSlider = brightSlider; st.ppBright = vBright; st.ppDark = vDark; st.bloomToggle = bloomT; st.ppNoBloom = vNoBloom;
         st.lakeToggle = lakeT; st.lakeMirror = lakeMirror; st.campMirrorToggle = mirT; st.campMirror = campMirror;
-        st.nightFlowersToggle = glowT;
+        st.nightFlowersSlider = glowSlider; st.nightFlowersText = glowText;
         st.soundSlider = soundSlider; st.soundText = soundText;
         st.flowersToggle = flT; st.firefliesToggle = ffT; st.shadowsToggle = shT;
         st.flowerDistSlider = flDist; st.flowerDistText = flDistText; st.lightShadowsToggle = lsT;
@@ -396,7 +398,7 @@ public static class PyriteSettingsUI
         ["darker"] = ("Darker", "어둡게"),
         ["brighter"] = ("Brighter", "밝게"),
         ["bloom"] = ("Bloom", "블룸 효과"),
-        ["nightFlowers"] = ("Glowing flowers at night", "밤에 빛나는 꽃"),
+        ["nightFlowers"] = ("Night flower glow", "밤에 빛나는 꽃"),
         ["refl"] = ("REFLECTIONS", "반사"),
         ["lake"] = ("Lake reflection", "호수 반사"),
         ["mirror"] = ("Mirror", "거울"),
