@@ -290,7 +290,7 @@ public static class PyriteBedroomV3
             EditorUtility.CopySerialized(cotSt, st);
             st.PlayerMobility = VRC.SDKBase.VRCStation.Mobility.Immobilize; st.seated = true; st.disableStationExit = false; st.canUseStationFromStation = true;
             var lp = new GameObject("LiePoint").transform; lp.SetParent(lie.transform, false);
-            lp.localPosition = new Vector3(0, MH + 0.005f, -0.05f); lp.localRotation = Quaternion.identity;
+            lp.localPosition = new Vector3(0, MH + 0.005f, PyriteLieViewTest.LIE_Z); lp.localRotation = Quaternion.identity;
             var ep = new GameObject("ExitPoint").transform; ep.SetParent(lie.transform, false);
             ep.localPosition = new Vector3(0, 0.02f, ML / 2f + 0.45f); ep.localRotation = Quaternion.identity;
             st.stationEnterPlayerLocation = lp; st.stationExitPlayerLocation = ep;

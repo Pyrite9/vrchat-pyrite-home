@@ -41,6 +41,25 @@ public static class PyriteLieViewTest
         Flush();
     }
 
+    // 2026-09-28 18:00 관리자 "눕는 위치를 머리 쪽으로" — 몸 중심(LiePoint)을 매트 가운데 −0.05 → −0.40 m (머리 쪽 = −Z). 베개 턱은 머리 끝 0.33 m
+    public const float LIE_Z = -0.40f;
+
+    [MenuItem("Tools/Pyrite3/Z49s. Bedroom Lie Point (head side)", false, 4918)]
+    public static void LiePoint()
+    {
+        sb = new StringBuilder("[Z49s] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
+        foreach (var st in Stations())
+        {
+            var lp = st.stationEnterPlayerLocation; if (lp == null) { sb.AppendLine("  " + st.name + " LiePoint 없음"); continue; }
+            var before = lp.localPosition;
+            lp.localPosition = new Vector3(before.x, before.y, LIE_Z); EditorUtility.SetDirty(lp);
+            sb.AppendLine("  " + st.name + " LiePoint local z " + before.z.ToString("F2") + " → " + LIE_Z.ToString("F2") + "  world " + lp.position.ToString("F2"));
+        }
+        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene()); EditorSceneManager.SaveOpenScenes();
+        sb.AppendLine("RESULT: DONE (되돌리기 = 이 파일 LIE_Z 를 -0.05 로)");
+        Flush();
+    }
+
     static VRC.SDK3.Components.VRCStation[] Stations()
     {
         var room = SceneManager.GetActiveScene().GetRootGameObjects().FirstOrDefault(g => g.name == "TentBedroom");
