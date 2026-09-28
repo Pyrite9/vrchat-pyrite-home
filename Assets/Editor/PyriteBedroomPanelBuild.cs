@@ -218,27 +218,8 @@ public static class PyriteBedroomPanelBuild
             if (mirrorType != null) MirrorHQ(surf.AddComponent(mirrorType));
             sb.AppendLine("!! TarpMirror 거울 원본 없음 → 새 VRCMirrorReflection (기본값)");
         }
-        // 테두리 (흰 나무, 3 cm)
-        var frameM = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/M_MirrorFrame.mat");
-        if (frameM == null) { frameM = new Material(Shader.Find("Standard")); AssetDatabase.CreateAsset(frameM, "Assets/Bedroom/M_MirrorFrame.mat"); }
-        frameM.color = new Color(0.86f, 0.85f, 0.82f); frameM.SetFloat("_Glossiness", 0.35f); EditorUtility.SetDirty(frameM);
-        float t = 0.03f, d = 0.025f;
-        var right = Vector3.Cross(up, n).normalized;   // 거울면 위 가로 (z 방향)
-        void Bar(string nm, Vector3 c, Vector3 size)
-        {
-            var g = GameObject.CreatePrimitive(PrimitiveType.Cube); g.name = nm; Object.DestroyImmediate(g.GetComponent<Collider>());
-            g.transform.SetParent(root.transform, false); g.transform.localPosition = c; g.transform.localRotation = Quaternion.LookRotation(n, up);
-            g.transform.localScale = size; g.GetComponent<Renderer>().sharedMaterial = frameM; g.layer = PyriteBedroomV3.LAYER;
-        }
-        var back = -n * (d * 0.3f);
-        Bar("FrameTop", center + up * (h / 2f + t / 2f) + back, new Vector3(MIR_W + 2 * t, t, d));
-        Bar("FrameBottom", center - up * (h / 2f + t / 2f) + back, new Vector3(MIR_W + 2 * t, t, d));
-        float sideH = MIR_Y1 + t;                                          // 옆 기둥은 바닥까지 (서 있는 거울)
-        Bar("FrameA", new Vector3(center.x, sideH / 2f, center.z) + right * (MIR_W / 2f + t / 2f) + back, new Vector3(t, sideH, d));
-        Bar("FrameB", new Vector3(center.x, sideH / 2f, center.z) - right * (MIR_W / 2f + t / 2f) + back, new Vector3(t, sideH, d));
-        foreach (float sgn in new[] { 1f, -1f })                          // 발: 벽 쪽(+X)으로 뻗음
-            Bar(sgn > 0 ? "FootA" : "FootB", new Vector3(center.x + 0.12f, 0.015f, center.z) + sgn * right * (MIR_W / 2f + t / 2f), new Vector3(t, 0.03f, 0.40f));
-        sb.AppendLine("거울 " + MIR_W + "×" + h.ToString("F2") + " m 수직, 중심 " + V(center) + ", 위 끝 벽 틈 " + MIR_GAP + " m · 아래 끝 벽까지 " + (xb + MIR_GAP - xt).ToString("F2") + " m");
+        // 테두리·스탠드 없음 (21:13 관리자: 필요 없음)
+        sb.AppendLine("거울 " + MIR_W + "×" + h.ToString("F2") + " m 수직(테두리 없음), 중심 " + V(center) + ", 위 끝 벽 틈 " + MIR_GAP + " m · 아래 끝 벽까지 " + (xb + MIR_GAP - xt).ToString("F2") + " m");
         return root;
     }
 

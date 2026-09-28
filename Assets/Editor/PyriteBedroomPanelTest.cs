@@ -162,11 +162,13 @@ public static class PyriteBedroomPanelTest
                 case 9:
                     if (t < 0.3f) return;
                     Check("정오·수면 84% → 낮 몫 5.6%", Mathf.Abs(RenderSettings.ambientSkyColor.r - (0.028f + 0.592f * 0.056f)) < 0.003f, "sky " + RenderSettings.ambientSkyColor + " 반사 " + RenderSettings.reflectionIntensity.ToString("F3") + ", 방 밝기 " + Shot());
+                    Check("정오·수면 84% 창 → 1→0.13 의 84%", Mathf.Abs(Dim() - 0.2692f) < 0.01f, "_Dim " + Dim().ToString("F3"));
                     Hour(21f);
                     t0 = Time.realtimeSinceStartup; stage = 10; return;
                 case 10:
                     if (t < 0.3f) return;
                     L("  21시·수면 84%: sky " + RenderSettings.ambientSkyColor + ", 방 밝기 " + Shot());
+                    Check("21시·수면 84% 창 → 1→0.4 의 84% (그대로)", Mathf.Abs(Dim() - 0.496f) < 0.01f, "_Dim " + Dim().ToString("F3"));
                     C<Slider>("PanelCanvas/SleepSlider").value = 0f;
                     L("  21시·수면 0%: 방 밝기 " + Shot());
                     Hour(12f);

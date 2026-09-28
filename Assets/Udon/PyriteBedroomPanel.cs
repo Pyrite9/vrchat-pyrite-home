@@ -38,6 +38,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     public Color nightEq = new Color(0.022f, 0.030f, 0.062f, 1f);
     public Color nightGr = new Color(0.008f, 0.011f, 0.022f, 1f);
     public float nightRefl = 0.35f;
+    public float minWindowDay = 0.13f;     // 낮 수면 100% 창 밝기 (Z50e: 창 카메라 정오 99~105 vs 밤 33 → ×0.13 ≈ 밤 ×0.4)
 
     private bool inRoom;
     private Color dSky;
@@ -241,6 +242,9 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         RenderSettings.ambientEquatorColor = wEq;
         RenderSettings.ambientGroundColor = wGr;
         RenderSettings.reflectionIntensity = wRefl;
+        // 창: 밤은 minWindow 그대로, 낮일수록 minWindowDay 쪽 (낮 정도 = 환경광 sky 합, 밤 0.156 → 1.0 이상이면 낮)
+        float dayK = Mathf.Clamp01((dSky.r + dSky.g + dSky.b - 0.156f) / 0.85f);
+        if (backdrop != null) backdrop.SetFloat("_Dim", Mathf.Lerp(1f, Mathf.Lerp(minWindow, minWindowDay, dayK), sleepSlider.value));
         inRoom = true;
     }
 
