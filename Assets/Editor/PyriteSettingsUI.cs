@@ -154,10 +154,10 @@ public static class PyriteSettingsUI
         L(Txt(cView, "Darker", 32, 178, 240, 28, "", 20, GREY), S["darker"]);
         L(Txt(cView, "Brighter", 281, 178, 240, 28, "", 20, GREY, TextAlignmentOptions.Right), S["brighter"]);
         var (bloomT, bloomL) = Tgl(cView, "Bloom", 32, 212, 489, true, "OnBloom"); L(bloomL, S["bloom"]);
-        // 2026-09-28 관리자: 밤 꽃 빛 슬라이더 0~200% (0 = 끔, 기본 10%, 로컬) — DayCycle.SetFlowerGlow. 블룸 240 → 212 로 올려 자리 확보
+        // 2026-09-28 관리자: 밤 꽃 빛 슬라이더 0~200% (0 = 끔, 기본 끔, 로컬) — DayCycle.SetFlowerGlow. 블룸 240 → 212 로 올려 자리 확보
         L(Txt(cView, "NightFlowersLabel", 32, 272, 380, 40, "", 28, WHITE), S["nightFlowers"]);
-        var glowText = Txt(cView, "NightFlowersValue", 412, 272, 109, 40, "10%", 28, GOLD, TextAlignmentOptions.Right);
-        var glowSlider = Sld(cView, "NightFlowers", 32, 314, 489, 0f, 2f, 0.1f, false, "OnNightFlowers");   // 기본 10%
+        var glowText = Txt(cView, "NightFlowersValue", 412, 272, 109, 40, "Off", 28, GOLD, TextAlignmentOptions.Right);
+        var glowSlider = Sld(cView, "NightFlowers", 32, 314, 489, 0f, 2f, 0f, false, "OnNightFlowers");   // 기본 끔 (관리자 14:01)
 
         // 반사
         var cRefl = Card("CardReflect", 2, 0, "refl");
