@@ -7,15 +7,21 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: M_Pyrite_Tarnish
-  m_Shader: {fileID: 4800000, guid: d3ce602256b3a024fb192badad0a0d74, type: 3}
+  m_Name: ProTVSimple_Bedroom
+  m_Shader: {fileID: 4800000, guid: 38d2be71b36142398c4d791645228f73, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - _NORMALMAP
-  m_InvalidKeywords: []
+  - _CROP_GAMMAZONE
+  - _RENDERMODE_NORMAL
+  - _USEFOG
+  m_InvalidKeywords:
+  - MIRROR_FLIP
+  - _MIRRORFLIP_ON
+  - _MIRROR_ON
+  - _THREEDMODE_ON
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 1
+  m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -25,7 +31,11 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: 1e2b0b5176f23ff428703cf5416423fa, type: 3}
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DefaultTex:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
@@ -45,11 +55,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _MatCap:
-        m_Texture: {fileID: 2800000, guid: b39787f4760f71542aec20493fd5eae4, type: 3}
+        m_Texture: {fileID: 2800000, guid: d6ae13c32a86c834f94b322a545ca8ef, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -64,43 +70,61 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    m_Ints: []
+    - _SoundTex:
+        m_Texture: {fileID: 2800000, guid: 94539e7e21bb45845abfb01c223d3995, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _VideoTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints:
+    - _AspectFitMode: 0
     m_Floats:
-    - _BumpScale: 0.9
-    - _CampR0: 8
-    - _CampR1: 16
+    - _3D: 0
+    - _AVProCorrection: 0
+    - _ApplyGamma: 0
+    - _Aspect: 1.7777
+    - _AspectRatio: 1.777777
+    - _Brightness: 1
+    - _BumpScale: 1
+    - _Clip: 0
+    - _CropGammaZone: 1
+    - _Cull: 2
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
-    - _GlintSharp: 40
+    - _Emission: 1
+    - _EnableEmission: 0
+    - _Exposure: 1
+    - _FadeEdges: 1
+    - _Fog: 1
+    - _Force2D: 0
+    - _GIBrightness: 3.0000002
     - _GlossMapScale: 1
-    - _Glossiness: 0.57600003
+    - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MatCapBoost: 1.5
-    - _MatCapNormal: 0.45
-    - _MatCapStrength: 0.3
-    - _Metallic: 1
+    - _Metallic: 0
+    - _Mirror: 1
+    - _MirrorFlip: 1
+    - _MirrorMode: 2
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _RimPower: 5
+    - _RenderMode: 0
+    - _SBSThreshhold: 2
     - _SmoothnessTextureChannel: 0
-    - _SparkleScale: 28
-    - _SparkleStrength: 4
-    - _SpecNoTint: 1
     - _SpecularHighlights: 1
+    - _Spread: 0
     - _SrcBlend: 1
-    - _StriationTile: 1
+    - _Swap: 0
+    - _ThreeDMode: 1
     - _UVSec: 0
+    - _UseGlobalTexture: 0
+    - _Wide: 2
     - _ZWrite: 1
     m_Colors:
-    - _CampCenter: {r: -10.5, g: 0, b: 54.5, a: 0}
-    - _CampTint: {r: 0.62, g: 0.5, b: 0.4, a: 1}
-    - _Color: {r: 0.96, g: 0.91, b: 0.7, a: 1}
-    - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
-    - _GlintColor: {r: 2.125, g: 2.25, b: 2.5, a: 2.5}
-    - _GlintDir: {r: -0.1486552, g: 0.4815086, b: -0.8637425, a: 0}
-    - _MatCapTint: {r: 0.62, g: 0.52, b: 0.38, a: 1}
-    - _NightTint: {r: 0.13, g: 0.15, b: 0.22, a: 1}
-    - _RimColor: {r: 0.35, g: 0.27299997, b: 0.147, a: 0.35}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _MainTex_ST_Override: {r: 1, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []

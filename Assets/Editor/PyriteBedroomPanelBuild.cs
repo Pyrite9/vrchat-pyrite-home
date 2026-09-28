@@ -29,6 +29,8 @@ public static class PyriteBedroomPanelBuild
     const string WAV = "Assets/Audio/SFX/sfx_alarm_clock.wav";
     const string PREV = "Assets/_preview/bedroom/";
     const string ROOT = "BedroomPanel";
+    const string TV_PREFAB = "Packages/dev.architech.protv/Simple (ProTV).prefab";
+    const float TV_W = 2.0f, TV_Y = 1.20f, TV_Z = -0.90f, TV_GAP = 0.06f;   // 21:23 관리자: 침대 왼쪽(입구 쪽, −X 벽), 수직
     const float PW = 900f, PH = 620f, PX = 0.001f;          // 패널 캔버스 px, 1 px = 1 mm
     const float PANEL_Y = 0.80f, ICON_X = 0.60f, WALL_GAP = 0.07f;          // 20:48 관리자: 통째로 내려서 침대 조금 위 (패널 아래 끝 0.49 m, 매트 윗면 ~0.36 m). 아이콘은 패널 오른쪽
     const float MIR_W = 2.4f, MIR_Z = -0.6f, MIR_Y0 = 0.15f, MIR_Y1 = 1.75f, MIR_GAP = 0.06f;   // 20:48 관리자: 수직으로, HQ(전체 반사)
@@ -36,7 +38,7 @@ public static class PyriteBedroomPanelBuild
     static readonly Color W2 = new Color(0.96f, 0.96f, 0.95f, 0.55f);
     static StringBuilder sb;
     static TMP_FontAsset font;
-    static Sprite sOutline, sRing, sMoon, sUp, sDown, sDot, sFill;
+    static Sprite sOutline, sRing, sMoon, sUp, sDown, sDot, sFill, sVideo;
     static UdonBehaviour ub;
 
     [MenuItem("Tools/Pyrite3/Z50a. Bedroom Panel Build", false, 5001)]
@@ -110,6 +112,12 @@ public static class PyriteBedroomPanelBuild
         var iconBtn = iconImg.gameObject.AddComponent<Button>(); iconBtn.targetGraphic = iconImg; iconBtn.navigation = new Navigation { mode = Navigation.Mode.None };
         var cb = iconBtn.colors; cb.highlightedColor = new Color(1, 1, 1, 0.8f); cb.pressedColor = new Color(1, 1, 1, 0.6f); iconBtn.colors = cb;
 
+        // 동영상 아이콘 (달 아이콘 위)
+        var vicon = MakeCanvas(rootGo.transform, "VideoIconCanvas", 140, 140, WallPt(ICON_X, PANEL_Y + 0.17f, 0.07f, 0f), rot);
+        var vImg = Img(vicon, "Video", 0, 0, 140, 140, W, sVideo); vImg.raycastTarget = true;
+        var vBtn = vImg.gameObject.AddComponent<Button>(); vBtn.targetGraphic = vImg; vBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var vcb = vBtn.colors; vcb.highlightedColor = new Color(1, 1, 1, 0.8f); vcb.pressedColor = new Color(1, 1, 1, 0.6f); vBtn.colors = vcb;
+
         // 패널
         var pc = MakeCanvas(rootGo.transform, "PanelCanvas", PW, PH, WallPt(0f, PANEL_Y, PW * PX * 0.5f, 0f), rot);
         Img(pc, "Border", 0, 0, PW, PH, W, sOutline);
@@ -139,6 +147,8 @@ public static class PyriteBedroomPanelBuild
 
         // 거울 (+X 벽)
         var mirror = BuildMirror(rootGo.transform);
+        // 침실 TV (−X 벽)
+        var tvRoot = BuildTV(rootGo.transform);
 
         // 소리
         var aud = rootGo.AddComponent<AudioSource>();
@@ -157,7 +167,7 @@ public static class PyriteBedroomPanelBuild
         // U#
         var pb = UdonSharpUndo.AddComponent<PyriteBedroomPanel>(rootGo);
         ub = UdonSharpEditorUtility.GetBackingUdonBehaviour(pb);
-        pb.panel = pc.gameObject; pb.mirror = mirror; pb.sleepSlider = sleep; pb.sleepValue = sleepVal; pb.mirrorToggle = mirT;
+        pb.panel = pc.gameObject; pb.mirror = mirror; pb.tvRoot = tvRoot; pb.sleepSlider = sleep; pb.sleepValue = sleepVal; pb.mirrorToggle = mirT;
         pb.clockText = clock; pb.alarmToggle = alarmT; pb.ampmText = ampm; pb.hourText = hour; pb.minText = min; pb.stopButton = stop.gameObject;
         pb.icon = iconImg; pb.alarmSource = aud; pb.backdrop = backdrop;
         pb.lights = o.Find("Lights") ? o.Find("Lights").GetComponentsInChildren<Light>(true) : new Light[0];
@@ -165,6 +175,7 @@ public static class PyriteBedroomPanelBuild
 
         // 이벤트 연결 (U# 가 붙은 뒤)
         Wire(iconBtn.onClick, "OnIcon");
+        Wire(vBtn.onClick, "OnVideo");
         Wire(closeB.onClick, "OnClose");
         Wire(stop.onClick, "StopAlarm");
         Wire(sleep.onValueChanged, "OnSleep");
@@ -176,7 +187,7 @@ public static class PyriteBedroomPanelBuild
         sb.AppendLine("광원 " + pb.lights.Length + " (" + string.Join(", ", pb.lights.Select(l => l.name + " " + l.intensity.ToString("F2"))) + ")");
         sb.AppendLine("아이콘 " + V(icon.position - o.position) + ", 패널 " + V(pc.position - o.position) + " 크기 " + (PW * PX) + "×" + (PH * PX) + " m");
 
-        pc.gameObject.SetActive(false); stop.gameObject.SetActive(false); mirror.SetActive(false);
+        pc.gameObject.SetActive(false); stop.gameObject.SetActive(false); mirror.SetActive(false); if (tvRoot) tvRoot.SetActive(false);
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         EditorSceneManager.SaveOpenScenes();
         return true;
@@ -221,6 +232,129 @@ public static class PyriteBedroomPanelBuild
         // 테두리·스탠드 없음 (21:13 관리자: 필요 없음)
         sb.AppendLine("거울 " + MIR_W + "×" + h.ToString("F2") + " m 수직(테두리 없음), 중심 " + V(center) + ", 위 끝 벽 틈 " + MIR_GAP + " m · 아래 끝 벽까지 " + (xb + MIR_GAP - xt).ToString("F2") + " m");
         return root;
+    }
+
+    // 침실 전용 ProTV: Simple (ProTV) 프리팹, 관객 쪽 = 루트 로컬 −Z(유니티 Quad 앞면) → 방 안(+X)을 보게. 화면 폭 TV_W 로 균일 스케일, 화면 위·아래 모서리 중 벽에 가장 가까운 곳에서 TV_GAP
+    static GameObject BuildTV(Transform parent)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TV_PREFAB);
+        if (prefab == null) { sb.AppendLine("!! ProTV 프리팹 없음 " + TV_PREFAB); return null; }
+        var tv = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        tv.name = "BedroomTV";
+        tv.transform.localPosition = Vector3.zero; tv.transform.localRotation = Quaternion.LookRotation(Vector3.left, Vector3.up);   // 화면 쿼드 앞면 = 루트 −Z → 루트 +Z 를 벽(−X)으로 (Z50c 실측: +X 로 두면 뒷면이라 안 보임) tv.transform.localScale = Vector3.one;
+        var room = parent.parent;
+        var screen = tv.GetComponentsInChildren<MeshRenderer>(true).FirstOrDefault(r => r.name.IndexOf("Screen", System.StringComparison.OrdinalIgnoreCase) >= 0);
+        if (screen == null) { sb.AppendLine("!! TV 화면 렌더러 없음"); Tree(tv.transform, 0); return tv; }
+        Bounds LB(Renderer r) { var b = r.bounds; b.center = room.InverseTransformPoint(b.center); return b; }  // 방 회전 0 가정
+        var b0 = LB(screen);
+        float s = TV_W / Mathf.Max(b0.size.z, 1e-3f);
+        tv.transform.localScale = Vector3.one * s;
+        var b1 = LB(screen);
+        float h = b1.size.y, zA = TV_Z - TV_W / 2f, zB = TV_Z + TV_W / 2f, y0 = TV_Y - h / 2f, y1 = TV_Y + h / 2f;
+        float wall = Mathf.Min(Mathf.Min(PyriteBedroomBuild.SurfX(zA, y1), PyriteBedroomBuild.SurfX(zB, y1)), Mathf.Min(PyriteBedroomBuild.SurfX(zA, y0), PyriteBedroomBuild.SurfX(zB, y0)));
+        var target = new Vector3(-wall + TV_GAP, TV_Y, TV_Z);
+        tv.transform.localPosition += target - b1.center;
+        SeparateAssets(tv);
+        // 설정: 전역 비디오 텍스처(GSV)·F5 리로드는 캠프 TV 몫, 숨기면 멈춤
+        var mgr = tv.GetComponentsInChildren<Component>(true).FirstOrDefault(c => c != null && c.GetType().Name == "TVManager");
+        if (mgr != null)
+        {
+            var so = new SerializedObject(mgr);
+            void SB(string n, bool v) { var p = so.FindProperty(n); if (p != null) { sb.AppendLine("  TV " + n + " " + p.boolValue + " → " + v); p.boolValue = v; } else sb.AppendLine("  !! TV " + n + " 없음"); }
+            SB("enableGSV", false); SB("enableReloadKeybind", false); SB("stopMediaWhenDisabled", true);
+            var au = so.FindProperty("autoplayURL"); if (au != null) sb.AppendLine("  TV autoplayURL 있음(기본값 유지)");
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+        else sb.AppendLine("!! TVManager 없음");
+        // 스피커: 캠프 TV(MediaPlayer) 같은 이름 스피커의 VRCSpatialAudioSource 설정 복사 (없으면 VRChat 에서 무음/경고 — 8절 함정)
+        var spType = System.AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+            .FirstOrDefault(t => t.Name == "VRCSpatialAudioSource" && typeof(Component).IsAssignableFrom(t) && !t.IsAbstract);
+        var camp = Root("MediaPlayer");
+        int copied = 0;
+        if (spType != null && camp != null)
+            foreach (var a in tv.GetComponentsInChildren<AudioSource>(true))
+            {
+                var src = camp.GetComponentsInChildren<AudioSource>(true).FirstOrDefault(x => x.name == a.name);
+                var srcSp = src ? src.GetComponent(spType) : null;
+                if (srcSp == null) continue;
+                var dst = a.GetComponent(spType); if (dst == null) dst = a.gameObject.AddComponent(spType);   // ?? 금지(가짜 null)
+                EditorUtility.CopySerialized(srcSp, dst); copied++;
+            }
+        sb.AppendLine("  TV 스피커 공간음향 복사 " + copied + "개 (캠프 MediaPlayer 기준)");
+        sb.AppendLine("  TV 화면 셰이더 " + (screen.sharedMaterial ? screen.sharedMaterial.shader.name + " / tex " + (screen.sharedMaterial.mainTexture ? screen.sharedMaterial.mainTexture.name : "null") : "null") + ", 화면 +Z(방 기준) " + V(room.InverseTransformDirection(screen.transform.forward)));
+        var b2 = LB(screen);
+        sb.AppendLine("TV: 스케일 " + s.ToString("F3") + ", 화면 " + b2.size.z.ToString("F2") + "×" + b2.size.y.ToString("F2") + " m, 중심 " + V(b2.center) + ", 벽 x " + (-wall).ToString("F2"));
+        Tree(tv.transform, 0);
+        return tv;
+    }
+
+    // ProTV "TV Material Contamination": 캠프 TV 와 같은 머티리얼·렌더 텍스처를 쓰면 한쪽 영상이 다른 쪽 화면에 뜬다 → 침실 TV 가 참조하는 Material/RenderTexture 를 Assets/Bedroom/TV/ 에 복제해서 바꿔 끼움
+    static void SeparateAssets(GameObject tv)
+    {
+        const string DIR = "Assets/Bedroom/TV/";
+        AssetDatabase.DeleteAsset(DIR.TrimEnd('/'));   // 재실행 때 지난 복제본 정리
+        Directory.CreateDirectory(DIR); AssetDatabase.Refresh();
+        var map = new Dictionary<Object, Object>();
+        Object Clone(Object o)
+        {
+            if (o == null) return null;
+            if (map.TryGetValue(o, out var c)) return c;
+            if (!(o is RenderTexture) && !(o is Material mv && mv.HasProperty("_VideoTex"))) return o;   // 영상이 들어가는 것만 (UI·글꼴 머티리얼은 그대로)
+            string src = AssetDatabase.GetAssetPath(o);
+            if (string.IsNullOrEmpty(src) || src.StartsWith(DIR)) { map[o] = o; return o; }
+            string dst = DIR + o.name + "_Bedroom" + (o is Material ? ".mat" : ".renderTexture");
+            AssetDatabase.DeleteAsset(dst);
+            Object n = o is Material m ? new Material(m) : (Object)new RenderTexture((RenderTexture)o);
+            if (n is Material nm0) nm0.name = o.name + "_Bedroom";
+            AssetDatabase.CreateAsset(n, dst);
+            map[o] = n; sb.AppendLine("  TV 에셋 분리 " + src + " → " + dst);
+            return n;
+        }
+        // 1) 머티리얼 안의 렌더 텍스처 먼저, 2) 렌더러 머티리얼, 3) 모든 컴포넌트의 Material/RenderTexture 참조
+        foreach (var r in tv.GetComponentsInChildren<Renderer>(true))
+        {
+            var mats = r.sharedMaterials; bool ch = false;
+            for (int i = 0; i < mats.Length; i++)
+            {
+                if (mats[i] == null) continue;
+                var nm = (Material)Clone(mats[i]);
+                if (nm != mats[i]) { mats[i] = nm; ch = true; }
+            }
+            if (ch) { r.sharedMaterials = mats; EditorUtility.SetDirty(r); }
+        }
+        foreach (var comp in tv.GetComponentsInChildren<Component>(true))
+        {
+            if (comp == null || comp is Transform || comp is Renderer) continue;
+            var so = new SerializedObject(comp); var it = so.GetIterator(); bool ch = false;
+            while (it.Next(true))
+            {
+                if (it.propertyType != SerializedPropertyType.ObjectReference) continue;
+                var v = it.objectReferenceValue;
+                if (v is Material || v is RenderTexture) { var n = Clone(v); if (n != v) { it.objectReferenceValue = n; ch = true; } }
+            }
+            if (ch) { so.ApplyModifiedPropertiesWithoutUndo(); sb.AppendLine("  TV 참조 교체 " + comp.GetType().Name + " @ " + comp.name); }
+        }
+        // 복제된 머티리얼 속 텍스처 슬롯이 원본 렌더 텍스처를 가리키면 교체
+        foreach (var kv in map.ToArray())
+            if (kv.Value is Material nm2 && kv.Value != kv.Key)
+                foreach (var pn in nm2.GetTexturePropertyNames())
+                {
+                    var tx = nm2.GetTexture(pn);
+                    if (tx is RenderTexture) { var n = Clone(tx); if (n != tx) { nm2.SetTexture(pn, (Texture)n); EditorUtility.SetDirty(nm2); } }
+                }
+        AssetDatabase.SaveAssets();
+        sb.AppendLine("  TV 분리 에셋 " + map.Count(kv => kv.Key != kv.Value) + "개");
+    }
+
+    static void Tree(Transform t, int d)
+    {
+        if (d > 3) return;
+        var room = t.root;
+        var comps = string.Join(",", t.GetComponents<Component>().Where(c => c != null && !(c is Transform)).Select(c => c.GetType().Name));
+        var r = t.GetComponent<Renderer>(); var rc = t.GetComponent<RectTransform>();
+        string where = r ? " bounds " + V(r.bounds.center - room.position) + " size " + r.bounds.size.ToString("F2") : " pos " + V(t.position - room.position);
+        sb.AppendLine("  " + new string(' ', d * 2) + t.name + (t.gameObject.activeSelf ? "" : " (꺼짐)") + " [" + comps + "]" + where);
+        foreach (Transform c in t) Tree(c, d + 1);
     }
 
     // HQ: 반사 레이어 = 전부(UI 5 · PlayerLocal 10 · UiMenu 12 제외), 픽셀 광원 켬. 바꾸기 전 값·전체 속성을 로그에
@@ -376,6 +510,7 @@ public static class PyriteBedroomPanelBuild
         sDown = Spr("ui_down", 64, (x, y) => Tri(x, y, 64, false), 0);
         sDot = Spr("ui_dot", 64, (x, y) => Mathf.Clamp01(30f - Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(32, 32)) + 0.5f), 0);
         sFill = Spr("ui_fill", 8, (x, y) => 1f, 0);
+        sVideo = Spr("ui_video", 128, (x, y) => Mathf.Max(Ring(x, y, 128, 60f, 4f), Play(x, y, 128)), 0);
     }
 
     static float RRectStroke(int x, int y, int n, float r, float w)
@@ -392,6 +527,13 @@ public static class PyriteBedroomPanelBuild
         float a = Mathf.Clamp01(30f - Vector2.Distance(p, c) + 0.5f);
         float b = Mathf.Clamp01(26f - Vector2.Distance(p, c + new Vector2(14f, 10f)) + 0.5f);
         return Mathf.Clamp01(a - b);
+    }
+    static float Play(int x, int y, int n)   // 오른쪽을 향한 삼각형 (가운데, 높이 0.34 n)
+    {
+        float fx = (x + 0.5f) / n, fy = (y + 0.5f) / n;
+        float x0 = 0.40f, x1 = 0.68f; if (fx < x0 || fx > x1) return 0f;
+        float half = 0.17f * (x1 - fx) / (x1 - x0);
+        return Mathf.Clamp01((half - Mathf.Abs(fy - 0.5f)) * n + 0.5f) * Mathf.Clamp01((fx - x0) * n + 0.5f);
     }
     static float Tri(int x, int y, int n, bool up)
     {
@@ -480,11 +622,13 @@ public static class PyriteBedroomPanelBuild
             mir.SetActive(true);
             Shot(cam, Wp(-1.0f, 1.5f, 0.3f), Wp(3.0f, 1.0f, -0.6f), "bp_mirror");
             Shot(cam, Wp(1.0f, 1.2f, 1.2f), Wp(2.9f, 0.9f, -0.6f), "bp_mirror_side");
+            var tvT = p.Find("BedroomTV");
+            if (tvT) { tvT.gameObject.SetActive(true); Shot(cam, Wp(0.8f, 1.5f, -0.2f), Wp(-2.8f, 1.1f, -0.9f), "bp_tv"); Shot(cam, Wp(-0.28f, 0.45f, -1.6f), Wp(-2.8f, 1.1f, -0.9f), "bp_tv_lie"); tvT.gameObject.SetActive(false); }
             mir.SetActive(false);
         }
         finally
         {
-            pc.SetActive(false); mir.SetActive(false);
+            pc.SetActive(false); mir.SetActive(false); var tvT2 = p.Find("BedroomTV"); if (tvT2) tvT2.gameObject.SetActive(false);
             cam.fieldOfView = f0; cam.transform.SetPositionAndRotation(p0, r0);
             if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(PyriteDayCycleSetup.EDITOR_HOUR); }
         }

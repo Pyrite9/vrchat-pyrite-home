@@ -30,11 +30,12 @@ public static class PyriteBedroomPanelTest
     static GameObject Root(string n) => SceneManager.GetActiveScene().GetRootGameObjects().FirstOrDefault(g => g.name == n);
     static void SetRS(Color s, Color e, Color g, float r) { RenderSettings.ambientSkyColor = s; RenderSettings.ambientEquatorColor = e; RenderSettings.ambientGroundColor = g; RenderSettings.reflectionIntensity = r; }
     // 방 전경(Z50d 와 같은 시점) 평균 밝기
-    static string Shot()
+    static string Shot() => Shot(new Vector3(1.6f, 1.5f, 1.9f), new Vector3(-0.6f, 0.7f, -1.6f), null);
+    static string Shot(Vector3 eyeL, Vector3 atL, string save)
     {
         var cam = Camera.main; var room = Root("TentBedroom").transform;
         var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
-        var eye = room.TransformPoint(new Vector3(1.6f, 1.5f, 1.9f)); var at = room.TransformPoint(new Vector3(-0.6f, 0.7f, -1.6f));
+        var eye = room.TransformPoint(eyeL); var at = room.TransformPoint(atL);
         cam.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(at - eye)); cam.fieldOfView = 70f;
         int w = 480, h = 270;
         var rt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
@@ -43,6 +44,7 @@ public static class PyriteBedroomPanelTest
         var tex = new Texture2D(w, h, TextureFormat.RGB24, false); tex.ReadPixels(new Rect(0, 0, w, h), 0, 0); tex.Apply();
         RenderTexture.active = act; RenderTexture.ReleaseTemporary(rt);
         cam.transform.SetPositionAndRotation(p0, r0); cam.fieldOfView = f0;
+        if (save != null) File.WriteAllBytes("Assets/_preview/bedroom/" + save + ".jpg", tex.EncodeToJPG(85));
         var px = tex.GetPixels32(); double sum = 0; foreach (var q in px) sum += q.r + q.g + q.b;
         Object.DestroyImmediate(tex);
         return (sum / px.Length / 3).ToString("F1");
@@ -182,6 +184,14 @@ public static class PyriteBedroomPanelTest
                     if (t < 2f) return;
                     Check("침실 나가면 DayCycle 값 복원", Mathf.Abs(RenderSettings.ambientSkyColor.r - 0.62f) < 0.001f && Mathf.Abs(RenderSettings.reflectionIntensity - 1f) < 0.001f, "위치 " + VRC.SDKBase.Networking.LocalPlayer.GetPosition() + " sky " + RenderSettings.ambientSkyColor + " 반사 " + RenderSettings.reflectionIntensity.ToString("F3"));
                     DC().SetProgramVariable("hourAtSync", oHour); DC().SetProgramVariable("autoFlow", oAuto); DC().SendCustomEvent("_onDeserialization");
+                    ub.SendCustomEvent("OnVideo");
+                    Check("▶ 아이콘 → 침실 TV 켬", P().Find("BedroomTV").gameObject.activeSelf, "active " + P().Find("BedroomTV").gameObject.activeSelf);
+                    t0 = Time.realtimeSinceStartup; stage = 13; return;
+                case 13:
+                    if (t < 4f) return;
+                    L("  TV 켠 뒤 4 s 화면 렌더(대기 로고) 저장 bp_tv_play.jpg, 밝기 " + Shot(new Vector3(0.8f, 1.5f, -0.2f), new Vector3(-2.8f, 1.1f, -0.9f), "bp_tv_play"));
+                    ub.SendCustomEvent("OnVideo");
+                    Check("▶ 다시 → 침실 TV 끔", !P().Find("BedroomTV").gameObject.activeSelf, "active " + P().Find("BedroomTV").gameObject.activeSelf);
                     stage = 98; return;
                 case 98:
                     L(fails == 0 ? "RESULT: PASS" : "RESULT: FAIL " + fails);

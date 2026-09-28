@@ -16,6 +16,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
 {
     public GameObject panel;
     public GameObject mirror;
+    public GameObject tvRoot;               // 침실 전용 ProTV (씬에선 꺼진 채로 시작, 로컬 표시 토글)
     public Slider sleepSlider;
     public TextMeshProUGUI sleepValue;
     public Toggle mirrorToggle;
@@ -84,6 +85,12 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     }
 
     public void OnClose() { panel.SetActive(false); }
+
+    // ── 동영상 플레이어 (위 아이콘) ──
+    public void OnVideo()
+    {
+        if (tvRoot != null) tvRoot.SetActive(!tvRoot.activeSelf);
+    }
 
     // ── 수면 모드 ──
     public void OnSleep()
