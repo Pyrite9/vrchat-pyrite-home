@@ -2,12 +2,14 @@
 //  아이콘(달) 누르기 = 패널 열기/닫기 (알람이 울리는 중이면 알람 끄기)
 //  수면 모드 0~1: 침실 광원 기준 밝기 × (1 → 0.05), 창밖(M_Backdrop _Dim) × (1 → 0.4)
 //  거울: 오른쪽 벽 전신거울 켜기/끄기
+//  침실 환경광: 방(부모) 반경 안에 있으면 PostLateUpdate 에서 DayCycle 이 쓴 환경광(Trilight)·반사 세기의 "밤보다 밝은 몫"을 dayAmbient × (1 − 수면) 만 남김. 나가면 DayCycle 값 복원
 //  알람: AM/PM·시·분 화살표 (누르고 있으면 0.45 s 뒤부터 반복, 1.5 s 뒤 더 빠르게), 켜짐이면 PC 시계로 그 분이 되면 울림. STOP 또는 아이콘으로 끔. 5분 뒤 자동으로 끔
 using System;
 using TMPro;
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
+using VRC.SDKBase;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PyriteBedroomPanel : UdonSharpBehaviour
@@ -30,6 +32,22 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     public float minLight = 0.05f;
     public float minWindow = 0.4f;
     public float ringMaxSeconds = 300f;
+    public float dayAmbient = 0.35f;
+    public float roomRadius = 12f;
+    public Color nightSky = new Color(0.028f, 0.040f, 0.088f, 1f);
+    public Color nightEq = new Color(0.022f, 0.030f, 0.062f, 1f);
+    public Color nightGr = new Color(0.008f, 0.011f, 0.022f, 1f);
+    public float nightRefl = 0.35f;
+
+    private bool inRoom;
+    private Color dSky;
+    private Color dEq;
+    private Color dGr;
+    private float dRefl;
+    private Color wSky;
+    private Color wEq;
+    private Color wGr;
+    private float wRefl;
 
     private float[] baseI;
     private bool alarmOn;
@@ -185,6 +203,56 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
             icon.color = new Color(1f, 1f, 1f, a);
             if (Time.time - ringStart > ringMaxSeconds) StopAlarm();
         }
+    }
+
+    // ── 침실 환경광 ──
+    public override void PostLateUpdate()
+    {
+        VRCPlayerApi lp = Networking.LocalPlayer;
+        if (!Utilities.IsValid(lp)) return;
+        Transform room = transform.parent;
+        bool now = (lp.GetPosition() - room.position).sqrMagnitude < roomRadius * roomRadius;
+        if (!now)
+        {
+            if (inRoom)
+            {
+                inRoom = false;
+                RenderSettings.ambientSkyColor = dSky;
+                RenderSettings.ambientEquatorColor = dEq;
+                RenderSettings.ambientGroundColor = dGr;
+                RenderSettings.reflectionIntensity = dRefl;
+            }
+            return;
+        }
+        Color cs = RenderSettings.ambientSkyColor;
+        Color ce = RenderSettings.ambientEquatorColor;
+        Color cg = RenderSettings.ambientGroundColor;
+        float cr = RenderSettings.reflectionIntensity;
+        if (!inRoom || !Same(cs, wSky) || !Same(ce, wEq) || !Same(cg, wGr) || cr != wRefl)
+        {
+            dSky = cs; dEq = ce; dGr = cg; dRefl = cr;   // DayCycle 가 새로 쓴 값
+        }
+        float k = Mathf.Lerp(dayAmbient, 0f, sleepSlider.value);
+        wSky = Dim(nightSky, dSky, k);
+        wEq = Dim(nightEq, dEq, k);
+        wGr = Dim(nightGr, dGr, k);
+        wRefl = Mathf.Lerp(Mathf.Min(nightRefl, dRefl), dRefl, k);
+        RenderSettings.ambientSkyColor = wSky;
+        RenderSettings.ambientEquatorColor = wEq;
+        RenderSettings.ambientGroundColor = wGr;
+        RenderSettings.reflectionIntensity = wRefl;
+        inRoom = true;
+    }
+
+    private bool Same(Color a, Color b)
+    {
+        return a.r == b.r && a.g == b.g && a.b == b.b;
+    }
+
+    private Color Dim(Color night, Color day, float k)
+    {
+        Color lo = new Color(Mathf.Min(night.r, day.r), Mathf.Min(night.g, day.g), Mathf.Min(night.b, day.b), 1f);
+        return Color.Lerp(lo, day, k);
     }
 
     // 에디터 시험용 (ClientSim): 알람 시각을 지금 분으로 맞추고 켠다

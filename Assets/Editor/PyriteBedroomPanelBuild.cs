@@ -30,8 +30,8 @@ public static class PyriteBedroomPanelBuild
     const string PREV = "Assets/_preview/bedroom/";
     const string ROOT = "BedroomPanel";
     const float PW = 900f, PH = 620f, PX = 0.001f;          // 패널 캔버스 px, 1 px = 1 mm
-    const float PANEL_Y = 1.45f, ICON_Y = 0.98f, WALL_GAP = 0.07f;
-    const float MIR_W = 2.4f, MIR_Z = -0.6f, MIR_Y0 = 0.15f, MIR_Y1 = 1.75f, MIR_GAP = 0.06f;
+    const float PANEL_Y = 0.80f, ICON_X = 0.60f, WALL_GAP = 0.07f;          // 20:48 관리자: 통째로 내려서 침대 조금 위 (패널 아래 끝 0.49 m, 매트 윗면 ~0.36 m). 아이콘은 패널 오른쪽
+    const float MIR_W = 2.4f, MIR_Z = -0.6f, MIR_Y0 = 0.15f, MIR_Y1 = 1.75f, MIR_GAP = 0.06f;   // 20:48 관리자: 수직으로, HQ(전체 반사)
     static readonly Color W = new Color(0.96f, 0.96f, 0.95f, 1f);
     static readonly Color W2 = new Color(0.96f, 0.96f, 0.95f, 0.55f);
     static StringBuilder sb;
@@ -100,18 +100,18 @@ public static class PyriteBedroomPanelBuild
         float s0 = PyriteBedroomBuild.SurfZ(0, PANEL_Y - 0.15f), s1 = PyriteBedroomBuild.SurfZ(0, PANEL_Y + 0.15f);
         var up = new Vector3(0, 0.30f, s0 - s1).normalized;               // 위로 갈수록 방 안쪽(+Z)으로 기움
         var nRoom = new Vector3(0, -up.z, up.y);                          // 방 쪽 법선 (살짝 아래를 봄)
-        Vector3 WallPt(float y, float halfW) => new Vector3(0, y, -Mathf.Min(PyriteBedroomBuild.SurfZ(halfW, y), PyriteBedroomBuild.SurfZ(-halfW, y)) + WALL_GAP);
+        Vector3 WallPt(float x, float y, float halfW, float halfH) => new Vector3(x, y, -Mathf.Min(Mathf.Min(PyriteBedroomBuild.SurfZ(x + halfW, y + halfH), PyriteBedroomBuild.SurfZ(x - halfW, y + halfH)), Mathf.Min(PyriteBedroomBuild.SurfZ(x + halfW, y - halfH), PyriteBedroomBuild.SurfZ(x - halfW, y - halfH))) + WALL_GAP);
         var rot = Quaternion.LookRotation(-nRoom, up);
         sb.AppendLine("머리맡 벽 기울기 " + (Mathf.Atan2(up.z, up.y) * Mathf.Rad2Deg).ToString("F1") + "° (위가 방 쪽)");
 
         // 아이콘
-        var icon = MakeCanvas(rootGo.transform, "IconCanvas", 140, 140, WallPt(ICON_Y, 0.07f), rot);
+        var icon = MakeCanvas(rootGo.transform, "IconCanvas", 140, 140, WallPt(ICON_X, PANEL_Y, 0.07f, 0f), rot);
         var iconImg = Img(icon, "Moon", 0, 0, 140, 140, W, sMoon); iconImg.raycastTarget = true;
         var iconBtn = iconImg.gameObject.AddComponent<Button>(); iconBtn.targetGraphic = iconImg; iconBtn.navigation = new Navigation { mode = Navigation.Mode.None };
         var cb = iconBtn.colors; cb.highlightedColor = new Color(1, 1, 1, 0.8f); cb.pressedColor = new Color(1, 1, 1, 0.6f); iconBtn.colors = cb;
 
         // 패널
-        var pc = MakeCanvas(rootGo.transform, "PanelCanvas", PW, PH, WallPt(PANEL_Y, PW * PX * 0.5f), rot);
+        var pc = MakeCanvas(rootGo.transform, "PanelCanvas", PW, PH, WallPt(0f, PANEL_Y, PW * PX * 0.5f, 0f), rot);
         Img(pc, "Border", 0, 0, PW, PH, W, sOutline);
         Txt(pc, "Title", 40, 22, 400, 56, "BEDROOM", 30, W, TextAlignmentOptions.MidlineLeft, 10f);
         var closeB = Btn(pc, "Close", PW - 86, 22, 56, 56, "×", 36);
@@ -189,10 +189,10 @@ public static class PyriteBedroomPanelBuild
         var root = new GameObject("Mirror"); root.transform.SetParent(parent, false);
         float zA = MIR_Z - MIR_W / 2f, zB = MIR_Z + MIR_W / 2f;
         float xb = Mathf.Min(PyriteBedroomBuild.SurfX(zA, MIR_Y0), PyriteBedroomBuild.SurfX(zB, MIR_Y0)) - MIR_GAP;
-        float xt = Mathf.Min(PyriteBedroomBuild.SurfX(zA, MIR_Y1), PyriteBedroomBuild.SurfX(zB, MIR_Y1)) - MIR_GAP;
-        var upv = new Vector3(xt - xb, MIR_Y1 - MIR_Y0, 0f); float h = upv.magnitude; var up = upv / h;
-        var n = new Vector3(-up.y, up.x, 0f);                             // 방 쪽 (−X, 살짝 아래)
-        var center = new Vector3((xb + xt) / 2f, (MIR_Y0 + MIR_Y1) / 2f, MIR_Z);
+        float xt = Mathf.Min(PyriteBedroomBuild.SurfX(zA, MIR_Y1 + 0.03f), PyriteBedroomBuild.SurfX(zB, MIR_Y1 + 0.03f)) - MIR_GAP - 0.03f;   // 벽이 위로 갈수록 안쪽 → 위 끝(테두리 포함)이 기준
+        float h = MIR_Y1 - MIR_Y0; var up = Vector3.up;
+        var n = Vector3.left;                                             // 방 쪽 (−X), 수직
+        var center = new Vector3(xt, (MIR_Y0 + MIR_Y1) / 2f, MIR_Z);
         var rot = Quaternion.LookRotation(-n, up);                         // VRChat 거울: −forward = 반사면 법선 = n
 
         var mirrorType = System.AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
@@ -208,13 +208,14 @@ public static class PyriteBedroomPanelBuild
             surf.transform.localPosition = center; surf.transform.localRotation = rot;
             surf.transform.localScale = new Vector3(MIR_W / Mathf.Max(b.x, 1e-3f), h / Mathf.Max(b.y, 1e-3f), 1f);
             sb.AppendLine("거울: TarpMirror 의 " + src.name + " 복제 (메시 " + (mf && mf.sharedMesh ? mf.sharedMesh.name : "?") + " " + b.ToString("F2") + ")");
+            MirrorHQ(surf.GetComponent(mirrorType));
         }
         else
         {
             surf = GameObject.CreatePrimitive(PrimitiveType.Quad); surf.name = "Surface"; surf.transform.SetParent(root.transform, false);
             Object.DestroyImmediate(surf.GetComponent<Collider>());
             surf.transform.localPosition = center; surf.transform.localRotation = rot; surf.transform.localScale = new Vector3(MIR_W, h, 1f);
-            if (mirrorType != null) surf.AddComponent(mirrorType);
+            if (mirrorType != null) MirrorHQ(surf.AddComponent(mirrorType));
             sb.AppendLine("!! TarpMirror 거울 원본 없음 → 새 VRCMirrorReflection (기본값)");
         }
         // 테두리 (흰 나무, 3 cm)
@@ -232,10 +233,28 @@ public static class PyriteBedroomPanelBuild
         var back = -n * (d * 0.3f);
         Bar("FrameTop", center + up * (h / 2f + t / 2f) + back, new Vector3(MIR_W + 2 * t, t, d));
         Bar("FrameBottom", center - up * (h / 2f + t / 2f) + back, new Vector3(MIR_W + 2 * t, t, d));
-        Bar("FrameA", center + right * (MIR_W / 2f + t / 2f) + back, new Vector3(t, h, d));
-        Bar("FrameB", center - right * (MIR_W / 2f + t / 2f) + back, new Vector3(t, h, d));
-        sb.AppendLine("거울 " + MIR_W + "×" + h.ToString("F2") + " m, 중심 " + V(center) + ", 기울기 " + (Mathf.Atan2(-up.x, up.y) * Mathf.Rad2Deg).ToString("F1") + "° (위가 방 쪽), 벽 틈 " + MIR_GAP + " m");
+        float sideH = MIR_Y1 + t;                                          // 옆 기둥은 바닥까지 (서 있는 거울)
+        Bar("FrameA", new Vector3(center.x, sideH / 2f, center.z) + right * (MIR_W / 2f + t / 2f) + back, new Vector3(t, sideH, d));
+        Bar("FrameB", new Vector3(center.x, sideH / 2f, center.z) - right * (MIR_W / 2f + t / 2f) + back, new Vector3(t, sideH, d));
+        foreach (float sgn in new[] { 1f, -1f })                          // 발: 벽 쪽(+X)으로 뻗음
+            Bar(sgn > 0 ? "FootA" : "FootB", new Vector3(center.x + 0.12f, 0.015f, center.z) + sgn * right * (MIR_W / 2f + t / 2f), new Vector3(t, 0.03f, 0.40f));
+        sb.AppendLine("거울 " + MIR_W + "×" + h.ToString("F2") + " m 수직, 중심 " + V(center) + ", 위 끝 벽 틈 " + MIR_GAP + " m · 아래 끝 벽까지 " + (xb + MIR_GAP - xt).ToString("F2") + " m");
         return root;
+    }
+
+    // HQ: 반사 레이어 = 전부(UI 5 · PlayerLocal 10 · UiMenu 12 제외), 픽셀 광원 켬. 바꾸기 전 값·전체 속성을 로그에
+    static void MirrorHQ(Component m)
+    {
+        if (m == null) return;
+        var so = new SerializedObject(m);
+        var it = so.GetIterator(); var dump = new StringBuilder("  거울 속성:");
+        if (it.NextVisible(true)) do { if (it.propertyType == SerializedPropertyType.Integer || it.propertyType == SerializedPropertyType.Boolean || it.propertyType == SerializedPropertyType.Enum || it.propertyType == SerializedPropertyType.LayerMask) dump.Append(" " + it.name + "=" + (it.propertyType == SerializedPropertyType.Boolean ? it.boolValue.ToString() : it.intValue.ToString())); } while (it.NextVisible(false));
+        sb.AppendLine(dump.ToString());
+        var rl = so.FindProperty("m_ReflectLayers");
+        if (rl != null) { int b = rl.intValue; rl.intValue = ~((1 << 5) | (1 << 10) | (1 << 12)); sb.AppendLine("  m_ReflectLayers " + b + " → " + rl.intValue); }
+        else sb.AppendLine("  !! m_ReflectLayers 없음");
+        var dp = so.FindProperty("m_DisablePixelLights"); if (dp != null) { sb.AppendLine("  m_DisablePixelLights " + dp.boolValue + " → False"); dp.boolValue = false; }
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     // ───────────────────────── UI 도우미 ─────────────────────────
@@ -470,14 +489,16 @@ public static class PyriteBedroomPanelBuild
             if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(21f); }
             cam.fieldOfView = 60f;
             Vector3 Wp(float x, float y, float z) => o.TransformPoint(new Vector3(x, y, z));
-            Shot(cam, Wp(0.3f, 1.55f, -0.6f), Wp(0, 1.2f, -2.6f), "bp_closed");
+            Shot(cam, Wp(0.3f, 1.55f, -0.2f), Wp(0.2f, 0.7f, -2.6f), "bp_closed");
             pc.SetActive(true);
-            Shot(cam, Wp(0.3f, 1.55f, -0.6f), Wp(0, 1.3f, -2.6f), "bp_open_stand");
-            Shot(cam, Wp(0.1f, 1.45f, -1.35f), Wp(0, 1.45f, -2.6f), "bp_open_close");
-            Shot(cam, Wp(-0.28f, 0.45f, -1.9f), Wp(0, 1.4f, -2.6f), "bp_open_lie");
+            Shot(cam, Wp(0.3f, 1.55f, -0.2f), Wp(0.2f, 0.7f, -2.6f), "bp_open_stand");
+            Shot(cam, Wp(0.1f, 1.0f, -1.2f), Wp(0.1f, 0.8f, -2.6f), "bp_open_close");
+            Shot(cam, Wp(-0.28f, 0.45f, -1.9f), Wp(0.1f, 0.85f, -2.6f), "bp_open_lie");
+            Shot(cam, Wp(1.2f, 1.5f, 2.0f), Wp(-0.3f, 0.6f, -2.2f), "bp_open_room");
             pc.SetActive(false);
             mir.SetActive(true);
             Shot(cam, Wp(-1.0f, 1.5f, 0.3f), Wp(3.0f, 1.0f, -0.6f), "bp_mirror");
+            Shot(cam, Wp(1.0f, 1.2f, 1.2f), Wp(2.9f, 0.9f, -0.6f), "bp_mirror_side");
             mir.SetActive(false);
         }
         finally

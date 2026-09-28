@@ -21,6 +21,32 @@ public static class PyriteBedroomPanelTest
     static int lastFrame = -1;
     static float t0;
     static string held;
+    static float oHour; static bool oAuto;
+    static UdonBehaviour DC() => Root("DayCycle").GetComponent<UdonBehaviour>();
+    // DayCycle 시각 고정: 자동 흐름 끄고 hourAtSync → OnDeserialization(= EvaluateAt(CurrentHour))
+    static void Hour(float h) { var dc = DC(); dc.SetProgramVariable("autoFlow", false); dc.SetProgramVariable("hourAtSync", h); dc.SendCustomEvent("_onDeserialization"); }
+    static readonly Color NOON_S = new Color(0.62f, 0.68f, 0.78f), NOON_E = new Color(0.48f, 0.49f, 0.50f), NOON_G = new Color(0.24f, 0.23f, 0.21f);
+    static readonly Color NIGHT_S = new Color(0.028f, 0.040f, 0.088f), NIGHT_E = new Color(0.022f, 0.030f, 0.062f), NIGHT_G = new Color(0.008f, 0.011f, 0.022f);
+    static GameObject Root(string n) => SceneManager.GetActiveScene().GetRootGameObjects().FirstOrDefault(g => g.name == n);
+    static void SetRS(Color s, Color e, Color g, float r) { RenderSettings.ambientSkyColor = s; RenderSettings.ambientEquatorColor = e; RenderSettings.ambientGroundColor = g; RenderSettings.reflectionIntensity = r; }
+    // 방 전경(Z50d 와 같은 시점) 평균 밝기
+    static string Shot()
+    {
+        var cam = Camera.main; var room = Root("TentBedroom").transform;
+        var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
+        var eye = room.TransformPoint(new Vector3(1.6f, 1.5f, 1.9f)); var at = room.TransformPoint(new Vector3(-0.6f, 0.7f, -1.6f));
+        cam.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(at - eye)); cam.fieldOfView = 70f;
+        int w = 480, h = 270;
+        var rt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+        var prev = cam.targetTexture; cam.targetTexture = rt; cam.Render(); cam.targetTexture = prev;
+        var act = RenderTexture.active; RenderTexture.active = rt;
+        var tex = new Texture2D(w, h, TextureFormat.RGB24, false); tex.ReadPixels(new Rect(0, 0, w, h), 0, 0); tex.Apply();
+        RenderTexture.active = act; RenderTexture.ReleaseTemporary(rt);
+        cam.transform.SetPositionAndRotation(p0, r0); cam.fieldOfView = f0;
+        var px = tex.GetPixels32(); double sum = 0; foreach (var q in px) sum += q.r + q.g + q.b;
+        Object.DestroyImmediate(tex);
+        return (sum / px.Length / 3).ToString("F1");
+    }
 
     static PyriteBedroomPanelTest()
     {
@@ -120,6 +146,40 @@ public static class PyriteBedroomPanelTest
                     Check("같은 분 다시 안 울림", !P().GetComponent<AudioSource>().isPlaying, "playing " + P().GetComponent<AudioSource>().isPlaying);
                     ub.SendCustomEvent("OnClose");
                     Check("닫기", !P().Find("PanelCanvas").gameObject.activeSelf, "");
+                    var dc = DC(); oHour = (float)dc.GetProgramVariable("hourAtSync"); oAuto = (bool)dc.GetProgramVariable("autoFlow");
+                    Root("TentDoor").GetComponent<UdonBehaviour>().SendCustomEvent("_interact");
+                    t0 = Time.realtimeSinceStartup; stage = 7; return;
+                case 7:
+                    if (t < 2f) return;
+                    L("  침실 입장: 위치 " + VRC.SDKBase.Networking.LocalPlayer.GetPosition());
+                    Hour(12f);
+                    t0 = Time.realtimeSinceStartup; stage = 8; return;
+                case 8:
+                    if (t < 0.3f) return;
+                    Check("정오·수면 0% → 낮 몫 35%", Mathf.Abs(RenderSettings.ambientSkyColor.r - (0.028f + 0.592f * 0.35f)) < 0.003f, "sky " + RenderSettings.ambientSkyColor + " 반사 " + RenderSettings.reflectionIntensity.ToString("F3") + ", 방 밝기 " + Shot());
+                    C<Slider>("PanelCanvas/SleepSlider").value = 0.84f;
+                    t0 = Time.realtimeSinceStartup; stage = 9; return;
+                case 9:
+                    if (t < 0.3f) return;
+                    Check("정오·수면 84% → 낮 몫 5.6%", Mathf.Abs(RenderSettings.ambientSkyColor.r - (0.028f + 0.592f * 0.056f)) < 0.003f, "sky " + RenderSettings.ambientSkyColor + " 반사 " + RenderSettings.reflectionIntensity.ToString("F3") + ", 방 밝기 " + Shot());
+                    Hour(21f);
+                    t0 = Time.realtimeSinceStartup; stage = 10; return;
+                case 10:
+                    if (t < 0.3f) return;
+                    L("  21시·수면 84%: sky " + RenderSettings.ambientSkyColor + ", 방 밝기 " + Shot());
+                    C<Slider>("PanelCanvas/SleepSlider").value = 0f;
+                    L("  21시·수면 0%: 방 밝기 " + Shot());
+                    Hour(12f);
+                    t0 = Time.realtimeSinceStartup; stage = 11; return;
+                case 11:
+                    if (t < 0.3f) return;
+                    L("  정오·수면 0%(재): 방 밝기 " + Shot());
+                    Root("TentBedroom").transform.Find("DoorFlap").GetComponent<UdonBehaviour>().SendCustomEvent("_interact");
+                    t0 = Time.realtimeSinceStartup; stage = 12; return;
+                case 12:
+                    if (t < 2f) return;
+                    Check("침실 나가면 DayCycle 값 복원", Mathf.Abs(RenderSettings.ambientSkyColor.r - 0.62f) < 0.001f && Mathf.Abs(RenderSettings.reflectionIntensity - 1f) < 0.001f, "위치 " + VRC.SDKBase.Networking.LocalPlayer.GetPosition() + " sky " + RenderSettings.ambientSkyColor + " 반사 " + RenderSettings.reflectionIntensity.ToString("F3"));
+                    DC().SetProgramVariable("hourAtSync", oHour); DC().SetProgramVariable("autoFlow", oAuto); DC().SendCustomEvent("_onDeserialization");
                     stage = 98; return;
                 case 98:
                     L(fails == 0 ? "RESULT: PASS" : "RESULT: FAIL " + fails);
