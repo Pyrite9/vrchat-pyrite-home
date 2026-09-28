@@ -154,10 +154,10 @@ public static class PyriteSettingsUI
         L(Txt(cView, "Darker", 32, 178, 240, 28, "", 20, GREY), S["darker"]);
         L(Txt(cView, "Brighter", 281, 178, 240, 28, "", 20, GREY, TextAlignmentOptions.Right), S["brighter"]);
         var (bloomT, bloomL) = Tgl(cView, "Bloom", 32, 212, 489, true, "OnBloom"); L(bloomL, S["bloom"]);
-        // 2026-09-28 관리자: 밤 꽃 빛 슬라이더 0~200% (0 = 끔, 기본 100%, 로컬) — DayCycle.SetFlowerGlow. 블룸 240 → 212 로 올려 자리 확보
+        // 2026-09-28 관리자: 밤 꽃 빛 슬라이더 0~200% (0 = 끔, 기본 10%, 로컬) — DayCycle.SetFlowerGlow. 블룸 240 → 212 로 올려 자리 확보
         L(Txt(cView, "NightFlowersLabel", 32, 272, 380, 40, "", 28, WHITE), S["nightFlowers"]);
-        var glowText = Txt(cView, "NightFlowersValue", 412, 272, 109, 40, "100%", 28, GOLD, TextAlignmentOptions.Right);
-        var glowSlider = Sld(cView, "NightFlowers", 32, 314, 489, 0f, 2f, 1f, false, "OnNightFlowers");
+        var glowText = Txt(cView, "NightFlowersValue", 412, 272, 109, 40, "10%", 28, GOLD, TextAlignmentOptions.Right);
+        var glowSlider = Sld(cView, "NightFlowers", 32, 314, 489, 0f, 2f, 0.1f, false, "OnNightFlowers");   // 기본 10%
 
         // 반사
         var cRefl = Card("CardReflect", 2, 0, "refl");
@@ -279,6 +279,9 @@ public static class PyriteSettingsUI
         st.brightSlider = brightSlider; st.ppBright = vBright; st.ppDark = vDark; st.bloomToggle = bloomT; st.ppNoBloom = vNoBloom;
         st.lakeToggle = lakeT; st.lakeMirror = lakeMirror; st.campMirrorToggle = mirT; st.campMirror = campMirror;
         st.nightFlowersSlider = glowSlider; st.nightFlowersText = glowText;
+        // 씬에 저장된 DayCycle.flowerGlow 가 옛 기본값(1.0)이면 입장 때 슬라이더가 그 값으로 맞춰진다 → 슬라이더 기본값을 그대로 써 넣는다
+        cyc.flowerGlow = glowSlider.value; UdonSharpEditorUtility.CopyProxyToUdon(cyc); EditorUtility.SetDirty(cyc);
+        sb.AppendLine("night glow default " + glowSlider.value + " → DayCycle.flowerGlow " + cyc.flowerGlow + " (int " + cyc.flowerGlowInt + ")");
         st.soundSlider = soundSlider; st.soundText = soundText;
         st.flowersToggle = flT; st.firefliesToggle = ffT; st.shadowsToggle = shT;
         st.flowerDistSlider = flDist; st.flowerDistText = flDistText; st.lightShadowsToggle = lsT;

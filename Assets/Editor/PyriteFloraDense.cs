@@ -33,7 +33,7 @@ public static class PyriteFloraDense
     const float TWIST = 15f;        // 타일 회전 흔들기 (°)
 
     // ── I(PyriteFloraField)와 같은 커버리지 읽기 ───────────────────────────
-    static float[,] LoadCoverage(out int res)
+    internal static float[,] LoadCoverage(out int res)
     {
         var p = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "FlowerDensity.bin");
         res = 0;
@@ -52,7 +52,7 @@ public static class PyriteFloraDense
         return cov;
     }
 
-    static float Sample(float[,] cov, int res, float x, float z)
+    internal static float Sample(float[,] cov, int res, float x, float z)
     {
         float fx = (x + 100f) / 200f * res - 0.5f;
         float fz = (z + 100f) / 200f * res - 0.5f;
@@ -64,7 +64,7 @@ public static class PyriteFloraDense
                           Mathf.Lerp(cov[z1, x0], cov[z1, x1], tx), tz);
     }
 
-    static Terrain FindTerrain()
+    internal static Terrain FindTerrain()
     {
         var t = Terrain.activeTerrain;
         if (t != null) return t;
@@ -73,10 +73,31 @@ public static class PyriteFloraDense
         return null;
     }
 
-    static GameObject Root(string name)
+    internal static GameObject Root(string name)
     {
         foreach (var r in SceneManager.GetActiveScene().GetRootGameObjects()) if (r.name == name) return r;
         return null;
+    }
+
+    // 지면에 놓인 작은·낮은 메시(텐트·테이블·돗자리·부두·결정 등)의 XZ 상자 (+0.25 m). 꽃 층들이 이 안을 비운다
+    internal static List<Rect> PropFootprints(GameObject ff, Terrain terrain, float baseY, StringBuilder sb)
+    {
+            var obst = new List<Rect>(); var obstNames = new List<string>();
+            foreach (var r in Object.FindObjectsOfType<MeshRenderer>())
+            {
+                if (!r.enabled || r.transform.IsChildOf(ff.transform)) continue;
+                string n = r.name.ToLowerInvariant();
+                if (n.Contains("water") || n.Contains("lake") || n.Contains("mirror") || n.Contains("sky") || n.Contains("cliff") || n.Contains("bedrock")) continue;
+                var b = r.bounds;
+                float area = b.size.x * b.size.z;
+                if (area < 0.1f || area > 40f || b.size.y > 5f) continue;
+                float g = terrain.SampleHeight(b.center) + baseY;
+                if (b.min.y > g + 0.6f) continue;   // 떠 있는 것(랜턴·타프 천)은 제외
+                obst.Add(Rect.MinMaxRect(b.min.x - 0.25f, b.min.z - 0.25f, b.max.x + 0.25f, b.max.z + 0.25f));
+                obstNames.Add(r.name);
+            }
+            sb.AppendLine("prop footprints " + obst.Count + ": " + string.Join(", ", obstNames.Take(40)) + (obstNames.Count > 40 ? " …" : ""));
+        return obst;
     }
 
     // ───────── Z45a 만들기 ─────────
@@ -123,21 +144,7 @@ public static class PyriteFloraDense
 
         // 소품 발자국 — 지면에 놓인 작은·낮은 메시(텐트·테이블·돗자리·부두·결정 등)의 XZ 상자 안은 비운다
         //  기존 층은 타일 중심 판정으로 캠프 가장자리가 우연히 비어 있었는데, 이 층은 마스크를 그대로 따라 텐트를 덮었다(Z45c 1차)
-        var obst = new List<Rect>(); var obstNames = new List<string>();
-        foreach (var r in Object.FindObjectsOfType<MeshRenderer>())
-        {
-            if (!r.enabled || r.transform.IsChildOf(ff.transform)) continue;
-            string n = r.name.ToLowerInvariant();
-            if (n.Contains("water") || n.Contains("lake") || n.Contains("mirror") || n.Contains("sky") || n.Contains("cliff") || n.Contains("bedrock")) continue;
-            var b = r.bounds;
-            float area = b.size.x * b.size.z;
-            if (area < 0.1f || area > 40f || b.size.y > 5f) continue;
-            float g = terrain.SampleHeight(b.center) + baseY;
-            if (b.min.y > g + 0.6f) continue;   // 떠 있는 것(랜턴·타프 천)은 제외
-            obst.Add(Rect.MinMaxRect(b.min.x - 0.25f, b.min.z - 0.25f, b.max.x + 0.25f, b.max.z + 0.25f));
-            obstNames.Add(r.name);
-        }
-        sb.AppendLine("prop footprints " + obst.Count + ": " + string.Join(", ", obstNames.Take(40)) + (obstNames.Count > 40 ? " …" : ""));
+        var obst = PropFootprints(ff, terrain, baseY, sb);
         int cutByProps = 0;
 
         var mv = mesh.vertices; var mn = mesh.normals; var mu = mesh.uv; var mc = mesh.colors32; var mt = mesh.triangles;
@@ -384,7 +391,7 @@ public static class PyriteFloraDense
     // ───────── Z45c 측정 + 렌더 — 밀도 층 끔/켬, Game 뷰 통계 + 눈높이 렌더 ─────────
     //  시각: 21 시(밤, 관리자 스크린샷 비교) / 18.33 시(노을). 통계는 Game 뷰가 다시 그려질 때만 갱신 → update 틱
     const string SHOT = "Assets/_preview/dense/";
-    static readonly (string n, Vector3 eye, Vector3 look)[] Views =
+    internal static readonly (string n, Vector3 eye, Vector3 look)[] Views =
     {
         ("spawn",     new Vector3(-2f,   4.23f, 62f),   new Vector3(-2f - 30f * 0.6157f, 2.4f, 62f - 30f * 0.7880f)),  // 스폰 yaw 218, 30 m 앞
         ("spawn_low", new Vector3(-2f,   3.60f, 62f),   new Vector3(-2f - 6f * 0.6157f, 2.2f, 62f - 6f * 0.7880f)),    // 꽃 속 내려다보기
@@ -439,7 +446,7 @@ public static class PyriteFloraDense
         mWait = 0; mStep++;
     }
 
-    static void Shot(Camera cam, Vector3 eye, Vector3 at, float fov, string path)
+    internal static void Shot(Camera cam, Vector3 eye, Vector3 at, float fov, string path)
     {
         cam.fieldOfView = fov; cam.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(at - eye));
         const int W = 1280, H = 720;

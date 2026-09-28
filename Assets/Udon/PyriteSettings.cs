@@ -227,7 +227,7 @@ public class PyriteSettings : UdonSharpBehaviour
     {
         if (updating || nightFlowersSlider == null || cycle == null) return;
         float v = nightFlowersSlider.value;
-        if (v < 0.05f) v = 0f;
+        if (v < 0.02f) v = 0f;
         cycle.SetFlowerGlow(v);
         GlowLabel();
         MarkDirty();
@@ -237,7 +237,7 @@ public class PyriteSettings : UdonSharpBehaviour
     {
         if (nightFlowersText == null || nightFlowersSlider == null) return;
         float v = nightFlowersSlider.value;
-        if (v < 0.05f) nightFlowersText.text = lang == 1 ? "끔" : "Off";
+        if (v < 0.02f) nightFlowersText.text = lang == 1 ? "끔" : "Off";
         else nightFlowersText.text = Mathf.RoundToInt(v * 100f) + "%";
     }
 
