@@ -16,6 +16,7 @@ Shader "Pyrite/Backdrop"
         _LiveUp ("Live cam up (world)", Vector) = (0, 1, 0, 0)
         _LiveTan ("Live cam tan half fov (h, v)", Vector) = (1, 1, 0, 0)
         _LiveEdge ("Live edge fade", Float) = 0.06
+        _Dim ("Sleep dim", Float) = 1
     }
     SubShader
     {
@@ -41,6 +42,7 @@ Shader "Pyrite/Backdrop"
             float4 _LiveUp;
             float4 _LiveTan;
             float _LiveEdge;
+            float _Dim;
             struct appdata { float4 vertex : POSITION; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct v2f { float4 pos : SV_POSITION; float3 dir : TEXCOORD0; UNITY_VERTEX_OUTPUT_STEREO };
             v2f vert (appdata v)
@@ -82,6 +84,7 @@ Shader "Pyrite/Backdrop"
                         }
                     }
                 }
+                col.rgb *= _Dim;
                 return col;
             }
             ENDCG
