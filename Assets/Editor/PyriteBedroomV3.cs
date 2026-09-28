@@ -30,8 +30,9 @@ public static class PyriteBedroomV3
     static float HEAD => PyriteBedroomBuild.MAT_HEAD;
     static float FOOT => PyriteBedroomBuild.MAT_HEAD + ML;
     static float MZC => PyriteBedroomBuild.MAT_HEAD + ML / 2f;
-    public static readonly Vector2 WIN_C = new Vector2(0f, 1.05f), WIN_H = new Vector2(0.9f, 0.6f);
-    public const float WIN_R = 0.22f;
+    // 창 v2 (2026-09-28 18:08 관리자 "넓이 5배"): 1.8×1.2 m r 0.22 (2.12 m²) → 4.6×2.3 m r 0.45 (10.4 m², ×4.9), 아래 끝 y 0.15 · 위 끝 2.45
+    public static readonly Vector2 WIN_C = new Vector2(0f, 1.30f), WIN_H = new Vector2(2.3f, 1.15f);
+    public const float WIN_R = 0.45f;
     static readonly Vector3 CAPTURE = new Vector3(-3.4f, 0f, 51.0f);
     const float CAPTURE_EYE = 0.9f, CAPTURE_HOUR = 20.4f;
     const string PANO = DIR + "/NightPano.png";
@@ -82,6 +83,36 @@ public static class PyriteBedroomV3
     {
         sb = new StringBuilder("[Z49l] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
         try { Renders(); sb.AppendLine("RESULT: DONE"); } catch (System.Exception e) { sb.AppendLine("EXCEPTION " + e); }
+        Flush();
+    }
+
+    [MenuItem("Tools/Pyrite3/Z49t. Bedroom Window Rebuild", false, 4919)]
+    public static void WindowRebuild()
+    {
+        sb = new StringBuilder("[Z49t] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
+        try
+        {
+            var room = Root("TentBedroom");
+            if (room == null) sb.AppendLine("!! TentBedroom 없음");
+            else
+            {
+                var old = room.transform.Find("Window"); if (old) Object.DestroyImmediate(old.gameObject);
+                var win = Child(room.transform, "Window");
+                BuildWindow(win);
+                SetupCanvas(room);
+                foreach (var r in win.GetComponentsInChildren<Renderer>(true)) r.gameObject.layer = LAYER;
+                foreach (var r in win.GetComponentsInChildren<Renderer>(true)) r.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+                float area = 4f * WIN_H.x * WIN_H.y - (4f - Mathf.PI) * WIN_R * WIN_R;
+                sb.AppendLine("창 " + (2 * WIN_H.x) + "×" + (2 * WIN_H.y) + " m r " + WIN_R + " = " + area.ToString("F2") + " m² (이전 2.12), y " + (WIN_C.y - WIN_H.y).ToString("F2") + "~" + (WIN_C.y + WIN_H.y).ToString("F2"));
+                foreach (var y in new[] { WIN_C.y - WIN_H.y, WIN_C.y, WIN_C.y + WIN_H.y })
+                    sb.AppendLine("  벽 z at y " + y.ToString("F2") + ": x 0 → " + PyriteBedroomBuild.SurfZ(0, y).ToString("F2") + ", x ±" + (WIN_H.x - WIN_R).ToString("F2") + " → " + PyriteBedroomBuild.SurfZ(WIN_H.x - WIN_R, y).ToString("F2"));
+                EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                EditorSceneManager.SaveOpenScenes();
+                Renders();
+                sb.AppendLine("RESULT: DONE");
+            }
+        }
+        catch (System.Exception e) { sb.AppendLine("EXCEPTION " + e); }
         Flush();
     }
 
@@ -622,7 +653,7 @@ public static class PyriteBedroomV3
         roll.transform.localPosition = new Vector3(0, ry, PyriteBedroomBuild.SurfZ(0, ry) - 0.06f);
         roll.transform.localRotation = Quaternion.Euler(0, 0, 90); roll.transform.localScale = new Vector3(0.09f, WIN_H.x + 0.02f, 0.09f);
         roll.GetComponent<Renderer>().sharedMaterial = Mat("M_TentFlapRoll", new Color(0.50f, 0.37f, 0.24f), 0.1f);
-        foreach (var sx in new[] { -0.55f, 0.55f })
+        foreach (var sx in new[] { -0.6f * WIN_H.x, 0.6f * WIN_H.x })
         {
             var tie = Box(win, "Tie", new Vector3(sx, ry + 0.02f, PyriteBedroomBuild.SurfZ(sx, ry) - 0.055f), new Vector3(0.025f, 0.12f, 0.10f), Mat("M_WindowTrim", new Color(0.11f, 0.10f, 0.09f), 0.2f));
             tie.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
