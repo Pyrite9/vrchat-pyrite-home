@@ -176,6 +176,9 @@ public static class PyriteBedroomPanelBuild
         pb.clockText = clock; pb.alarmToggle = alarmT; pb.ampmText = ampm; pb.hourText = hour; pb.minText = min; pb.stopButton = stop.gameObject;
         pb.icon = iconImg; pb.alarmSource = aud; pb.backdrop = backdrop;
         pb.lights = o.Find("Lights") ? o.Find("Lights").GetComponentsInChildren<Light>(true) : new Light[0];
+        { var st = o.Find("Mood/StarLamp/StarLight"); pb.starLight = st ? st.GetComponent<Light>() : null; }   // 무드등 (Z51i) — 있으면 연결
+        pb.stringMat = o.Find("Mood/StringLights") ? AssetDatabase.LoadAssetAtPath<Material>(PyriteBedroomMood.DIR + "M_StringBulb.mat") : null;
+        pb.starMax = PyriteBedroomMood.STAR_MAX; pb.stringEmit = PyriteBedroomMood.STRING_EMIT;
         UdonSharpEditorUtility.CopyProxyToUdon(pb); EditorUtility.SetDirty(pb);
 
         // 이벤트 연결 (U# 가 붙은 뒤)
