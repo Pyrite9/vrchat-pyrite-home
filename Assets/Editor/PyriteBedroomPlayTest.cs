@@ -1,5 +1,5 @@
 // PyriteBedroomPlayTest.cs — Tools ▸ Pyrite3 ▸ Z49e. Bedroom Play Test (ClientSim)
-//  Play 진입 → 6 s 뒤 TentDoor → 침실 → Bed_2 눕기 Station → ExitStation → DoorFlap → 캠프 (단계마다 2 s, 위치 기록) → Play 종료
+//  Play 진입 → 6 s 뒤 TentDoor → 침실 → Lie_2 눕기 → 이불 주머니(켬) → 확인 → 이불 끔 + ExitStation → DoorFlap → 캠프 → Play 종료
 //  결과: Logs/pyrite_bedroom.txt + 클립보드
 //  🔴 Play 진입 때 "VideoPlayerShim Missing" 대화상자 → No. Console Error Pause 는 꺼 둘 것
 #if UNITY_EDITOR
@@ -16,7 +16,7 @@ public static class PyriteBedroomPlayTest
     const string KEY = "PyriteBedroomPlayTest";
     static double t0;
     static float el;
-    static int stage;
+    static int stage, lastFrame;
     static string log;
 
     static PyriteBedroomPlayTest()
@@ -57,6 +57,8 @@ public static class PyriteBedroomPlayTest
 
     static void Tick()
     {
+        if (Time.frameCount == lastFrame) return;       // EditorApplication.update 는 한 프레임에 여러 번 불린다 → 프레임당 한 번만 센다
+        lastFrame = Time.frameCount;
         el += Mathf.Min(Time.unscaledDeltaTime, 0.1f);   // 모달 대화상자 동안 멈춘 시간은 세지 않는다
         double t = el;
         try
@@ -72,31 +74,48 @@ public static class PyriteBedroomPlayTest
             else if (stage == 1 && t > 8)
             {
                 log += "after TentDoor → " + Pos() + "  (기대 (1997.60, 0.02, 1.30) yaw 90)\n";
-                var lie = UB("TentBedroom", "Beds/Bed_2/Lie");
-                log += "Bed_2 Lie udon " + (lie != null) + "\n";
+                var lie = UB("TentBedroom", "Beds/Lie_2");
+                log += "Lie_2 udon " + (lie != null) + "\n";
                 if (lie != null) lie.SendCustomEvent("_interact");
                 stage = 2;
             }
             else if (stage == 2 && t > 10)
             {
-                var lp = GameObject.Find("TentBedroom/Beds/Bed_2/Lie/LiePoint");
+                var lp = GameObject.Find("TentBedroom/Beds/Lie_2/LiePoint");
                 log += "after Lie → " + Pos() + "  (LiePoint " + (lp ? lp.transform.position.ToString("F2") : "?") + ")\n";
-                var st = GameObject.Find("TentBedroom/Beds/Bed_2/Lie").GetComponent<VRC.SDK3.Components.VRCStation>();
-                if (st != null) st.ExitStation(Networking.LocalPlayer);
+                var sack = UB("TentBedroom", "Beds/StuffSack");
+                log += "StuffSack udon " + (sack != null) + "\n";
+                if (sack != null) sack.SendCustomEvent("_interact");
                 stage = 3;
             }
-            else if (stage == 3 && t > 12)
+            else if (stage == 3 && t > 12.5)
             {
-                log += "after ExitStation → " + Pos() + "  (ExitPoint 기대 z 0.25)\n";
-                var ub = UB("TentBedroom", "DoorFlap");
-                log += "DoorFlap udon " + (ub != null) + "\n";
-                if (ub != null) ub.SendCustomEvent("_interact");
+                var sack = UB("TentBedroom", "Beds/StuffSack");
+                var cover = GameObject.Find("TentBedroom/Beds/BlanketCover");
+                var foldT = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects().First(g => g.name == "TentBedroom").transform.Find("Beds/BlanketFold");
+                var fold = foldT != null && foldT.gameObject.activeInHierarchy ? foldT.gameObject : null;
+                object on = sack != null ? sack.GetProgramVariable("isOn") : null;
+                var m = cover ? cover.GetComponent<Renderer>().sharedMaterial : null;
+                log += "blanket isOn " + on + " cover " + (cover ? cover.GetComponent<Renderer>().enabled.ToString() : "?") + " fold active " + (fold != null) + " _Drop " + (m ? m.GetFloat("_Drop").ToString("F2") : "?") + " _SegCount " + (m ? m.GetFloat("_SegCount").ToString("F0") : "?") + "\n";
+                if (sack != null) sack.SendCustomEvent("_interact");
+                var st = GameObject.Find("TentBedroom/Beds/Lie_2").GetComponent<VRC.SDK3.Components.VRCStation>();
+                if (st != null) st.ExitStation(Networking.LocalPlayer);
                 stage = 4;
             }
-            else if (stage == 4 && t > 14)
+            else if (stage == 4 && t > 15)
+            {
+                var sack = UB("TentBedroom", "Beds/StuffSack");
+                var cover = GameObject.Find("TentBedroom/Beds/BlanketCover");
+                log += "blanket off → isOn " + (sack != null ? sack.GetProgramVariable("isOn") : null) + " cover " + (cover ? cover.GetComponent<Renderer>().enabled.ToString() : "?") + "\n";
+                log += "after ExitStation → " + Pos() + "  (ExitPoint 기대 z 0.25)\n";
+                var ub = UB("TentBedroom", "DoorFlap");
+                if (ub != null) ub.SendCustomEvent("_interact");
+                stage = 5;
+            }
+            else if (stage == 5 && t > 17)
             {
                 log += "after DoorFlap → " + Pos() + "  (기대 (-5.56, 1.83, 54.35) yaw 240)\n";
-                stage = 5;
+                stage = 6;
                 Finish();
             }
             else if (EditorApplication.timeSinceStartup - t0 > 120) { log += "TIMEOUT stage " + stage + "\n"; Finish(); }
