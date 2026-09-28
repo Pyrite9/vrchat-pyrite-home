@@ -116,3 +116,11 @@ crashlytics-build.properties
 
 # git 실행 로그 (Unity 에서 돌린 결과)
 /Logs/
+
+# ── 아바타 SDK(VRChat) 에서 복사한 부품 — SDK 바이너리라 올리지 않는다 ──
+#    눕기 Station 의 Tracking Control·Pose Space 용 (월드 SDK 에는 구체 타입이 없다)
+#    복구: 같은 버전 아바타 프로젝트의 Packages/com.vrchat.avatars 에서
+#          Runtime/VRCSDK/Plugins/VRCSDK3A.dll(+meta) → Assets/VRCSDK3A/
+#          Editor/VRCSDK/SDK3A/Components3/VRCAnimatorTrackingControlEditor.cs, VRCAnimatorTemporaryPoseSpaceEditor.cs(+meta) → Assets/VRCSDK3A/Editor/
+/Assets/VRCSDK3A/
+/Assets/VRCSDK3A.meta
