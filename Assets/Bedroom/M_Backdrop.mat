@@ -40,8 +40,8 @@ Material:
     - _OffU: 0
     - _Yaw: 210
     m_Colors:
-    - _LiveFwd: {r: 1.0000001, g: 0, b: 0.000085532665, a: 0}
-    - _LiveRight: {r: 0.000085532665, g: 0, b: -1.0000001, a: 0}
+    - _LiveFwd: {r: -0.50000006, g: 0, b: -0.86602557, a: 0}
+    - _LiveRight: {r: -0.86602557, g: 0, b: 0.50000006, a: 0}
     - _LiveTan: {r: 1.9068058, g: 1.1917536, b: 0, a: 0}
     - _LiveUp: {r: 0, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []

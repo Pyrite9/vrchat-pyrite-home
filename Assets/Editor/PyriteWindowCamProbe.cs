@@ -35,6 +35,18 @@ public static class PyriteWindowCamProbe
         // 발밑 지면 높이
         if (Physics.Raycast(POS + Vector3.up * 3f, Vector3.down, out var hit, 10f)) sb.AppendLine("ground under cam y " + hit.point.y.ToString("F2") + " (" + hit.collider.name + ") → eye +" + (POS.y - hit.point.y).ToString("F2"));
 
+        // 카메라 앞(yaw 210 ± 70°, 12 m 안) 물체 목록 — 가까운 순
+        var fwd = Quaternion.Euler(0, 210f, 0) * Vector3.forward;
+        var near = Object.FindObjectsOfType<Renderer>().Where(r => r.enabled && r.gameObject.activeInHierarchy && !(r is ParticleSystemRenderer))
+            .Select(r => new { r, c = r.bounds.center, d = new Vector2(r.bounds.center.x - POS.x, r.bounds.center.z - POS.z) })
+            .Where(x => x.d.magnitude < 12f && x.d.magnitude > 0.01f && Vector2.Angle(new Vector2(fwd.x, fwd.z), x.d) < 70f && x.r.bounds.size.magnitude < 20f)
+            .OrderBy(x => x.d.magnitude).Take(25);
+        foreach (var x in near)
+        {
+            var t = x.r.transform; string path = t.name; while (t.parent) { t = t.parent; path = t.name + "/" + path; }
+            float along = Vector2.Dot(x.d, new Vector2(fwd.x, fwd.z)); float side = x.d.x * fwd.z - x.d.y * fwd.x;
+            sb.AppendLine("  " + x.d.magnitude.ToString("F2") + " m (앞 " + along.ToString("F2") + ", 옆 " + side.ToString("F2") + ") " + path + " bounds " + x.r.bounds.min.ToString("F2") + ".." + x.r.bounds.max.ToString("F2"));
+        }
         var go = new GameObject("_WinCamProbe"); go.hideFlags = HideFlags.HideAndDontSave;
         var cam = go.AddComponent<Camera>();
         var main = Camera.main;

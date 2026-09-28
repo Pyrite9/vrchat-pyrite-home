@@ -19,7 +19,9 @@ public static class PyriteWindowCamBuild
     const string RT_PATH = DIR + "/RT_WindowCam.renderTexture";
     const string PREV = "Assets/_preview/bedroom/";
     const string ROOT = "BedroomWindowCam";
-    static readonly Vector3 POS = new Vector3(-4.9f, 2.55f, 54.6f);
+    // 19:17 관리자 "카메라 바로 앞 랜턴 스탠드가 거슬림" — 스탠드(camp07_lantern_stand, 앞 2.76 m·오른쪽 1.6 m)가 창 면(앞 2.55 m) 바로 뒤라 창에 크게 붙어 보였다
+    //  → 뒤(yaw 30 방향)로 2.0 m: (−4.9, 54.6) → (−3.9, 56.33). 텐트 안쪽이 되지만 창 면 앞은 near 로 잘린다. 스탠드는 창 뒤 2.2 m
+    static readonly Vector3 POS = new Vector3(-3.9f, 2.55f, 56.33f);
     const float YAW = 210f, VFOV = 100f, PLANE_Z = 2.55f;
     const int W = 1536, H = 960;
     static readonly Vector3 EYE_LOCAL = new Vector3(0f, 0.74f, 0f);   // 침실 이 점 ↔ 캠프 POS (머리 따라가기의 기준)
