@@ -31,7 +31,7 @@ Material:
     m_Floats:
     - _EdgeIn: 0.34
     - _EdgeOut: 0.485
-    - _Gain: 1.7
+    - _Gain: 1
     - _Scale1: 7
     - _Scale2: 11
     m_Colors:

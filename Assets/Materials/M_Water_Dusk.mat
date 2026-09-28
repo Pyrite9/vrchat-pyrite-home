@@ -104,9 +104,9 @@ Material:
     - _WaveTime: 0.55
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.08125489, g: 0.12533328, b: 0.21835288, a: 1}
+    - _BaseColor: {r: 0.29019558, g: 0.36862695, b: 0.3764701, a: 1}
     - _Color: {r: 0.9063317, g: 0.9063317, b: 0.9063317, a: 1}
-    - _DeepColor: {r: 0.021960776, g: 0.045333296, b: 0.09552934, a: 1}
+    - _DeepColor: {r: 0.07843087, g: 0.13333285, b: 0.1647054, a: 1}
     - _DepthRect: {r: -64, g: -78, b: 0.0078125, a: 0.0078125}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

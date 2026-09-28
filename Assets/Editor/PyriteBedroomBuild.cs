@@ -1,6 +1,8 @@
 // PyriteBedroomBuild.cs — 텐트 침실 2단계: 빈 돔 + 텔레포트 왕복
 // Tools ▸ Pyrite3 ▸ Z49b. Bedroom Shell Build  /  Z49c. Bedroom Revert  /  Z49d. Bedroom Renders
-//  루트 TentBedroom (2000, 0, 0) — 돔 텐트(지름 6 m, 꼭대기 3.5 m), 바닥, X자 폴 2개, 입구 천막(−Z, 귀환), Spawn(입구 안쪽, +Z 를 봄)
+//  루트 TentBedroom (2000, 0, 0) — 직사각 돔 텐트(바닥 6.8×5.6 m 초타원 n=6, 꼭대기 3.3 m), 바닥, 대각 X자 폴 2개,
+//    입구 천막(−X 짧은 벽, 귀환), Spawn(입구 안쪽, +X 를 봄). 앞 = +Z 긴 벽(창 자리), 뒤 = −Z 긴 벽(매트 머리)
+//  v1(원형 지름 6 m, 15:36)은 관리자 "너무 동그랗다" → v2 직사각 (15:53)
 //  루트 TentDoor — 캠프 텐트 camp01_tent_BRN 자리에 트리거 BoxCollider + PyriteTeleportDoor (기존 텐트 오브젝트는 건드리지 않음: 네트워크 ID 함정)
 //  임시 조명 TempLight (4단계에서 교체). 정적 플래그 없음 → 베이크 영향 없음 (4단계에서 정적 + 베이크)
 //  로그 Logs/pyrite_bedroom.txt, 렌더 Assets/_preview/bedroom/*.jpg (960x540)
@@ -18,8 +20,14 @@ using UnityEngine.SceneManagement;
 public static class PyriteBedroomBuild
 {
     public static readonly Vector3 ORIGIN = new Vector3(2000f, 0f, 0f);
-    public const float R = 3.0f;       // 바닥 반지름
-    public const float H = 3.5f;       // 꼭대기 높이
+    public const float A = 3.4f;       // 바닥 반폭 x (6.8 m)
+    public const float B = 2.8f;       // 바닥 반폭 z (5.6 m)
+    public const float H = 3.3f;       // 꼭대기 높이
+    public const float N = 6f;         // 초타원 지수 (클수록 각짐)
+    // 매트 자리 안내(3단계에서 실제 매트): 2.2×0.9 m, 간격 0.6, 머리 z −2.4, 발 z −0.2
+    public const float DOOR_Z = 1.3f;  // 입구는 짧은 벽의 앞쪽 절반(매트 발끝 z 0 보다 앞, 통로 쪽)
+    public static readonly float[] MAT_X = { -2.25f, -0.75f, 0.75f, 2.25f };
+    public const float MAT_HEAD = -2.4f, MAT_LEN = 2.2f;
     const string DIR = "Assets/Bedroom";
     const string LOG = "Logs/pyrite_bedroom.txt";
     const string TENT = "Camp/camp01_tent_BRN";
@@ -81,6 +89,15 @@ public static class PyriteBedroomBuild
 
         foreach (var n in new[] { "TentBedroom", "TentDoor" }) { var g = RootByName(n); if (g != null) { Object.DestroyImmediate(g); sb.AppendLine("이전 " + n + " 삭제"); } }
         Directory.CreateDirectory(DIR + "/Meshes");
+        // 이전 판 렌더 보존 (전후 비교)
+        const string PV = "Assets/_preview/bedroom/";
+        if (Directory.Exists(PV) && !Directory.Exists(PV + "v1") && Directory.GetFiles(PV, "*.jpg").Length > 0)
+        {
+            Directory.CreateDirectory(PV + "v1");
+            foreach (var f in Directory.GetFiles(PV, "*.jpg")) File.Move(f, PV + "v1/" + Path.GetFileName(f));
+            foreach (var f in Directory.GetFiles(PV, "*.jpg.meta")) File.Delete(f);
+            sb.AppendLine("v1 렌더 → " + PV + "v1/");
+        }
 
         var mCanvas = Mat("M_TentCanvas", new Color(0.62f, 0.47f, 0.31f), 0.15f, 0f);
         var mFloor = Mat("M_TentFloor", new Color(0.22f, 0.20f, 0.17f), 0.10f, 0f);
@@ -91,31 +108,30 @@ public static class PyriteBedroomBuild
         root.transform.position = ORIGIN;
 
         // 돔 (안쪽을 보는 면, 그림자는 양면 → 해·달 직사광을 막는다)
-        var dome = Part(root.transform, "Dome", SaveMesh(DomeMesh(48, 16), "TentDome"), mCanvas);
+        var dome = Part(root.transform, "Dome", SaveMesh(DomeMesh(96, 20), "TentDome"), mCanvas);
         dome.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.TwoSided;
         dome.AddComponent<MeshCollider>().sharedMesh = dome.GetComponent<MeshFilter>().sharedMesh;
 
         // 바닥
-        var floor = Part(root.transform, "Floor", SaveMesh(DiscMesh(48), "TentFloor"), mFloor);
-        var fc = floor.AddComponent<BoxCollider>(); fc.center = new Vector3(0, -0.05f, 0); fc.size = new Vector3(2 * R + 0.4f, 0.1f, 2 * R + 0.4f);
+        var floor = Part(root.transform, "Floor", SaveMesh(DiscMesh(96), "TentFloor"), mFloor);
+        var fc = floor.AddComponent<BoxCollider>(); fc.center = new Vector3(0, -0.05f, 0); fc.size = new Vector3(2 * A + 0.4f, 0.1f, 2 * B + 0.4f);
 
-        // X자 폴 2개 (방위 45° / 135° 평면의 반타원, 돔 안쪽 3 cm)
-        var poleMesh = SaveMesh(ArchTube(0.985f, 0.02f, 40, 8), "TentPoleArch");
-        foreach (var yaw in new[] { 45f, 135f })
+        // 대각 X자 폴 2개 (모서리 → 꼭대기 → 반대 모서리, 표면 안쪽 3 cm)
+        for (int k = 0; k < 2; k++)
         {
-            var p = Part(root.transform, "Pole_" + yaw.ToString("0"), poleMesh, mPole);
-            p.transform.localRotation = Quaternion.Euler(0, yaw, 0);
+            float th = Mathf.PI * 0.25f + k * Mathf.PI * 0.5f;
+            var p = Part(root.transform, "Pole_" + (k == 0 ? "A" : "B"), SaveMesh(ArchTube(th, 0.03f, 0.02f, 48, 8), "TentPole" + (k == 0 ? "A" : "B")), mPole);
             p.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
-        // 입구 천막 (−Z): 돔 곡면에 붙인 패널, 누르면 캠프로
-        var door = Part(root.transform, "DoorFlap", SaveMesh(DoorMesh(1.1f, 1.9f), "TentDoorFlap"), mDoor);
+        // 입구 천막 (−X 짧은 벽): 곡면에 붙인 패널, 누르면 캠프로
+        var door = Part(root.transform, "DoorFlap", SaveMesh(DoorMesh(1.1f, 1.9f, DOOR_Z), "TentDoorFlap"), mDoor);
         var dcol = door.AddComponent<BoxCollider>(); dcol.isTrigger = true;
-        dcol.center = new Vector3(0, 0.95f, -R + 0.35f); dcol.size = new Vector3(1.2f, 1.9f, 0.5f);
+        dcol.center = new Vector3(-A + 0.35f, 0.95f, DOOR_Z); dcol.size = new Vector3(0.5f, 1.9f, 1.2f);
 
-        // Spawn: 입구 안쪽 1 m, +Z(가운데·창 쪽)를 봄
+        // Spawn: 입구 안쪽 1 m, +X(방 안쪽)를 봄
         var spawn = new GameObject("Spawn").transform; spawn.SetParent(root.transform, false);
-        spawn.localPosition = new Vector3(0, 0.02f, -R + 1.0f); spawn.localRotation = Quaternion.identity;
+        spawn.localPosition = new Vector3(-A + 1.0f, 0.02f, DOOR_Z); spawn.localRotation = Quaternion.Euler(0, 90, 0);
 
         // 임시 조명 (4단계에서 교체)
         var tl = new GameObject("TempLight"); tl.transform.SetParent(root.transform, false); tl.transform.localPosition = new Vector3(0, 2.3f, 0);
@@ -147,7 +163,8 @@ public static class PyriteBedroomBuild
 
         // 리포트
         int tris = root.GetComponentsInChildren<MeshFilter>(true).Sum(m => m.sharedMesh ? m.sharedMesh.triangles.Length / 3 : 0);
-        sb.AppendLine("TentBedroom at " + V(ORIGIN) + " | dome R " + R + " H " + H + " | tris " + tris);
+        sb.AppendLine("TentBedroom at " + V(ORIGIN) + " | floor " + (2 * A) + "x" + (2 * B) + " m (n " + N + ") H " + H + " | 바닥 넓이 " + FloorArea().ToString("F1") + " m² | tris " + tris);
+        foreach (var mx in MAT_X) { float zb = SurfZ(Mathf.Abs(mx) + 0.45f, 0.25f); sb.AppendLine("  매트 x " + mx.ToString("F3") + " : 바깥 모서리 높이 0.25 m 에서 뒤 벽 z −" + zb.ToString("F2") + " (머리 " + MAT_HEAD.ToString("F2") + " → 여유 " + (zb + MAT_HEAD).ToString("F2") + " m)"); }
         sb.AppendLine("spawn " + V(spawn.position) + " yaw " + spawn.eulerAngles.y.ToString("0"));
         sb.AppendLine("tent bounds " + V(b.min) + " .. " + V(b.max) + " → TentDoor trigger size " + V(tc.size));
         sb.AppendLine("CampReturn " + V(campReturn.position) + " yaw " + campReturn.eulerAngles.y.ToString("0") + " (불 쪽) | 지면 " + Ground(ret).ToString("F2"));
@@ -158,6 +175,37 @@ public static class PyriteBedroomBuild
     }
 
     // ── 메시 ─────────────────────────────────────────
+    // 초타원 방향 (각진 원): θ → (cx, cz), |cx|^N + |cz|^N = 1
+    static Vector2 SE(float th)
+    {
+        float c = Mathf.Cos(th), s = Mathf.Sin(th);
+        return new Vector2(Mathf.Sign(c) * Mathf.Pow(Mathf.Abs(c), 2f / N), Mathf.Sign(s) * Mathf.Pow(Mathf.Abs(s), 2f / N));
+    }
+    // 돔 표면 점: θ(방위), φ(0 바닥 → π/2 꼭대기). 단면은 타원 → 벽은 바닥에서 거의 수직
+    static Vector3 Surf(float th, float phi)
+    {
+        var d = SE(th); float r = Mathf.Cos(phi);
+        return new Vector3(A * d.x * r, H * Mathf.Sin(phi), B * d.y * r);
+    }
+    // 높이 y 에서 x 위치의 벽 z (양수)
+    public static float SurfZ(float x, float y)
+    {
+        float r = Mathf.Sqrt(Mathf.Max(0f, 1f - (y * y) / (H * H)));
+        return B * Mathf.Pow(Mathf.Max(0f, Mathf.Pow(r, N) - Mathf.Pow(Mathf.Abs(x) / A, N)), 1f / N);
+    }
+    public static float SurfX(float z, float y)
+    {
+        float r = Mathf.Sqrt(Mathf.Max(0f, 1f - (y * y) / (H * H)));
+        return A * Mathf.Pow(Mathf.Max(0f, Mathf.Pow(r, N) - Mathf.Pow(Mathf.Abs(z) / B, N)), 1f / N);
+    }
+    static float FloorArea()
+    {
+        float sum = 0; int n = 720;
+        for (int i = 0; i < n; i++) { var a = SE(2 * Mathf.PI * i / n); var b = SE(2 * Mathf.PI * (i + 1) / n); sum += 0.5f * (A * a.x * B * b.y - A * b.x * B * a.y); }
+        return Mathf.Abs(sum);
+    }
+    static readonly Vector3 INSIDE = new Vector3(0, H * 0.3f, 0);
+
     static Mesh DomeMesh(int seg, int rings)
     {
         var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
@@ -167,11 +215,9 @@ public static class PyriteBedroomBuild
             for (int i = 0; i <= seg; i++)
             {
                 float th = 2f * Mathf.PI * i / seg;
-                var p = new Vector3(R * Mathf.Cos(phi) * Mathf.Cos(th), H * Mathf.Sin(phi), R * Mathf.Cos(phi) * Mathf.Sin(th));
-                v.Add(p);
-                var g = new Vector3(p.x / (R * R), p.y / (H * H), p.z / (R * R)); // 바깥 방향 → 안쪽 법선
-                n.Add(-g.normalized);
-                uv.Add(new Vector2((float)i / seg * 6f, (float)j / rings * 2f));
+                var p = Surf(th, phi);
+                v.Add(p); n.Add((INSIDE - p).normalized);   // 감김 판정용 (안쪽), 음영 법선은 Build 에서 다시 계산
+                uv.Add(new Vector2((float)i / seg * 8f, (float)j / rings * 2f));
             }
         }
         int w = seg + 1;
@@ -179,9 +225,9 @@ public static class PyriteBedroomBuild
             for (int i = 0; i < seg; i++)
             {
                 int a = j * w + i, b = a + 1, c = a + w, d = c + 1;
-                t.AddRange(new[] { a, b, c, b, d, c }); // 안쪽에서 보이는 감김
+                t.AddRange(new[] { a, b, c, b, d, c });
             }
-        return Build("TentDome", v, n, uv, t);
+        return Build("TentDome", v, n, uv, t, true, seg + 1);
     }
 
     static Mesh DiscMesh(int seg)
@@ -189,29 +235,38 @@ public static class PyriteBedroomBuild
         var v = new List<Vector3> { Vector3.zero }; var n = new List<Vector3> { Vector3.up }; var uv = new List<Vector2> { new Vector2(0.5f, 0.5f) }; var t = new List<int>();
         for (int i = 0; i <= seg; i++)
         {
-            float th = 2f * Mathf.PI * i / seg;
-            v.Add(new Vector3(R * Mathf.Cos(th), 0, R * Mathf.Sin(th))); n.Add(Vector3.up);
-            uv.Add(new Vector2(0.5f + 0.5f * Mathf.Cos(th), 0.5f + 0.5f * Mathf.Sin(th)));
+            var d = SE(2f * Mathf.PI * i / seg);
+            v.Add(new Vector3(A * d.x, 0, B * d.y)); n.Add(Vector3.up);
+            uv.Add(new Vector2(0.5f + 0.5f * d.x * A / 3f, 0.5f + 0.5f * d.y * B / 3f));
         }
         for (int i = 1; i <= seg; i++) t.AddRange(new[] { 0, i + 1, i });
-        return Build("TentFloor", v, n, uv, t);
+        return Build("TentFloor", v, n, uv, t, false, 0);
     }
 
-    // x 축 방향 반타원 (−R..R), 돔 표면 × k 안쪽
-    static Mesh ArchTube(float k, float rad, int steps, int sides)
+    // 모서리(θ) → 꼭대기 → 반대 모서리(θ+π), 표면에서 inset 만큼 안쪽
+    static Mesh ArchTube(float th, float inset, float rad, int steps, int sides)
     {
-        var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
+        var path = new List<Vector3>();
         for (int s = 0; s <= steps; s++)
         {
-            float a = Mathf.PI * s / steps;
-            var c = new Vector3(R * k * Mathf.Cos(a), H * k * Mathf.Sin(a), 0);
-            var tan = new Vector3(-R * Mathf.Sin(a), H * Mathf.Cos(a), 0).normalized;
-            var nrm = Vector3.Cross(tan, Vector3.forward).normalized;
+            float u = (float)s / steps;           // 0 → 1
+            float phi = u < 0.5f ? Mathf.PI * u : Mathf.PI * (1f - u);
+            float tt = u < 0.5f ? th : th + Mathf.PI;
+            var p = Surf(tt, phi);
+            p += (INSIDE - p).normalized * inset;
+            path.Add(p);
+        }
+        var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
+        for (int s = 0; s < path.Count; s++)
+        {
+            var tan = (path[Mathf.Min(s + 1, path.Count - 1)] - path[Mathf.Max(s - 1, 0)]).normalized;
+            var side = Vector3.Cross(tan, Vector3.up); if (side.sqrMagnitude < 1e-4f) side = Vector3.Cross(tan, Vector3.forward); side.Normalize();
+            var nrm = Vector3.Cross(side, tan).normalized;
             for (int i = 0; i <= sides; i++)
             {
                 float b = 2f * Mathf.PI * i / sides;
-                var d = nrm * Mathf.Cos(b) + Vector3.forward * Mathf.Sin(b);
-                v.Add(c + d * rad); n.Add(d); uv.Add(new Vector2((float)i / sides, (float)s / steps));
+                var d = nrm * Mathf.Cos(b) + side * Mathf.Sin(b);
+                v.Add(path[s] + d * rad); n.Add(d); uv.Add(new Vector2((float)i / sides, (float)s / steps));
             }
         }
         int w = sides + 1;
@@ -221,27 +276,23 @@ public static class PyriteBedroomBuild
                 int a = s * w + i, b = a + 1, c = a + w, d = c + 1;
                 t.AddRange(new[] { a, c, b, b, c, d });
             }
-        return Build("TentPoleArch", v, n, uv, t);
+        return Build("TentPole", v, n, uv, t, false, 0);
     }
 
-    // −Z 쪽 돔 곡면을 따라 붙인 아치형 천막 패널 (폭 wd, 높이 ht), 안쪽 1.5 cm
-    static Mesh DoorMesh(float wd, float ht)
+    // −X 짧은 벽 곡면을 따라 붙인 아치형 천막 패널 (폭 wd, 높이 ht), 안쪽 1.5 cm
+    static Mesh DoorMesh(float wd, float ht, float zc)
     {
         var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
         int cols = 12, rows = 16;
         for (int j = 0; j <= rows; j++)
         {
             float y = ht * j / rows;
-            float half = wd * 0.5f * Mathf.Sqrt(Mathf.Max(0f, 1f - Mathf.Pow(Mathf.Max(0f, (y - ht * 0.55f) / (ht * 0.45f)), 2f))); // 위쪽이 둥근 아치
+            float half = wd * 0.5f * Mathf.Sqrt(Mathf.Max(0f, 1f - Mathf.Pow(Mathf.Max(0f, (y - ht * 0.55f) / (ht * 0.45f)), 2f)));
             for (int i = 0; i <= cols; i++)
             {
-                float x = Mathf.Lerp(-half, half, (float)i / cols);
-                float rr = R * Mathf.Sqrt(Mathf.Max(0.0001f, 1f - (y * y) / (H * H))); // 그 높이의 돔 반지름
-                float z = -Mathf.Sqrt(Mathf.Max(0.0001f, rr * rr - x * x)) + 0.015f;
-                var p = new Vector3(x, y, z);
-                v.Add(p);
-                var g = new Vector3(p.x / (R * R), p.y / (H * H), p.z / (R * R));
-                n.Add(-g.normalized);
+                float z = zc + Mathf.Lerp(-half, half, (float)i / cols);
+                var p = new Vector3(-SurfX(z, y) + 0.015f, y, z);
+                v.Add(p); n.Add(Vector3.right);
                 uv.Add(new Vector2((float)i / cols, (float)j / rows));
             }
         }
@@ -252,10 +303,10 @@ public static class PyriteBedroomBuild
                 int a = j * w + i, b = a + 1, c = a + w, d = c + 1;
                 t.AddRange(new[] { a, c, b, b, c, d });
             }
-        return Build("TentDoorFlap", v, n, uv, t);
+        return Build("TentDoorFlap", v, n, uv, t, true, 0);
     }
 
-    static Mesh Build(string name, List<Vector3> v, List<Vector3> n, List<Vector2> uv, List<int> t)
+    static Mesh Build(string name, List<Vector3> v, List<Vector3> n, List<Vector2> uv, List<int> t, bool recalc, int seamW)
     {
         // 감김 방향을 법선에 맞춘다 (Unity 앞면: cross(b-a, c-a) 가 보는 쪽)
         double agree = 0;
@@ -268,6 +319,16 @@ public static class PyriteBedroomBuild
         if (sb != null) sb.AppendLine("  mesh " + name + " verts " + v.Count + " tris " + t.Count / 3 + (agree < 0 ? " (감김 뒤집음)" : ""));
         var m = new Mesh { name = name };
         m.SetVertices(v); m.SetNormals(n); m.SetUVs(0, uv); m.SetTriangles(t, 0);
+        if (recalc)
+        {
+            m.RecalculateNormals();
+            if (seamW > 1)   // θ=0 / 2π 이음매 법선 평균 (같은 위치 두 정점)
+            {
+                var nn = m.normals;
+                for (int k = 0; k + seamW - 1 < nn.Length; k += seamW) { var avg = (nn[k] + nn[k + seamW - 1]).normalized; nn[k] = avg; nn[k + seamW - 1] = avg; }
+                m.normals = nn;
+            }
+        }
         m.RecalculateBounds(); m.RecalculateTangents();
         Unwrapping.GenerateSecondaryUVSet(m);
         return m;
@@ -276,8 +337,8 @@ public static class PyriteBedroomBuild
     static Mesh SaveMesh(Mesh m, string name)
     {
         string path = DIR + "/Meshes/" + name + ".asset";
-        var old = AssetDatabase.LoadAssetAtPath<Mesh>(path);
-        if (old != null) { EditorUtility.CopySerialized(m, old); EditorUtility.SetDirty(old); AssetDatabase.SaveAssets(); return old; }
+        // 🔴 CopySerialized 로 덮으면 정점이 안 바뀌었다(v2 첫 빌드가 v1 원형 메시 그대로) → 지우고 새로 만든다 (씬 오브젝트는 매번 새로 만드니 참조 문제 없음)
+        if (AssetDatabase.LoadAssetAtPath<Mesh>(path) != null) AssetDatabase.DeleteAsset(path);
         AssetDatabase.CreateAsset(m, path); return m;
     }
 
@@ -319,20 +380,39 @@ public static class PyriteBedroomBuild
             if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(21f); }
             cam.fieldOfView = 75f;
             var o = ORIGIN;
-            Shot(cam, o + new Vector3(0, 1.6f, -R + 1.0f), o + new Vector3(0, 1.3f, R), "in_spawn");          // 스폰에서 안쪽
-            Shot(cam, o + new Vector3(0, 1.6f, 1.5f), o + new Vector3(0, 1.0f, -R), "in_door");              // 입구 천막
-            Shot(cam, o + new Vector3(1.8f, 0.4f, 0.8f), o + new Vector3(-0.5f, 2.6f, -0.3f), "in_lie");     // 누운 시선(천장·폴)
+            Shot(cam, o + new Vector3(-A + 1.0f, 1.6f, DOOR_Z), o + new Vector3(A, 1.2f, -0.3f), "in_spawn");                 // 입구 안쪽에서 방 안
+            Shot(cam, o + new Vector3(0, 1.6f, -1.2f), o + new Vector3(0, 1.1f, B), "in_front");                     // 뒤에서 앞 긴 벽(창 자리)
+            Shot(cam, o + new Vector3(0.3f, 1.6f, 1.8f), o + new Vector3(0, 0.6f, -B), "in_back");                    // 앞에서 뒤 벽(매트 머리 쪽)
+            Shot(cam, o + new Vector3(MAT_X[1], 0.35f, MAT_HEAD + 0.3f), o + new Vector3(MAT_X[1], 1.3f, B), "in_lie");         // 매트에 누운 시선(발끝 = 창 쪽)
+            Shot(cam, o + new Vector3(1.5f, 1.6f, DOOR_Z), o + new Vector3(-A, 1.0f, DOOR_Z), "in_door");                       // 입구 천막
+            // 위에서: 돔을 끄고 매트 자리 안내판을 잠깐 깔아 찍는다
+            var dome = root.transform.Find("Dome").gameObject; dome.SetActive(false);
+            var guides = new List<GameObject>();
+            var gm = new Material(Shader.Find("Unlit/Color")); gm.color = new Color(0.25f, 0.55f, 0.85f);
+            foreach (var mx in MAT_X)
+            {
+                var q = GameObject.CreatePrimitive(PrimitiveType.Cube); q.transform.SetParent(root.transform, false);
+                q.transform.localPosition = new Vector3(mx, 0.12f, MAT_HEAD + MAT_LEN / 2f); q.transform.localScale = new Vector3(0.9f, 0.24f, MAT_LEN);
+                q.GetComponent<Renderer>().sharedMaterial = gm; Object.DestroyImmediate(q.GetComponent<Collider>()); guides.Add(q);
+            }
+            bool o0 = cam.orthographic; float s0 = cam.orthographicSize;
+            cam.orthographic = true; cam.orthographicSize = 3.6f;
+            Shot(cam, o + new Vector3(0, 30f, 0.001f), o, "top_mats");
+            cam.orthographic = o0; cam.orthographicSize = s0;
+            foreach (var g in guides) Object.DestroyImmediate(g);
+            Object.DestroyImmediate(gm);
+            dome.SetActive(true);
             var tent = GameObject.Find(TENT); var td = RootByName("TentDoor");
             if (tent != null && td != null)
             {
                 var ret = td.transform.Find("CampReturn");
                 var c = tent.GetComponent<Renderer>().bounds.center;
                 cam.fieldOfView = 60f;
-                Shot(cam, ret.position + Vector3.up * 1.6f - ret.forward * 0.1f, c, "camp_return");            // 귀환 지점에서 텐트
+                Shot(cam, ret.position + Vector3.up * 1.6f - ret.forward * 0.1f, c, "camp_return");
             }
             if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(12f); }
             cam.fieldOfView = 75f;
-            Shot(cam, o + new Vector3(0, 1.6f, -R + 1.0f), o + new Vector3(0, 1.3f, R), "in_spawn_noon");    // 정오: 햇빛이 새는지
+            Shot(cam, o + new Vector3(-A + 1.0f, 1.6f, DOOR_Z), o + new Vector3(A, 1.2f, -0.3f), "in_spawn_noon");
         }
         finally
         {
@@ -340,12 +420,12 @@ public static class PyriteBedroomBuild
             cam.fieldOfView = f0; cam.transform.SetPositionAndRotation(p0, r0);
             if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(PyriteDayCycleSetup.EDITOR_HOUR); }
         }
-        sb.AppendLine("shots Assets/_preview/bedroom/{in_spawn,in_door,in_lie,camp_return,in_spawn_noon}.jpg");
+        sb.AppendLine("shots Assets/_preview/bedroom/{in_spawn,in_front,in_back,in_lie,in_door,top_mats,camp_return,in_spawn_noon}.jpg (v1 은 v1/)");
     }
 
     static void Shot(Camera cam, Vector3 eye, Vector3 at, string tag)
     {
-        cam.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(at - eye));
+        var fwd = at - eye; cam.transform.SetPositionAndRotation(eye, Mathf.Abs(Vector3.Dot(fwd.normalized, Vector3.up)) > 0.99f ? Quaternion.LookRotation(fwd, Vector3.forward) : Quaternion.LookRotation(fwd));
         int w = 960, h = 540;
         var rt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
         var prev = cam.targetTexture; cam.targetTexture = rt; cam.Render(); cam.targetTexture = prev;
