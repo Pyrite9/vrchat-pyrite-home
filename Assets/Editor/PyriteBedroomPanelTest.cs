@@ -21,6 +21,8 @@ public static class PyriteBedroomPanelTest
     static int lastFrame = -1;
     static float t0;
     static string held;
+    static float Vol(string n) { var t = P().Find("Nature/" + n); return t ? t.GetComponent<AudioSource>().volume : -1f; }
+    static string NatStr() => "풀벌레 " + Vol("BR_N_Crickets_A").ToString("F3") + " 물 " + Vol("BR_Water_ShoreN").ToString("F3") + " (재생 " + (P().Find("Nature/BR_Water_ShoreN") ? P().Find("Nature/BR_Water_ShoreN").GetComponent<AudioSource>().isPlaying.ToString() : "?") + ")";
     static float oHour; static bool oAuto;
     static UdonBehaviour DC() => Root("DayCycle").GetComponent<UdonBehaviour>();
     // DayCycle 시각 고정: 자동 흐름 끄고 hourAtSync → OnDeserialization(= EvaluateAt(CurrentHour))
@@ -165,12 +167,16 @@ public static class PyriteBedroomPanelTest
                     if (t < 0.3f) return;
                     Check("정오·수면 84% → 낮 몫 5.6%", Mathf.Abs(RenderSettings.ambientSkyColor.r - (0.028f + 0.592f * 0.056f)) < 0.003f, "sky " + RenderSettings.ambientSkyColor + " 반사 " + RenderSettings.reflectionIntensity.ToString("F3") + ", 방 밝기 " + Shot());
                     Check("정오·수면 84% 창 → 1→0.13 의 84%", Mathf.Abs(Dim() - 0.2692f) < 0.01f, "_Dim " + Dim().ToString("F3"));
+                    Check("정오 자연 소리 50%: 풀벌레 0 · 물 0.21", Vol("BR_N_Crickets_A") < 0.01f && Mathf.Abs(Vol("BR_Water_ShoreN") - 0.21f) < 0.01f, NatStr());
                     Hour(21f);
                     t0 = Time.realtimeSinceStartup; stage = 10; return;
                 case 10:
                     if (t < 0.3f) return;
                     L("  21시·수면 84%: sky " + RenderSettings.ambientSkyColor + ", 방 밝기 " + Shot());
                     Check("21시·수면 84% 창 → 1→0.4 의 84% (그대로)", Mathf.Abs(Dim() - 0.496f) < 0.01f, "_Dim " + Dim().ToString("F3"));
+                    Check("21시 자연 소리 50%: 풀벌레 0.19 · 물 0.21", Mathf.Abs(Vol("BR_N_Crickets_A") - 0.19f) < 0.01f && Mathf.Abs(Vol("BR_Water_ShoreN") - 0.21f) < 0.01f, NatStr());
+                    C<Slider>("PanelCanvas/NatureSlider").value = 1f;
+                    Check("자연 소리 100% 표시", Txt("PanelCanvas/NatureValue") == "100%", Txt("PanelCanvas/NatureValue"));
                     C<Slider>("PanelCanvas/SleepSlider").value = 0f;
                     L("  21시·수면 0%: 방 밝기 " + Shot());
                     Hour(12f);
@@ -182,6 +188,7 @@ public static class PyriteBedroomPanelTest
                     t0 = Time.realtimeSinceStartup; stage = 12; return;
                 case 12:
                     if (t < 2f) return;
+                    Check("침실 나가면 자연 소리 0", Vol("BR_N_Crickets_A") == 0f && Vol("BR_Water_ShoreN") == 0f, NatStr());
                     Check("침실 나가면 DayCycle 값 복원", Mathf.Abs(RenderSettings.ambientSkyColor.r - 0.62f) < 0.001f && Mathf.Abs(RenderSettings.reflectionIntensity - 1f) < 0.001f, "위치 " + VRC.SDKBase.Networking.LocalPlayer.GetPosition() + " sky " + RenderSettings.ambientSkyColor + " 반사 " + RenderSettings.reflectionIntensity.ToString("F3"));
                     DC().SetProgramVariable("hourAtSync", oHour); DC().SetProgramVariable("autoFlow", oAuto); DC().SendCustomEvent("_onDeserialization");
                     ub.SendCustomEvent("OnVideo");

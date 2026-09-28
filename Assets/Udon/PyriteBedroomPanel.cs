@@ -18,6 +18,12 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     public GameObject mirror;
     public GameObject tvRoot;               // 침실 전용 ProTV (씬에선 꺼진 채로 시작, 로컬 표시 토글)
     public Slider sleepSlider;
+    public Slider natureSlider;
+    public TextMeshProUGUI natureValue;
+    public AudioSource[] natureNight;       // 풀벌레 (밤일수록)
+    public AudioSource[] natureDay;         // 물가 (항상)
+    public float[] natureNightBase = new float[] { 0.38f };          // DayCycle nightAmbBase(AMB_N_Crickets_A)
+    public float[] natureDayBase = new float[] { 0.42f };             // DayCycle ambBase(AMB_Water_ShoreN)
     public TextMeshProUGUI sleepValue;
     public Toggle mirrorToggle;
     public TextMeshProUGUI clockText;
@@ -73,6 +79,8 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         mirror.SetActive(false);
         stopButton.SetActive(false);
         ApplySleep(0f);
+        OnNature();
+        SetNature(0f, 0f);
         RefreshAlarm();
         UpdateClock();
     }
@@ -105,6 +113,18 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         for (int i = 0; i < lights.Length; i++) if (lights[i] != null) lights[i].intensity = baseI[i] * k;
         if (backdrop != null) backdrop.SetFloat("_Dim", Mathf.Lerp(1f, minWindow, s));
         sleepValue.text = Mathf.RoundToInt(s * 100f) + "%";
+    }
+
+    // ── 자연 소리 ──
+    public void OnNature()
+    {
+        natureValue.text = Mathf.RoundToInt(natureSlider.value * 100f) + "%";
+    }
+
+    private void SetNature(float level, float nightK)
+    {
+        for (int i = 0; i < natureNight.Length; i++) if (natureNight[i] != null) natureNight[i].volume = level * (i < natureNightBase.Length ? natureNightBase[i] : 0.3f) * nightK;
+        for (int i = 0; i < natureDay.Length; i++) if (natureDay[i] != null) natureDay[i].volume = level * (i < natureDayBase.Length ? natureDayBase[i] : 0.3f);
     }
 
     // ── 거울 ──
@@ -229,6 +249,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
                 RenderSettings.ambientEquatorColor = dEq;
                 RenderSettings.ambientGroundColor = dGr;
                 RenderSettings.reflectionIntensity = dRefl;
+                SetNature(0f, 0f);   // 2D 라 침실 밖에서도 들리므로 끔
             }
             return;
         }
@@ -252,6 +273,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         // 창: 밤은 minWindow 그대로, 낮일수록 minWindowDay 쪽 (낮 정도 = 환경광 sky 합, 밤 0.156 → 1.0 이상이면 낮)
         float dayK = Mathf.Clamp01((dSky.r + dSky.g + dSky.b - 0.156f) / 0.85f);
         if (backdrop != null) backdrop.SetFloat("_Dim", Mathf.Lerp(1f, Mathf.Lerp(minWindow, minWindowDay, dayK), sleepSlider.value));
+        SetNature(natureSlider.value, 1f - dayK);
         inRoom = true;
     }
 

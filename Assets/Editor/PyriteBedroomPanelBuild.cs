@@ -31,8 +31,8 @@ public static class PyriteBedroomPanelBuild
     const string ROOT = "BedroomPanel";
     const string TV_PREFAB = "Packages/dev.architech.protv/Simple (ProTV).prefab";
     const float TV_W = 2.0f, TV_Y = 1.20f, TV_Z = -0.90f, TV_GAP = 0.06f;   // 21:23 관리자: 침대 왼쪽(입구 쪽, −X 벽), 수직
-    const float PW = 900f, PH = 620f, PX = 0.001f;          // 패널 캔버스 px, 1 px = 1 mm
-    const float PANEL_Y = 0.80f, ICON_X = 0.60f, WALL_GAP = 0.07f;          // 20:48 관리자: 통째로 내려서 침대 조금 위 (패널 아래 끝 0.49 m, 매트 윗면 ~0.36 m). 아이콘은 패널 오른쪽
+    const float PW = 900f, PH = 740f, PX = 0.001f;          // 패널 캔버스 px, 1 px = 1 mm
+    const float PANEL_Y = 0.86f, ICON_Y = 0.80f, ICON_X = 0.60f, WALL_GAP = 0.07f;   // 21:58 자연 소리 줄 추가로 패널 +120 px → 중심 0.86 (아래 끝 0.49 그대로)          // 20:48 관리자: 통째로 내려서 침대 조금 위 (패널 아래 끝 0.49 m, 매트 윗면 ~0.36 m). 아이콘은 패널 오른쪽
     const float MIR_W = 2.4f, MIR_Z = -0.6f, MIR_Y0 = 0.15f, MIR_Y1 = 1.75f, MIR_GAP = 0.06f;   // 20:48 관리자: 수직으로, HQ(전체 반사)
     static readonly Color W = new Color(0.96f, 0.96f, 0.95f, 1f);
     static readonly Color W2 = new Color(0.96f, 0.96f, 0.95f, 0.55f);
@@ -86,7 +86,7 @@ public static class PyriteBedroomPanelBuild
         if (!EnsureProgram("PyriteBedroomPanel")) return false;
         var room = Root("TentBedroom"); if (room == null) { sb.AppendLine("!! TentBedroom 없음"); return false; }
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FA); if (font == null) { sb.AppendLine("!! 글꼴 없음 " + FA); return false; }
-        string need = "BEDROOMSLPMIRAT0123456789:%× NO";
+        string need = "BEDROOMSLPMIRATNUD0123456789:%× NO";
         foreach (var c in need) if (!font.HasCharacter(c)) sb.AppendLine("!! 글꼴에 없는 글자 '" + c + "'");
         var backdrop = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/M_Backdrop.mat");
         if (backdrop == null || !backdrop.HasProperty("_Dim")) { sb.AppendLine("!! M_Backdrop 에 _Dim 없음 (셰이더 갱신 전?)"); return false; }
@@ -107,13 +107,13 @@ public static class PyriteBedroomPanelBuild
         sb.AppendLine("머리맡 벽 기울기 " + (Mathf.Atan2(up.z, up.y) * Mathf.Rad2Deg).ToString("F1") + "° (위가 방 쪽)");
 
         // 아이콘
-        var icon = MakeCanvas(rootGo.transform, "IconCanvas", 140, 140, WallPt(ICON_X, PANEL_Y, 0.07f, 0f), rot);
+        var icon = MakeCanvas(rootGo.transform, "IconCanvas", 140, 140, WallPt(ICON_X, ICON_Y, 0.07f, 0f), rot);
         var iconImg = Img(icon, "Moon", 0, 0, 140, 140, W, sMoon); iconImg.raycastTarget = true;
         var iconBtn = iconImg.gameObject.AddComponent<Button>(); iconBtn.targetGraphic = iconImg; iconBtn.navigation = new Navigation { mode = Navigation.Mode.None };
         var cb = iconBtn.colors; cb.highlightedColor = new Color(1, 1, 1, 0.8f); cb.pressedColor = new Color(1, 1, 1, 0.6f); iconBtn.colors = cb;
 
         // 동영상 아이콘 (달 아이콘 위)
-        var vicon = MakeCanvas(rootGo.transform, "VideoIconCanvas", 140, 140, WallPt(ICON_X, PANEL_Y + 0.17f, 0.07f, 0f), rot);
+        var vicon = MakeCanvas(rootGo.transform, "VideoIconCanvas", 140, 140, WallPt(ICON_X, ICON_Y + 0.17f, 0.07f, 0f), rot);
         var vImg = Img(vicon, "Video", 0, 0, 140, 140, W, sVideo); vImg.raycastTarget = true;
         var vBtn = vImg.gameObject.AddComponent<Button>(); vBtn.targetGraphic = vImg; vBtn.navigation = new Navigation { mode = Navigation.Mode.None };
         var vcb = vBtn.colors; vcb.highlightedColor = new Color(1, 1, 1, 0.8f); vcb.pressedColor = new Color(1, 1, 1, 0.6f); vBtn.colors = vcb;
@@ -129,16 +129,19 @@ public static class PyriteBedroomPanelBuild
         var sleepVal = Txt(pc, "SleepValue", PW - 240, 116, 200, 48, "0%", 30, W, TextAlignmentOptions.MidlineRight);
         var sleep = Sld(pc, "SleepSlider", 40, 172, PW - 80);
 
-        var (mirT, _) = Tgl(pc, "MirrorToggle", 40, 236, 400, "MIRROR");
-        Img(pc, "Div2", 40, 318, PW - 80, 2, W2, sFill);
+        Txt(pc, "NatureLabel", 40, 236, 500, 48, "NATURE SOUNDS", 30, W, TextAlignmentOptions.MidlineLeft, 6f);
+        var natureVal = Txt(pc, "NatureValue", PW - 240, 236, 200, 48, "50%", 30, W, TextAlignmentOptions.MidlineRight);
+        var nature = Sld(pc, "NatureSlider", 40, 292, PW - 80); nature.value = 0.5f;
+        var (mirT, _) = Tgl(pc, "MirrorToggle", 40, 356, 400, "MIRROR");
+        Img(pc, "Div2", 40, 438, PW - 80, 2, W2, sFill);
 
-        var clock = Txt(pc, "Clock", 40, 338, 420, 96, "12:00 AM", 76, W, TextAlignmentOptions.MidlineLeft);
-        Txt(pc, "ClockNote", 42, 432, 420, 32, "NOW", 22, W2, TextAlignmentOptions.MidlineLeft, 6f);
-        var (alarmT, _) = Tgl(pc, "AlarmToggle", 40, 490, 400, "ALARM");
-        var stop = Btn(pc, "Stop", 40, 548, 380, 56, "STOP", 30);
+        var clock = Txt(pc, "Clock", 40, 458, 420, 96, "12:00 AM", 76, W, TextAlignmentOptions.MidlineLeft);
+        Txt(pc, "ClockNote", 42, 552, 420, 32, "NOW", 22, W2, TextAlignmentOptions.MidlineLeft, 6f);
+        var (alarmT, _) = Tgl(pc, "AlarmToggle", 40, 610, 400, "ALARM");
+        var stop = Btn(pc, "Stop", 40, 668, 380, 56, "STOP", 30);
 
         // 알람 시각: 세로 3칸 (AM/PM · 시 · 분), 각 칸 ▲ 값 ▼
-        float colY = 340f, colW = 110f;
+        float colY = 460f, colW = 110f;
         float[] cx = { 480f, 620f, 760f };
         Txt(pc, "Colon", cx[1] + colW - 4, colY + 70, 40, 90, ":", 60, W, TextAlignmentOptions.Center);
         var ampm = Col(pc, "AmPm", cx[0], colY, colW, "AM", "AmPm", "AmPm", false);
@@ -149,6 +152,8 @@ public static class PyriteBedroomPanelBuild
         var mirror = BuildMirror(rootGo.transform);
         // 침실 TV (−X 벽)
         var tvRoot = BuildTV(rootGo.transform);
+        // 자연 소리 (2D, 침실 안에서만)
+        var (natNight, natDay) = BuildNature(rootGo.transform);
 
         // 소리
         var aud = rootGo.AddComponent<AudioSource>();
@@ -167,7 +172,7 @@ public static class PyriteBedroomPanelBuild
         // U#
         var pb = UdonSharpUndo.AddComponent<PyriteBedroomPanel>(rootGo);
         ub = UdonSharpEditorUtility.GetBackingUdonBehaviour(pb);
-        pb.panel = pc.gameObject; pb.mirror = mirror; pb.tvRoot = tvRoot; pb.sleepSlider = sleep; pb.sleepValue = sleepVal; pb.mirrorToggle = mirT;
+        pb.panel = pc.gameObject; pb.mirror = mirror; pb.tvRoot = tvRoot; pb.sleepSlider = sleep; pb.sleepValue = sleepVal; pb.natureSlider = nature; pb.natureValue = natureVal; pb.natureNight = natNight; pb.natureDay = natDay; pb.mirrorToggle = mirT;
         pb.clockText = clock; pb.alarmToggle = alarmT; pb.ampmText = ampm; pb.hourText = hour; pb.minText = min; pb.stopButton = stop.gameObject;
         pb.icon = iconImg; pb.alarmSource = aud; pb.backdrop = backdrop;
         pb.lights = o.Find("Lights") ? o.Find("Lights").GetComponentsInChildren<Light>(true) : new Light[0];
@@ -179,6 +184,7 @@ public static class PyriteBedroomPanelBuild
         Wire(closeB.onClick, "OnClose");
         Wire(stop.onClick, "StopAlarm");
         Wire(sleep.onValueChanged, "OnSleep");
+        Wire(nature.onValueChanged, "OnNature");
         Wire(mirT.onValueChanged, "OnMirror");
         Wire(alarmT.onValueChanged, "OnAlarmToggle");
         foreach (var (n, m) in pending) Hook(n, m);
@@ -232,6 +238,39 @@ public static class PyriteBedroomPanelBuild
         // 테두리·스탠드 없음 (21:13 관리자: 필요 없음)
         sb.AppendLine("거울 " + MIR_W + "×" + h.ToString("F2") + " m 수직(테두리 없음), 중심 " + V(center) + ", 위 끝 벽 틈 " + MIR_GAP + " m · 아래 끝 벽까지 " + (xb + MIR_GAP - xt).ToString("F2") + " m");
         return root;
+    }
+
+    // 자연 소리: 월드의 풀벌레(AMB_N_Crickets_A/B, 밤) · 물가(AMB_Water_ShoreN) 클립을 2D 반복으로. 볼륨은 U# 가 (슬라이더 × 기준 × 밤/낮) 로, 침실 밖이면 0
+    static (AudioSource[], AudioSource[]) BuildNature(Transform parent)
+    {
+        var root = new GameObject("Nature"); root.transform.SetParent(parent, false);
+        var all = Object.FindObjectsOfType<AudioSource>(true);
+        var spType = System.AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+            .FirstOrDefault(t => t.Name == "VRCSpatialAudioSource" && typeof(Component).IsAssignableFrom(t) && !t.IsAbstract);
+        AudioSource[] Make(string[] names)
+        {
+            var list = new List<AudioSource>();
+            foreach (var n in names)
+            {
+                var src = all.FirstOrDefault(a => a.name == n && a.clip != null);
+                if (src == null) { sb.AppendLine("  !! 자연 소리 원본 없음 " + n); continue; }
+                var go = new GameObject(n.Replace("AMB_", "BR_")); go.transform.SetParent(root.transform, false);
+                var a = go.AddComponent<AudioSource>();
+                a.clip = src.clip; a.loop = true; a.playOnAwake = true; a.spatialBlend = 0f; a.volume = 0f; a.dopplerLevel = 0f; a.priority = 200;
+                if (spType != null)
+                {
+                    var so = new SerializedObject(go.AddComponent(spType));
+                    void SB(string pn, bool v) { var p = so.FindProperty(pn); if (p != null) p.boolValue = v; }
+                    SB("EnableSpatialization", false); SB("UseAudioSourceVolumeCurve", true);
+                    var g = so.FindProperty("Gain"); if (g != null) g.floatValue = 0f;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+                sb.AppendLine("  자연 소리 " + go.name + " ← " + src.name + " (" + src.clip.name + ", " + src.clip.length.ToString("F1") + " s, 원본 볼륨 " + src.volume.ToString("F2") + ", 원본 공간 " + src.spatialBlend.ToString("F1") + ")");
+                list.Add(a);
+            }
+            return list.ToArray();
+        }
+        return (Make(new[] { "AMB_N_Crickets_A" }), Make(new[] { "AMB_Water_ShoreN" }));   // Crickets_B 는 같은 클립(A_Crickets)이라 2D 로 겹치면 두 배 소리일 뿐
     }
 
     // 침실 전용 ProTV: Simple (ProTV) 프리팹, 관객 쪽 = 루트 로컬 −Z(유니티 Quad 앞면) → 방 안(+X)을 보게. 화면 폭 TV_W 로 균일 스케일, 화면 위·아래 모서리 중 벽에 가장 가까운 곳에서 TV_GAP
