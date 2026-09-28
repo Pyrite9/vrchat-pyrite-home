@@ -25,6 +25,10 @@ public class PyriteWindowCam : UdonSharpBehaviour
 
     void Start()
     {
+        // 기준점 = 이 오브젝트(BedroomWindowCam)를 씬에 놓은 자리·방향. 에디터에서 옮기면 그대로 따라간다
+        camPos = transform.position;
+        camYaw = transform.eulerAngles.y;
+        mat.SetFloat("_Yaw", camYaw);
         cam.enabled = false;
         mat.SetFloat("_LiveOn", 0f);
     }

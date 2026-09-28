@@ -72,9 +72,12 @@ public static class PyriteWindowCamBuild
         var mat = AssetDatabase.LoadAssetAtPath<Material>(DIR + "/M_Backdrop.mat"); if (mat == null) { sb.AppendLine("!! M_Backdrop 없음"); return false; }
         if (!mat.HasProperty("_LiveOn")) { sb.AppendLine("!! Pyrite/Backdrop 에 _LiveOn 없음 (셰이더 갱신 전?)"); return false; }
 
-        var old = Root(ROOT); if (old) Object.DestroyImmediate(old);
+        // 관리자가 씬에서 옮긴 자리·방향이 있으면 그걸 유지 (U# 도 Start 에서 이 오브젝트 자리를 기준으로 삼는다)
+        var old = Root(ROOT);
+        Vector3 anchor = POS; float yawA = YAW;
+        if (old) { anchor = old.transform.position; yawA = old.transform.eulerAngles.y; sb.AppendLine("기존 자리 유지 " + V(anchor) + " yaw " + yawA.ToString("F1")); Object.DestroyImmediate(old); }
         var go = new GameObject(ROOT);
-        go.transform.SetPositionAndRotation(POS, Quaternion.Euler(0f, YAW, 0f));
+        go.transform.SetPositionAndRotation(anchor, Quaternion.Euler(0f, yawA, 0f));
 
         if (AssetDatabase.LoadAssetAtPath<RenderTexture>(RT_PATH) != null) AssetDatabase.DeleteAsset(RT_PATH);
         var rt = new RenderTexture(W, H, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { name = "RT_WindowCam", antiAliasing = 1, useMipMap = false, wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
@@ -84,7 +87,7 @@ public static class PyriteWindowCamBuild
         var cam = go.AddComponent<Camera>();
         cam.CopyFrom(main);   // ⚠ CopyFrom 은 transform·layer 까지 메인 카메라로 덮는다 → 위치는 그 뒤에
         go.layer = 0;
-        go.transform.SetPositionAndRotation(POS, Quaternion.Euler(0f, YAW, 0f));
+        go.transform.SetPositionAndRotation(anchor, Quaternion.Euler(0f, yawA, 0f));
         cam.targetTexture = rt;
         cam.fieldOfView = VFOV; cam.nearClipPlane = 0.1f; cam.farClipPlane = main.farClipPlane;
         int drop = (1 << 5) | (1 << 10) | (1 << 12) | (1 << 18) | (1 << PyriteBedroomV3.LAYER);
@@ -95,7 +98,7 @@ public static class PyriteWindowCamBuild
 
         var wc = UdonSharpUndo.AddComponent<PyriteWindowCam>(go);
         wc.cam = cam; wc.room = room.transform; wc.mat = mat; wc.radius = 12f; wc.allowLive = true;
-        wc.followHead = true; wc.camPos = POS; wc.camYaw = YAW; wc.eyeLocal = EYE_LOCAL; wc.planeZ = PLANE_Z;
+        wc.followHead = true; wc.camPos = anchor; wc.camYaw = yawA; wc.eyeLocal = EYE_LOCAL; wc.planeZ = PLANE_Z;
         UdonSharpEditorUtility.CopyProxyToUdon(wc); EditorUtility.SetDirty(wc);
 
         float tanV = Mathf.Tan(VFOV * 0.5f * Mathf.Deg2Rad), tanH = tanV * W / (float)H;
@@ -104,7 +107,7 @@ public static class PyriteWindowCamBuild
         mat.SetFloat("_LiveOn", 0f);
         mat.SetVector("_LiveFwd", t.forward); mat.SetVector("_LiveRight", t.right); mat.SetVector("_LiveUp", t.up);
         mat.SetVector("_LiveTan", new Vector4(tanH, tanV, 0, 0));
-        mat.SetFloat("_Yaw", YAW);
+        mat.SetFloat("_Yaw", yawA);
         EditorUtility.SetDirty(mat); AssetDatabase.SaveAssets();
 
         sb.AppendLine("카메라 " + V(POS) + " yaw " + YAW + ", 화각 수직 " + VFOV + "° · 가로 " + (2f * Mathf.Atan(tanH) * Mathf.Rad2Deg).ToString("F0") + "°, RT " + W + "×" + H + ", cullingMask " + cam.cullingMask + " (뺀 레이어 UI·PlayerLocal·UiMenu·MirrorReflection·Bedroom)");
@@ -124,6 +127,8 @@ public static class PyriteWindowCamBuild
         var cam = Camera.main; var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
         var wcam = wcGo.GetComponent<Camera>();
         var mat = AssetDatabase.LoadAssetAtPath<Material>(DIR + "/M_Backdrop.mat");
+        var anchor0 = wcGo.transform.position; var rot0 = wcGo.transform.rotation;
+        sAnchor = anchor0; sYaw = rot0.eulerAngles.y;
         var cyc = Object.FindObjectOfType<PyriteDayCycle>();
         var psr = Object.FindObjectsOfType<ParticleSystemRenderer>().Where(r => r.enabled).ToArray();
         foreach (var r in psr) r.enabled = false;
@@ -170,7 +175,7 @@ public static class PyriteWindowCamBuild
         {
             foreach (var g in stand) if (g) Object.DestroyImmediate(g);
             mat.SetFloat("_LiveOn", 0f);
-            wcam.transform.SetPositionAndRotation(POS, Quaternion.Euler(0f, YAW, 0f)); wcam.nearClipPlane = 0.1f;
+            wcam.transform.SetPositionAndRotation(anchor0, rot0); wcam.nearClipPlane = 0.1f;
             var tt = wcam.transform; mat.SetVector("_LiveFwd", tt.forward); mat.SetVector("_LiveRight", tt.right); mat.SetVector("_LiveUp", tt.up);
             foreach (var r in psr) r.enabled = true;
             cam.fieldOfView = f0; cam.transform.SetPositionAndRotation(p0, r0);
@@ -178,12 +183,13 @@ public static class PyriteWindowCamBuild
         }
     }
 
+    static Vector3 sAnchor; static float sYaw;
     static void Aim(Camera wcam, Transform room, Vector3 eye, Quaternion rot, Material mat)
     {
         Vector3 local = room.InverseTransformPoint(eye);
         Quaternion lrot = Quaternion.Inverse(room.rotation) * rot;
-        Quaternion yaw = Quaternion.Euler(0f, YAW, 0f);
-        wcam.transform.SetPositionAndRotation(POS + yaw * (local - EYE_LOCAL), yaw * lrot);
+        Quaternion yaw = Quaternion.Euler(0f, sYaw, 0f);
+        wcam.transform.SetPositionAndRotation(sAnchor + yaw * (local - EYE_LOCAL), yaw * lrot);
         Vector3 fwdLocal = lrot * Vector3.forward; float d = PLANE_Z - local.z; float near = 0.05f;
         if (d > 0f && fwdLocal.z > 0.2f) near = Mathf.Max(0.05f, (d * fwdLocal.z - 0.35f) * 0.9f);
         wcam.nearClipPlane = near;

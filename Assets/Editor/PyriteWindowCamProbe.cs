@@ -47,6 +47,16 @@ public static class PyriteWindowCamProbe
             float along = Vector2.Dot(x.d, new Vector2(fwd.x, fwd.z)); float side = x.d.x * fwd.z - x.d.y * fwd.x;
             sb.AppendLine("  " + x.d.magnitude.ToString("F2") + " m (앞 " + along.ToString("F2") + ", 옆 " + side.ToString("F2") + ") " + path + " bounds " + x.r.bounds.min.ToString("F2") + ".." + x.r.bounds.max.ToString("F2"));
         }
+        // 타프·줄 구조
+        foreach (var r in Object.FindObjectsOfType<Renderer>().Where(r => { var n = r.name.ToLower(); return n.Contains("tarp") || n.Contains("rope") || n.Contains("guy") || n.Contains("string") || n.Contains("line") || n.Contains("peg") || n.Contains("stake"); }))
+        {
+            var t = r.transform; string path = t.name; while (t.parent) { t = t.parent; path = t.name + "/" + path; }
+            var mf = r.GetComponent<MeshFilter>(); var m = mf ? mf.sharedMesh : null;
+            sb.AppendLine("  TARP? " + path + " layer " + r.gameObject.layer + " static " + r.gameObject.isStatic + " mesh " + (m ? m.name + " sub " + m.subMeshCount + " tris " + (m.triangles.Length / 3) : "-")
+                + " mats [" + string.Join(", ", r.sharedMaterials.Select(x => x ? x.name + "/" + x.shader.name + " @" + AssetDatabase.GetAssetPath(x) : "null")) + "] bounds " + r.bounds.min.ToString("F1") + ".." + r.bounds.max.ToString("F1"));
+            if (m != null && m.subMeshCount > 1)
+                for (int s = 0; s < m.subMeshCount; s++) { var b = m.GetSubMesh(s).bounds; sb.AppendLine("     sub " + s + " tris " + m.GetSubMesh(s).indexCount / 3 + " local bounds " + b.min.ToString("F2") + ".." + b.max.ToString("F2")); }
+        }
         var go = new GameObject("_WinCamProbe"); go.hideFlags = HideFlags.HideAndDontSave;
         var cam = go.AddComponent<Camera>();
         var main = Camera.main;
