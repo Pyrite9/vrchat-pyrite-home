@@ -245,7 +245,7 @@ public static class PyriteSettingsUI
             var (_, gdim, _) = Btn(guide.transform, "Dim", -PAD, 0, CW, H, "", "CloseGuide");
             gdim.sprite = null; gdim.type = Image.Type.Simple; gdim.color = new Color(0f, 0f, 0f, 0.8f);
             var gcb = gdim.GetComponent<Button>().colors; gcb.highlightedColor = Color.white; gcb.pressedColor = Color.white; gdim.GetComponent<Button>().colors = gcb;
-            const float gx0 = 200f, gy0 = 80f, gw = 1520f, gh = 920f;
+            const float gx0 = 200f, gy0 = 40f, gw = 1520f, gh = 1000f;   // 15개(8+7) → 높이 920 → 1000
             var gbox = Img(guide.transform, "Box", gx0, gy0, gw, gh, new Color(0.045f, 0.05f, 0.06f, 1f), spr); gbox.raycastTarget = true;
             Img(gbox.transform, "Edge", 0, 0, gw, 3, new Color(GOLD.r, GOLD.g, GOLD.b, 0.6f), null);
             L(Txt(gbox.transform, "Title", 60, 36, 1100, 60, "", 42, GOLD, spacing: 6f), S["guideTitle"]);
@@ -253,13 +253,13 @@ public static class PyriteSettingsUI
             Img(gbox.transform, "Divider", 60, 116, gw - 120, 2, new Color(GOLD.r, GOLD.g, GOLD.b, 0.3f), null);
             for (int i = 0; i < GUIDE.Length; i++)
             {
-                int col = i / 7, row = i % 7;
-                float ix = 60f + col * 720f, iy = 136f + row * 104f;   // 두 줄 설명이 다음 이름에 붙지 않게 104
+                int col = i / 8, row = i % 8;
+                float ix = 60f + col * 720f, iy = 136f + row * 100f;   // 두 줄 설명(36+54)이 다음 이름에 붙지 않게 100
                 L(Txt(gbox.transform, "Name" + i, ix, iy, 680, 36, "", 28, GOLD), S[GUIDE[i] + "N"]);
                 var d = Txt(gbox.transform, "Desc" + i, ix, iy + 36, 680, 54, "", 21, GREY); d.alignment = TextAlignmentOptions.TopLeft;
                 L(d, S[GUIDE[i] + "D"]);
             }
-            L(Txt(gbox.transform, "Foot", 60, 860, gw - 120, 40, "", 22, GREY), S["guideFoot"]);
+            L(Txt(gbox.transform, "Foot", 60, 940, gw - 120, 40, "", 22, GREY), S["guideFoot"]);
         }
         guide.SetActive(false);
 
@@ -447,6 +447,8 @@ public static class PyriteSettingsUI
         ["gChrD"] = ("Grab the backrest to move, press the seat to sit. More on page 2.", "등받이를 잡아 옮기고 자리를 누르면 앉습니다. 설정 2쪽에서 개수를 바꿉니다."),
         ["gCotN"] = ("Cot", "야전침대"),
         ["gCotD"] = ("Press to lie down.", "누르면 눕습니다."),
+        ["gTntN"] = ("Tent", "텐트"),
+        ["gTntD"] = ("Press to go inside. By the bed: sleep mode, nature sounds, mirror, alarm, and a TV.", "누르면 안으로 들어갑니다. 침대 머리맡에서 수면 모드 · 자연 소리 · 거울 · 알람 · TV."),   // 2026-09-28 22:16 관리자 요청
         ["gMatN"] = ("Picnic mat", "돗자리"),
         ["gMatD"] = ("Press to lie down. Grab the foot end to move it.", "누르면 눕습니다. 발치 쪽을 잡으면 옮길 수 있습니다."),
         ["gSkwN"] = ("Marshmallows", "마시멜로"),
@@ -476,7 +478,7 @@ public static class PyriteSettingsUI
     };
 
     // 상호작용 사물 목록 (문구 키 앞부분 — N 이름 / D 설명). 왼쪽 열 7개 → 오른쪽 열
-    static readonly string[] GUIDE = { "gSet", "gVid", "gMir", "gLan", "gChr", "gCot", "gMat", "gSkw", "gKet", "gMug", "gScp", "gStn", "gBt", "gPen" };
+    static readonly string[] GUIDE = { "gSet", "gVid", "gMir", "gLan", "gChr", "gCot", "gTnt", "gMat", "gSkw", "gKet", "gMug", "gScp", "gStn", "gBt", "gPen" };
 
     static void L(TextMeshProUGUI t, (string en, string ko) s) { loc.Add((t, s.en, s.ko)); }
 

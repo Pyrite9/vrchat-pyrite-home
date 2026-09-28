@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: PP_UserBright
   m_EditorClassIdentifier: 
   settings:
-  - {fileID: 5969889092812262482}
---- !u!114 &5969889092812262482
+  - {fileID: 3587996464202664984}
+--- !u!114 &3587996464202664984
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
