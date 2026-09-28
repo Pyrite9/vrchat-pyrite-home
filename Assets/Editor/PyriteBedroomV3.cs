@@ -33,6 +33,31 @@ public static class PyriteBedroomV3
     // 창 v2 (2026-09-28 18:08 관리자 "넓이 5배"): 1.8×1.2 m r 0.22 (2.12 m²) → 4.6×2.3 m r 0.45 (10.4 m², ×4.9), 아래 끝 y 0.15 · 위 끝 2.45
     public static readonly Vector2 WIN_C = new Vector2(0f, 1.30f), WIN_H = new Vector2(2.3f, 1.15f);
     public const float WIN_R = 0.45f;
+    // 창 v3 (18:18 관리자 "폴에 맞게 유동적으로"): 양옆 = 대각 폴(앞면에서 xy 투영하면 타원 x²/3.03² + y²/3.3² = 1)에서 WIN_M 안쪽, 아래 WIN_Y0 · 위 WIN_Y1 에서 자름, 모서리 WIN_RA
+    public const bool WIN_ARCH = true;
+    public const float WIN_M = 0.25f, WIN_Y0 = 0.15f, WIN_Y1 = 2.70f, WIN_RA = 0.35f;
+    static float PoleAx => PyriteBedroomBuild.A * Mathf.Pow(Mathf.Cos(Mathf.PI / 4f), 2f / PyriteBedroomBuild.N);
+    static Vector2 WinE => new Vector2(PoleAx - WIN_M, PyriteBedroomBuild.H - WIN_M);
+    static Vector2 WinCenter => WIN_ARCH ? new Vector2(0f, (WIN_Y0 + WIN_Y1) * 0.5f) : WIN_C;
+    static float RMax(float a, float b, float r) { float qa = a + r, qb = b + r; return new Vector2(Mathf.Max(qa, 0), Mathf.Max(qb, 0)).magnitude + Mathf.Min(Mathf.Max(qa, qb), 0) - r; }
+    // 창 모양 거리(음수 = 창 안). 셰이더 Pyrite/TentCanvas 의 sdArch 와 같은 식
+    public static float WinSd(Vector2 p)
+    {
+        if (!WIN_ARCH) return SdRR(p - WIN_C, WIN_H, WIN_R);
+        var e = WinE;
+        float k0 = new Vector2(p.x / e.x, p.y / e.y).magnitude, k1 = new Vector2(p.x / (e.x * e.x), p.y / (e.y * e.y)).magnitude;
+        float dE = k0 * (k0 - 1f) / Mathf.Max(k1, 1e-4f);
+        return RMax(RMax(dE, WIN_Y0 - p.y, WIN_RA), p.y - WIN_Y1, WIN_RA);
+    }
+    // 중심에서 방향 dir 로 경계까지 거리 (이분법, 창은 별 모양)
+    static float WinRay(Vector2 c, Vector2 dir) { float lo = 0f, hi = 4f; for (int i = 0; i < 40; i++) { float m = (lo + hi) * 0.5f; if (WinSd(c + dir * m) < 0) lo = m; else hi = m; } return lo; }
+    static List<Vector2> WinLoop()
+    {
+        if (!WIN_ARCH) return RoundRectLoop(0f);
+        var c = WinCenter; var pts = new List<Vector2>();
+        for (int k = 0; k < 180; k++) { float a = 2f * Mathf.PI * k / 180; var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a)); pts.Add(c + d * WinRay(c, d)); }
+        return pts;
+    }
     static readonly Vector3 CAPTURE = new Vector3(-3.4f, 0f, 51.0f);
     const float CAPTURE_EYE = 0.9f, CAPTURE_HOUR = 20.4f;
     const string PANO = DIR + "/NightPano.png";
@@ -102,10 +127,14 @@ public static class PyriteBedroomV3
                 SetupCanvas(room);
                 foreach (var r in win.GetComponentsInChildren<Renderer>(true)) r.gameObject.layer = LAYER;
                 foreach (var r in win.GetComponentsInChildren<Renderer>(true)) r.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-                float area = 4f * WIN_H.x * WIN_H.y - (4f - Mathf.PI) * WIN_R * WIN_R;
-                sb.AppendLine("창 " + (2 * WIN_H.x) + "×" + (2 * WIN_H.y) + " m r " + WIN_R + " = " + area.ToString("F2") + " m² (이전 2.12), y " + (WIN_C.y - WIN_H.y).ToString("F2") + "~" + (WIN_C.y + WIN_H.y).ToString("F2"));
-                foreach (var y in new[] { WIN_C.y - WIN_H.y, WIN_C.y, WIN_C.y + WIN_H.y })
-                    sb.AppendLine("  벽 z at y " + y.ToString("F2") + ": x 0 → " + PyriteBedroomBuild.SurfZ(0, y).ToString("F2") + ", x ±" + (WIN_H.x - WIN_R).ToString("F2") + " → " + PyriteBedroomBuild.SurfZ(WIN_H.x - WIN_R, y).ToString("F2"));
+                int cells = 0; for (int i = -400; i <= 400; i++) for (int j = 0; j <= 340; j++) if (WinSd(new Vector2(i * 0.01f, j * 0.01f)) < 0) cells++;
+                sb.AppendLine("창 모양 " + (WIN_ARCH ? "폴 따라(타원 " + WinE.x.ToString("F2") + "×" + WinE.y.ToString("F2") + ", 폴 안쪽 " + WIN_M + " m, y " + WIN_Y0 + "~" + WIN_Y1 + ", 모서리 " + WIN_RA + ")" : "둥근 사각") + " 넓이 " + (cells * 0.0001f).ToString("F2") + " m² (사각 v2 10.41, v1 2.12)");
+                foreach (var y in new[] { 0.3f, 0.8f, 1.3f, 1.8f, 2.3f, 2.6f })
+                {
+                    float hx = WinRay(new Vector2(0, y), Vector2.right);
+                    float pole = PoleAx * Mathf.Sqrt(Mathf.Max(0f, 1f - y * y / (PyriteBedroomBuild.H * PyriteBedroomBuild.H)));
+                    sb.AppendLine("  y " + y.ToString("F1") + ": 창 반폭 " + hx.ToString("F2") + " / 폴 x " + pole.ToString("F2") + " (틈 " + (pole - hx).ToString("F2") + ")");
+                }
                 EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
                 EditorSceneManager.SaveOpenScenes();
                 Renders();
@@ -201,7 +230,9 @@ public static class PyriteBedroomV3
         m.SetColor("_Color", c); m.SetFloat("_Glossiness", 0.12f); m.SetFloat("_Weave", 0.08f);
         m.SetVector("_WinC", new Vector4(WIN_C.x, WIN_C.y, 0, 0));
         m.SetVector("_WinH", new Vector4(WIN_H.x, WIN_H.y, 0, 0));
-        m.SetFloat("_WinR", WIN_R); m.SetFloat("_WinSide", 1f);
+        m.SetFloat("_WinR", WIN_ARCH ? WIN_RA : WIN_R); m.SetFloat("_WinSide", 1f);
+        m.SetFloat("_WinMode", WIN_ARCH ? 1f : 0f);
+        m.SetVector("_WinE", new Vector4(WinE.x, WinE.y, 0, 0)); m.SetVector("_WinY", new Vector4(WIN_Y0, WIN_Y1, 0, 0));
         EditorUtility.SetDirty(m);
         sb.AppendLine("천 셰이더 Pyrite/TentCanvas, 창 " + (2 * WIN_H.x) + "×" + (2 * WIN_H.y) + " m 중심 y " + WIN_C.y);
     }
@@ -606,8 +637,9 @@ public static class PyriteBedroomV3
     {
         // TPU 판: 격자, 둥근 사각 안쪽 칸만
         var v = new List<Vector3>(); var t = new List<int>(); var uv = new List<Vector2>();
-        int nx = 40, ny = 28;
+        int nx = WIN_ARCH ? 64 : 40, ny = WIN_ARCH ? 40 : 28;
         float x0 = -WIN_H.x - 0.02f, x1 = WIN_H.x + 0.02f, y0 = WIN_C.y - WIN_H.y - 0.02f, y1 = WIN_C.y + WIN_H.y + 0.02f;
+        if (WIN_ARCH) { x0 = -WinE.x - 0.02f; x1 = WinE.x + 0.02f; y0 = WIN_Y0 - 0.02f; y1 = WIN_Y1 + 0.02f; }
         var idx = new int[(nx + 1) * (ny + 1)];
         for (int j = 0; j <= ny; j++)
             for (int i = 0; i <= nx; i++)
@@ -620,7 +652,7 @@ public static class PyriteBedroomV3
             {
                 int a = idx[j * (nx + 1) + i], b = idx[j * (nx + 1) + i + 1], c = idx[(j + 1) * (nx + 1) + i], d = idx[(j + 1) * (nx + 1) + i + 1];
                 var ctr = (uv[a] + uv[d]) / 2f;
-                if (SdRR(ctr - WIN_C, WIN_H, WIN_R) > 0.03f) continue;
+                if (WinSd(ctr) > 0.03f) continue;
                 t.AddRange(new[] { a, b, c, b, d, c });
             }
         FixWinding(v, t, Vector3.back);
@@ -628,13 +660,13 @@ public static class PyriteBedroomV3
         pane.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
 
         // 테두리: 경계를 따라 안 0.05 / 밖 0.04
-        var loop = RoundRectLoop(0f);
+        var loop = WinLoop();
         var tv = new List<Vector3>(); var tt = new List<int>(); var tuv = new List<Vector2>();
         for (int k = 0; k < loop.Count; k++)
         {
             var p = loop[k];
-            var g = new Vector2(SdRR(p + new Vector2(0.001f, 0) - WIN_C, WIN_H, WIN_R) - SdRR(p - new Vector2(0.001f, 0) - WIN_C, WIN_H, WIN_R),
-                                SdRR(p + new Vector2(0, 0.001f) - WIN_C, WIN_H, WIN_R) - SdRR(p - new Vector2(0, 0.001f) - WIN_C, WIN_H, WIN_R)).normalized;
+            var g = new Vector2(WinSd(p + new Vector2(0.001f, 0)) - WinSd(p - new Vector2(0.001f, 0)),
+                                WinSd(p + new Vector2(0, 0.001f)) - WinSd(p - new Vector2(0, 0.001f))).normalized;
             tv.Add(OnWall(p - g * 0.05f, 0.010f)); tv.Add(OnWall(p + g * 0.04f, 0.010f));
             tuv.Add(new Vector2(k / (float)loop.Count, 0)); tuv.Add(new Vector2(k / (float)loop.Count, 1));
         }
@@ -649,11 +681,13 @@ public static class PyriteBedroomV3
         // 말아 올린 덮개 (창 위)
         var roll = GameObject.CreatePrimitive(PrimitiveType.Cylinder); Object.DestroyImmediate(roll.GetComponent<Collider>());
         roll.name = "RolledFlap"; roll.transform.SetParent(win, false);
-        float ry = WIN_C.y + WIN_H.y + 0.09f;
+        float topY = WIN_ARCH ? WIN_Y1 : WIN_C.y + WIN_H.y;
+        float topHalf = WIN_ARCH ? WinRay(new Vector2(0, topY - 0.05f), Vector2.right) : WIN_H.x;
+        float ry = topY + 0.09f;
         roll.transform.localPosition = new Vector3(0, ry, PyriteBedroomBuild.SurfZ(0, ry) - 0.06f);
-        roll.transform.localRotation = Quaternion.Euler(0, 0, 90); roll.transform.localScale = new Vector3(0.09f, WIN_H.x + 0.02f, 0.09f);
+        roll.transform.localRotation = Quaternion.Euler(0, 0, 90); roll.transform.localScale = new Vector3(0.09f, topHalf + 0.02f, 0.09f);
         roll.GetComponent<Renderer>().sharedMaterial = Mat("M_TentFlapRoll", new Color(0.50f, 0.37f, 0.24f), 0.1f);
-        foreach (var sx in new[] { -0.6f * WIN_H.x, 0.6f * WIN_H.x })
+        foreach (var sx in new[] { -0.6f * topHalf, 0.6f * topHalf })
         {
             var tie = Box(win, "Tie", new Vector3(sx, ry + 0.02f, PyriteBedroomBuild.SurfZ(sx, ry) - 0.055f), new Vector3(0.025f, 0.12f, 0.10f), Mat("M_WindowTrim", new Color(0.11f, 0.10f, 0.09f), 0.2f));
             tie.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
