@@ -12,8 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - ENABLE_AVOIDANCE
   - ENABLE_COLOR_VARIATION
+  - ENABLE_EMISSION
   - ENABLE_HEIGHT_VARIATION
   - ENABLE_LIGHTPROBE
   - ENABLE_SHADOW
@@ -46,7 +46,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmiTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 61b0b1b98bce0bb49a20f25a591c445c, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
@@ -146,13 +146,13 @@ Material:
     - _DistortionStrength: 1
     - _DistortionStrengthScaled: 0
     - _DstBlend: 0
-    - _EmiInt: 1
+    - _EmiInt: 0
     - _EmissionEnabled: 0
     - _EnaAtlas: 0
-    - _EnaAvd: 1
+    - _EnaAvd: 0
     - _EnaBtm: 0
     - _EnaColAdj: 0
-    - _EnaEmi: 0
+    - _EnaEmi: 1
     - _EnaFar: 1
     - _EnaHei: 1
     - _EnaLgt: 0
@@ -232,7 +232,7 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _Ctr: {r: 0, g: 0, b: 0, a: 0}
     - _EmiCol: {r: 1.5660377, g: 1.5660377, b: 1.5660377, a: 0}
-    - _EmiColor: {r: 1.6479115, g: 1.6479115, b: 1.6479115, a: 1}
+    - _EmiColor: {r: 0.9883373, g: 0.9883373, b: 0.9883373, a: 1}
     - _EmissionColor: {r: 0.6854237, g: 0.9623886, b: 1.4980394, a: 1}
     - _HeiTex_ST: {r: 1, g: 1, b: 0, a: 0}
     - _MainCol: {r: 1, g: 1, b: 1, a: 1}

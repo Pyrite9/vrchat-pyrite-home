@@ -154,6 +154,8 @@ public static class PyriteSettingsUI
         L(Txt(cView, "Darker", 32, 178, 240, 28, "", 20, GREY), S["darker"]);
         L(Txt(cView, "Brighter", 281, 178, 240, 28, "", 20, GREY, TextAlignmentOptions.Right), S["brighter"]);
         var (bloomT, bloomL) = Tgl(cView, "Bloom", 32, 240, 489, true, "OnBloom"); L(bloomL, S["bloom"]);
+        // 2026-09-28 관리자: 밤 꽃 빛 (벤더 Night 발광, 로컬, 기본 켬) — DayCycle.SetFlowerGlow
+        var (glowT, glowL) = Tgl(cView, "NightFlowers", 32, 300, 489, true, "OnNightFlowers"); L(glowL, S["nightFlowers"]);
 
         // 반사
         var cRefl = Card("CardReflect", 2, 0, "refl");
@@ -274,6 +276,7 @@ public static class PyriteSettingsUI
         st.timeSlider = timeSlider; st.timeText = timeText; st.autoToggle = autoT;
         st.brightSlider = brightSlider; st.ppBright = vBright; st.ppDark = vDark; st.bloomToggle = bloomT; st.ppNoBloom = vNoBloom;
         st.lakeToggle = lakeT; st.lakeMirror = lakeMirror; st.campMirrorToggle = mirT; st.campMirror = campMirror;
+        st.nightFlowersToggle = glowT;
         st.soundSlider = soundSlider; st.soundText = soundText;
         st.flowersToggle = flT; st.firefliesToggle = ffT; st.shadowsToggle = shT;
         st.flowerDistSlider = flDist; st.flowerDistText = flDistText; st.lightShadowsToggle = lsT;
@@ -393,6 +396,7 @@ public static class PyriteSettingsUI
         ["darker"] = ("Darker", "어둡게"),
         ["brighter"] = ("Brighter", "밝게"),
         ["bloom"] = ("Bloom", "블룸 효과"),
+        ["nightFlowers"] = ("Glowing flowers at night", "밤에 빛나는 꽃"),
         ["refl"] = ("REFLECTIONS", "반사"),
         ["lake"] = ("Lake reflection", "호수 반사"),
         ["mirror"] = ("Mirror", "거울"),

@@ -55,6 +55,7 @@ public static class PyriteFloraField
         m.SetColor("_MainColor", new Color(0.66f, 0.66f, 0.66f, 1f));  // 0.8 → 살짝 낮춤
         m.enableInstancing = true;
         m.renderQueue = -1;
+        PyriteFloraDense.ApplyFlowerMaterial(m);   // 2026-09-28: 젖혀짐 끔 + 밤 발광 (재생성해도 유지)
         EditorUtility.SetDirty(m);
         return m;
     }

@@ -84,6 +84,10 @@ public class PyriteDayCycle : UdonSharpBehaviour
     public Renderer[] flowerRenderers;
     public Material flowerMat;
     public Color[] flowerColor;
+    // 밤 꽃 빛 (2026-09-28 관리자): 벤더 Night 머티리얼의 발광을 같은 머티리얼에서 _EmiInt 로만 켠다(키워드는 에디터 Z45d 가 켜 둠)
+    //  세기 = flowerGlowInt × flowerGlow(설정 토글, 로컬) × 해 고도 페이드(−1° → −9° 에서 0 → 1)
+    public float flowerGlowInt = 1.0f;
+    [HideInInspector] public float flowerGlow = 1f;
 
     [Header("수면 시머")]
     public Material shimmerMat;
@@ -223,6 +227,12 @@ public class PyriteDayCycle : UdonSharpBehaviour
         float h = CurrentHour();
         hourAtSync = h; syncStamp = Networking.GetServerTimeInSeconds(); dayMinutes = m;
         RequestSerialization();
+    }
+
+    public void SetFlowerGlow(float v)
+    {
+        flowerGlow = Mathf.Clamp01(v);
+        EvaluateAt(CurrentHour());
     }
 
     public void SetSoundScale(float v)
@@ -436,7 +446,13 @@ public class PyriteDayCycle : UdonSharpBehaviour
 
         if (cliffMat != null) cliffMat.SetColor("_Color", C(cliffColor));
         if (waterMat != null) { waterMat.SetColor("_BaseColor", C(waterBase)); waterMat.SetColor("_DeepColor", C(waterDeep)); }
-        if (flowerMat != null) flowerMat.SetColor("_MainColor", C(flowerColor));
+        if (flowerMat != null)
+        {
+            flowerMat.SetColor("_MainColor", C(flowerColor));
+            float nightK = Mathf.Clamp01((-sEl - 1f) / 8f);
+            nightK = nightK * nightK * (3f - 2f * nightK);
+            flowerMat.SetFloat("_EmiInt", flowerGlowInt * flowerGlow * nightK);
+        }
         if (shimmerMat != null) shimmerMat.SetFloat("_Gain", F(shimmerGain));
 
         float rate = F(ffRateMul);
