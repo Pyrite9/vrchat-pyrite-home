@@ -4,7 +4,8 @@
 //  루트 TentBedroom/Bedside
 //   NightstandR (1.50, −2.05): 협탁 + 탁상시계(TMP 3D, PyriteBedroomPanel.deskClock 이 PC 시각·알람 표시) + 물병(Props/WaterBottle 이동)
 //   NightstandL (−1.55, −2.05): 작은 협탁. Mood/StarLamp 를 위로 옮기고 외형 교체(나무 받침 + 별이 박힌 발광 구). 광원·쿠키·패널 연결은 그대로
-//   Trunk (1.52, −1.05): 긴 축 z. 뚜껑 = 벽 쪽 경첩, 누르면 열림(PyriteTrunkLid, 동기화). 안에 접힌 담요
+//   Container (1.52, −1.20): 폴딩 컨테이너(올리브 PP + 나무 상판), 긴 축 z. 뚜껑 = 벽 쪽 경첩, 누르면 열림(PyriteTrunkLid, 동기화). 안에 접힌 담요
+//    (8adc782 의 가죽 트렁크는 캠핑과 안 어울린다는 관리자 의견으로 교체)
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
@@ -28,12 +29,12 @@ public static class PyriteBedside
 
     static readonly Vector3 NS_R = new Vector3(1.50f, 0f, -2.05f);
     static readonly Vector3 NS_L = new Vector3(-1.55f, 0f, -2.05f);
-    static readonly Vector3 TRUNK = new Vector3(1.52f, 0f, -1.05f);
+    static readonly Vector3 CONTAINER = new Vector3(1.52f, 0f, -1.20f);    // 협탁 쪽으로 붙임 (트렁크 때 −1.05)
     static readonly Vector3 CLOCK_AIM = new Vector3(0.55f, 0f, -1.30f);          // 누운 자리(Lie_3·4)와 방 쪽
     static readonly Vector3 LAMP_OLD = new Vector3(-1.50f, 0f, -2.10f);          // PyriteBedroomMood.LAMP_POS
     static readonly Vector3 BOTTLE_OLD = new Vector3(1.30f, 0f, -2.05f);         // PyriteBedroomProps 물병
     const float NS_W = 0.38f, NS_H = 0.40f, NS_W_L = 0.32f, NS_H_L = 0.36f;
-    const float TR_W = 0.46f, TR_L = 0.85f, TR_H = 0.36f, LID_H = 0.08f;
+    const float CT_W = 0.40f, CT_L = 0.62f, CT_H = 0.32f;
     static readonly Color CLOCK_COL = new Color(1f, 0.58f, 0.22f, 1f);
     static StringBuilder sb;
     static int tris;
@@ -109,9 +110,7 @@ public static class PyriteBedside
         var lt = o.Find("Furniture/LowTable"); var ltr = lt ? lt.GetComponentsInChildren<Renderer>(true).FirstOrDefault() : null;
         var wood = ltr ? ltr.sharedMaterial : Mat("M_BedsideWood", new Color(0.42f, 0.27f, 0.15f), 0.25f);
         sb.AppendLine("나무 재질: " + (wood ? wood.name + " (" + (wood.shader ? wood.shader.name : "?") + ")" : "없음") + (ltr ? " ← LowTable 재사용" : " (새로 만듦)"));
-        var trunkWood = Mat("M_TrunkWood", new Color(0.30f, 0.17f, 0.09f), 0.30f);
-        if (wood && wood.HasProperty("_MainTex") && wood.mainTexture) { trunkWood.mainTexture = wood.mainTexture; trunkWood.color = wood.color * new Color(0.62f, 0.55f, 0.50f, 1f); }
-        var leather = Mat("M_TrunkLeather", new Color(0.13f, 0.08f, 0.05f), 0.38f);
+        foreach (var n in new[] { "M_TrunkWood", "M_TrunkLeather", "M_TrunkLining" }) AssetDatabase.DeleteAsset(DIR + n + ".mat");   // 트렁크(8adc782) 재질 정리
         var brass = Mat("M_Brass", new Color(0.72f, 0.54f, 0.26f), 0.62f, 0.85f);
 
         // ── 오른쪽 협탁 + 시계 + 물병 ──
@@ -126,7 +125,7 @@ public static class PyriteBedside
         MoveLamp(o, NS_L + new Vector3(0f, NS_H_L, 0f), wood);
 
         // ── 트렁크 ──
-        BuildTrunk(root, o, trunkWood, leather, brass);
+        BuildContainer(root, o, wood);
 
         foreach (var r in root.GetComponentsInChildren<Renderer>(true))
         {
@@ -252,62 +251,64 @@ public static class PyriteBedside
         return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
     }
 
-    // ── 트렁크: 몸통 + 가죽띠 + 황동 모서리 + 손잡이, 뚜껑은 벽 쪽(+x) 경첩 ──
-    static void BuildTrunk(Transform root, Transform room, Material wood, Material leather, Material brass)
+    // ── 폴딩 컨테이너 (2026-09-30 관리자: 트렁크는 캠핑과 안 어울림 → 에어매트리스와 같은 현대 캠핑 톤) ──
+    //  올리브 PP 몸통(속 빔, 벽 1.2 cm) + 접이 이음선 · 세로 리브 · 모서리 기둥 · 끝면 손잡이 홈, 뚜껑 = PP 판 + 나무 상판, 앞 걸쇠 2
+    static void BuildContainer(Transform root, Transform room, Material wood)
     {
-        var t = new GameObject("Trunk").transform; t.SetParent(root, false); t.localPosition = TRUNK;
-        // 속이 빈 몸통: 바닥 + 벽 4 (두께 2 cm) + 안감(짙은 붉은 펠트)
-        const float WT = 0.02f;
-        var lining = Mat("M_TrunkLining", new Color(0.26f, 0.06f, 0.05f), 0.05f);
-        Box(t, "Bottom", new Vector3(0, 0.025f, 0), new Vector3(TR_W, 0.03f, TR_L), wood);
-        Box(t, "WallFront", new Vector3(-TR_W / 2f + WT / 2f, TR_H / 2f, 0), new Vector3(WT, TR_H, TR_L), wood);
-        Box(t, "WallBack", new Vector3(TR_W / 2f - WT / 2f, TR_H / 2f, 0), new Vector3(WT, TR_H, TR_L), wood);
-        foreach (var sz in new[] { -1, 1 }) Box(t, "WallEnd", new Vector3(0, TR_H / 2f, sz * (TR_L / 2f - WT / 2f)), new Vector3(TR_W - 2f * WT, TR_H, WT), wood);
-        Box(t, "Lining", new Vector3(0, 0.041f, 0), new Vector3(TR_W - 2f * WT, 0.002f, TR_L - 2f * WT), lining);
-        // 가죽띠: 바깥면에만 (앞·뒤·바닥 띠) — 통짜 상자로 하면 속을 가로지름
-        foreach (var z in new[] { -0.24f, 0.24f })
-        {
-            Box(t, "StrapF", new Vector3(-TR_W / 2f - 0.003f, TR_H / 2f, z), new Vector3(0.006f, TR_H, 0.05f), leather);
-            Box(t, "StrapB", new Vector3(TR_W / 2f + 0.003f, TR_H / 2f, z), new Vector3(0.006f, TR_H, 0.05f), leather);
-        }
+        var pp = Mat("M_ContainerPP", new Color(0.30f, 0.32f, 0.22f), 0.30f);
+        var ppd = Mat("M_ContainerPPDark", new Color(0.19f, 0.20f, 0.14f), 0.25f);
+        var blk = Mat("M_ContainerBlack", new Color(0.05f, 0.05f, 0.05f), 0.40f);
+        var t = new GameObject("Container").transform; t.SetParent(root, false); t.localPosition = CONTAINER;
+        const float WT = 0.012f;
+        Box(t, "Bottom", new Vector3(0, 0.02f, 0), new Vector3(CT_W, 0.02f, CT_L), pp);
+        Box(t, "Base", new Vector3(0, 0.008f, 0), new Vector3(CT_W + 0.006f, 0.016f, CT_L + 0.006f), ppd);
+        Box(t, "WallFront", new Vector3(-CT_W / 2f + WT / 2f, CT_H / 2f, 0), new Vector3(WT, CT_H, CT_L), pp);
+        Box(t, "WallBack", new Vector3(CT_W / 2f - WT / 2f, CT_H / 2f, 0), new Vector3(WT, CT_H, CT_L), pp);
+        foreach (var sz in new[] { -1, 1 }) Box(t, "WallEnd", new Vector3(0, CT_H / 2f, sz * (CT_L / 2f - WT / 2f)), new Vector3(CT_W - 2f * WT, CT_H, WT), pp);
+        Box(t, "Floor", new Vector3(0, 0.031f, 0), new Vector3(CT_W - 2f * WT, 0.002f, CT_L - 2f * WT), ppd);
+        // 접이 이음선 (바깥 4면, 높이 0.45)
+        float sy = CT_H * 0.45f;
+        foreach (var sx in new[] { -1, 1 }) Box(t, "Seam", new Vector3(sx * (CT_W / 2f + 0.002f), sy, 0), new Vector3(0.004f, 0.008f, CT_L - 0.04f), ppd);
+        foreach (var sz in new[] { -1, 1 }) Box(t, "Seam", new Vector3(0, sy, sz * (CT_L / 2f + 0.002f)), new Vector3(CT_W - 0.04f, 0.008f, 0.004f), ppd);
+        // 긴 면 세로 리브 3개씩
+        foreach (var sx in new[] { -1, 1 }) foreach (var z in new[] { -0.19f, 0f, 0.19f })
+            Box(t, "Rib", new Vector3(sx * (CT_W / 2f + 0.003f), CT_H * 0.55f, z), new Vector3(0.006f, CT_H * 0.70f, 0.022f), pp);
+        // 모서리 기둥
         foreach (var (sx, sz) in new[] { (1, 1), (1, -1), (-1, 1), (-1, -1) })
-        {
-            Box(t, "Corner", new Vector3(sx * TR_W / 2f, TR_H / 2f, sz * TR_L / 2f), new Vector3(0.036f, TR_H + 0.004f, 0.036f), brass);
-            Box(t, "Foot", new Vector3(sx * (TR_W / 2f - 0.04f), 0.006f, sz * (TR_L / 2f - 0.05f)), new Vector3(0.05f, 0.012f, 0.05f), brass);
-        }
-        foreach (var sz in new[] { -1, 1 }) Box(t, "Handle", new Vector3(0, TR_H * 0.62f, sz * (TR_L / 2f + 0.014f)), new Vector3(0.13f, 0.026f, 0.02f), leather);
-        Col(t, new Vector3(0, TR_H / 2f, 0), new Vector3(TR_W, TR_H, TR_L));
+            Box(t, "Post", new Vector3(sx * (CT_W / 2f - 0.008f), CT_H / 2f, sz * (CT_L / 2f - 0.008f)), new Vector3(0.028f, CT_H, 0.028f), pp);
+        // 끝면 손잡이 홈
+        foreach (var sz in new[] { -1, 1 }) Box(t, "Grip", new Vector3(0, CT_H * 0.80f, sz * (CT_L / 2f + 0.001f)), new Vector3(0.13f, 0.030f, 0.004f), blk);
+        Col(t, new Vector3(0, CT_H / 2f, 0), new Vector3(CT_W, CT_H, CT_L));
 
-        // 안: 접힌 예비 담요 2장 (침대 발치 담요 메시 재사용, 색은 표준 담요 재질)
+        // 안: 접힌 예비 담요 2장 (침대 발치 담요 메시 재사용)
         var bf = room.Find("Beds/BlanketFold"); var bmf = bf ? bf.GetComponent<MeshFilter>() : null; var fold = bmf ? bmf.sharedMesh : null;
         var bms = new[] { AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/M_Blanket_1.mat"), AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/M_Blanket_2.mat") };
         if (fold && bms[0])
         {
-            float[] ys = { 0.235f, 0.312f };
+            float[] ys = { 0.205f, 0.272f };
             for (int i = 0; i < 2; i++)
             {
                 var b = MeshObj(t, "SpareBlanket", fold, bms[i] ? bms[i] : bms[0]);
-                b.transform.localPosition = new Vector3(0f, ys[i], 0.01f * (i * 2 - 1)); b.transform.localRotation = Quaternion.Euler(0f, 90f + i * 3f, 0f);
-                var bs = fold.bounds.size; b.transform.localScale = new Vector3(0.76f / bs.x, 0.072f / bs.y, 0.38f / bs.z);   // 안쪽 0.42 × 0.81 에 맞춤 (메시 x → 트렁크 z)
+                b.transform.localPosition = new Vector3(0f, ys[i], 0.008f * (i * 2 - 1)); b.transform.localRotation = Quaternion.Euler(0f, 90f + i * 3f, 0f);
+                var bs = fold.bounds.size; b.transform.localScale = new Vector3(0.56f / bs.x, 0.064f / bs.y, 0.35f / bs.z);   // 안쪽 0.38 × 0.60 에 맞춤 (메시 x → 컨테이너 z)
             }
-            sb.AppendLine("  예비 담요 2장 (메시 " + fold.name + " " + fold.bounds.size.ToString("F2") + ")");
+            sb.AppendLine("  예비 담요 2장 (메시 " + fold.name + ")");
         }
-        else sb.AppendLine("  (예비 담요 메시/재질 없음 — 생략: Beds/BlanketFold " + (bf != null) + ")");
+        else sb.AppendLine("  (예비 담요 메시/재질 없음 — 생략)");
 
-        // 뚜껑 (경첩 = 벽 쪽 윗모서리)
-        var lid = new GameObject("Lid"); lid.transform.SetParent(t, false); lid.transform.localPosition = new Vector3(TR_W / 2f, TR_H, 0f);
-        var lt = lid.transform; float cx = -TR_W / 2f;
-        Box(lt, "LidTop", new Vector3(cx, LID_H / 2f, 0), new Vector3(TR_W, LID_H, TR_L), wood);
-        foreach (var z in new[] { -0.24f, 0.24f }) Box(lt, "Strap", new Vector3(cx, LID_H / 2f, z), new Vector3(TR_W + 0.008f, LID_H + 0.004f, 0.05f), leather);
-        foreach (var (sx, sz) in new[] { (1, 1), (1, -1), (-1, 1), (-1, -1) })
-            Box(lt, "Cap", new Vector3(cx + sx * TR_W / 2f, LID_H / 2f, sz * TR_L / 2f), new Vector3(0.038f, LID_H + 0.006f, 0.038f), brass);
-        Box(lt, "Latch", new Vector3(-TR_W - 0.006f, LID_H * 0.35f, 0f), new Vector3(0.012f, 0.07f, 0.06f), brass);
-        var bc = lid.AddComponent<BoxCollider>(); bc.center = new Vector3(cx, LID_H / 2f, 0); bc.size = new Vector3(TR_W, LID_H, TR_L);
+        // 뚜껑 (경첩 = 벽 쪽 윗모서리): PP 판 + 나무 상판 + 앞 걸쇠 2
+        var lid = new GameObject("Lid"); lid.transform.SetParent(t, false); lid.transform.localPosition = new Vector3(CT_W / 2f + 0.006f, CT_H, 0f);
+        var lt = lid.transform; float cx = -(CT_W + 0.012f) / 2f;
+        Box(lt, "LidPP", new Vector3(cx, 0.011f, 0), new Vector3(CT_W + 0.012f, 0.022f, CT_L + 0.012f), pp);
+        Box(lt, "LidRim", new Vector3(cx, -0.006f, 0), new Vector3(CT_W + 0.012f, 0.012f, CT_L + 0.012f), ppd);
+        Box(lt, "WoodTop", new Vector3(cx, 0.022f + 0.009f, 0), new Vector3(CT_W - 0.03f, 0.018f, CT_L - 0.05f), wood);
+        foreach (var z in new[] { -0.17f, 0.17f }) Box(lt, "Latch", new Vector3(-(CT_W + 0.012f) - 0.004f, -0.012f, z), new Vector3(0.008f, 0.05f, 0.045f), blk);
+        var bc = lid.AddComponent<BoxCollider>(); bc.center = new Vector3(cx, 0.02f, 0); bc.size = new Vector3(CT_W + 0.012f, 0.045f, CT_L + 0.012f);
         var ul = UdonSharpUndo.AddComponent<PyriteTrunkLid>(lid);
         UdonSharpEditorUtility.CopyProxyToUdon(ul);
         var ub = UdonSharpEditorUtility.GetBackingUdonBehaviour(ul);
         if (ub != null) { ub.interactText = "Open"; ub.proximity = 2f; EditorUtility.SetDirty(ub); }
-        sb.AppendLine("트렁크 " + V(TRUNK) + " · " + TR_W + " × " + TR_L + " × 높이 " + (TR_H + LID_H) + " m, 뚜껑 경첩 +x(벽 쪽), 열림 −100°, 거울(x 2.67)까지 통로 " + (2.67f - TRUNK.x - TR_W / 2f).ToString("F2") + " m");
+        sb.AppendLine("폴딩 컨테이너 " + V(CONTAINER) + " · " + CT_W + " × " + CT_L + " × 높이 " + (CT_H + 0.04f).ToString("F2") + " m (50 L 급), 올리브 PP + 나무 상판, 뚜껑 경첩 +x(벽 쪽) · 열림 −100°, 거울(x 2.67)까지 통로 " + (2.67f - CONTAINER.x - CT_W / 2f).ToString("F2") + " m");
     }
 
     // ───────────── 공통 ─────────────
@@ -406,7 +407,7 @@ public static class PyriteBedside
         var room = Root("TentBedroom").transform;
         var cam = Camera.main; var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
         var cyc = Object.FindObjectOfType<PyriteDayCycle>();
-        var lid = room.Find(ROOT + "/Trunk/Lid");
+        var lid = room.Find(ROOT + "/Container/Lid");
         Directory.CreateDirectory(PREV);
         try
         {
@@ -421,7 +422,7 @@ public static class PyriteBedside
             if (lid)
             {
                 var r = lid.localRotation; lid.localRotation = Quaternion.Euler(0, 0, -100f);
-                Shot(cam, W(0.55f, 1.35f, -0.45f), W(1.52f, 0.36f, -1.05f), "bd_trunk_open");
+                Shot(cam, W(0.55f, 1.30f, -0.55f), W(1.52f, 0.30f, -1.20f), "bd_trunk_open");
                 lid.localRotation = r;
             }
         }
