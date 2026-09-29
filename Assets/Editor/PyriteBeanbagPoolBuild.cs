@@ -4,7 +4,7 @@
 //   TentBedroom/BeanbagPool (U# PyriteBeanbagPool, mask 동기화) / Homes/Home_1~6
 //   TentBedroom/Beanbags/Beanbag_1~6 (Pickup 레이어): Rigidbody(키네마틱) + 뒤쪽 잡기 상자 + VRCPickup "Carry beanbag" + VRCObjectSync + PyriteCarryChair(놓으면 바닥에 똑바로)
 //     Body (침실 레이어, Beanbag.asset + 색 3가지 순환: 머스터드 · 딥 틸 · 오트밀)
-//     Seat (Pickup 레이어): Rigidbody(키네마틱, 분리) + 앞쪽 앉기 상자 + VRCStation(옛 Beanbag_1 설정 복사 = AC_BeanbagSit) + PyriteCarrySeat(앉은 동안 들기 금지)
+//     Seat (Pickup 레이어): Rigidbody(키네마틱, 분리) + 앞쪽 앉기 상자 + VRCStation(옛 Beanbag_1 설정 복사 = AC_BeanbagSit) + PyriteCarrySeat(pickup 없음 = 앉아 있어도 들기 가능, occupied 로 풀이 빼기·제자리 건너뜀)
 //       SitPoint · ExitPoint (옛 값 복사)
 //   옛 Beanbags(Z51l) 는 이름을 Beanbags_Old 로 바꿔 끄고 EditorOnly — Z52j 가 복구
 //  제자리: 1·2 = Z52g V 자, 3~6 = 러그 앞쪽 빈 바닥(서로 1.4 m 이상, 침대·낮은 테이블·입구·컨테이너 피함), TV 쪽을 보되 무리 가운데로 25°
@@ -125,7 +125,7 @@ public static class PyriteBeanbagPoolBuild
         var poolGo = new GameObject("BeanbagPool"); poolGo.transform.SetParent(room, false);
         var homesT = new GameObject("Homes").transform; homesT.SetParent(poolGo.transform, false);
         var bagsRoot = new GameObject("Beanbags").transform; bagsRoot.SetParent(room, false);
-        var bags = new GameObject[HOME.Length]; var homes = new Transform[HOME.Length];
+        var bags = new GameObject[HOME.Length]; var homes = new Transform[HOME.Length]; var seats = new PyriteCarrySeat[HOME.Length];
         for (int i = 0; i < HOME.Length; i++)
         {
             var q = Yaw(i);
@@ -155,7 +155,8 @@ public static class PyriteBeanbagPoolBuild
             EditorUtility.SetDirty(st);
 
             var cc = UdonSharpUndo.AddComponent<PyriteCarryChair>(root); cc.groundMask = ground;
-            var cs = UdonSharpUndo.AddComponent<PyriteCarrySeat>(seat); cs.station = st; cs.pickup = pk;
+            var cs = UdonSharpUndo.AddComponent<PyriteCarrySeat>(seat); cs.station = st; cs.pickup = null;   // 앉아 있어도 들기 가능 (09-30 관리자)
+            seats[i] = cs;
             UdonSharpEditorUtility.CopyProxyToUdon(cc); UdonSharpEditorUtility.CopyProxyToUdon(cs);
             var ubs = UdonSharpEditorUtility.GetBackingUdonBehaviour(cs); if (ubs != null) { ubs.interactText = "Sit"; ubs.proximity = 2f; EditorUtility.SetDirty(ubs); }
 
@@ -168,8 +169,11 @@ public static class PyriteBeanbagPoolBuild
         sb.AppendLine("제자리 최소 간격 " + md.ToString("F2") + " m (빈백 지름 약 1.2)");
 
         var pool = UdonSharpUndo.AddComponent<PyriteBeanbagPool>(poolGo);
-        pool.bags = bags; pool.homes = homes; pool.mask = DEFAULT_MASK;
+        pool.bags = bags; pool.homes = homes; pool.seats = seats; pool.mask = DEFAULT_MASK;
         UdonSharpEditorUtility.CopyProxyToUdon(pool);
+        // 머리맡 패널이 이미 있으면 새 풀로 다시 연결 (Z50a 재실행 없이 — UI 셰이더 Auto Fix 도 다시 안 해도 됨)
+        var pb = room.GetComponentInChildren<PyriteBedroomPanel>(true);
+        if (pb != null) { pb.bagPool = pool; UdonSharpEditorUtility.CopyProxyToUdon(pb); EditorUtility.SetDirty(pb); sb.AppendLine("머리맡 패널 bagPool 다시 연결" + (pb.bagValue ? "" : " (빈백 줄 없음 → Z50a)")); }
         sb.AppendLine("풀: 빈백 " + bags.Length + " · 기본 mask " + DEFAULT_MASK + " (" + CountBits(DEFAULT_MASK) + "개)");
         Save();
         Shots(room, bags);

@@ -2,6 +2,7 @@
 //  VRChat 은 실행 중에 동기화 물건을 새로 못 만든다 → 빈백 6개를 미리 두고 켜고 끈다 (PyriteCampPool 과 같은 방식)
 //  mask: 비트 i = i 번째 빈백 켜짐. 모두에게 동기화(Manual). 기본 3 = 1·2번 (V 자)
 //  더하기 = 꺼진 것 중 번호가 가장 작은 것을 켜서 제자리(home)에 / 빼기 = 켜진 것 중 번호가 가장 큰 '자유로운' 것(안 들림·안 앉음)을 끔
+//  앉아 있어도 들 수 있다(캠프 의자와 같게, 관리자) — 앉음 판정은 PyriteCarrySeat.occupied
 //  제자리 = 켜진 자유로운 빈백을 전부 home 으로. 머리맡 패널(PyriteBedroomPanel)이 부른다
 using UdonSharp;
 using UnityEngine;
@@ -13,6 +14,7 @@ public class PyriteBeanbagPool : UdonSharpBehaviour
 {
     public GameObject[] bags;
     public Transform[] homes;
+    public PyriteCarrySeat[] seats;         // 앉아 있는 빈백은 빼기·제자리에서 건너뜀 (들기는 앉아 있어도 됨)
 
     [UdonSynced] public int mask = 3;
 
@@ -65,7 +67,7 @@ public class PyriteBeanbagPool : UdonSharpBehaviour
     {
         for (int i = bags.Length - 1; i >= 0; i--)
         {
-            if (bags[i] == null || (mask & (1 << i)) == 0 || !Free(bags[i])) continue;
+            if (bags[i] == null || (mask & (1 << i)) == 0 || !Free(i)) continue;
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
             mask = mask & ~(1 << i);
             Commit();
@@ -78,17 +80,18 @@ public class PyriteBeanbagPool : UdonSharpBehaviour
         VRCPlayerApi lp = Networking.LocalPlayer;
         for (int i = 0; i < bags.Length && i < homes.Length; i++)
         {
-            if (bags[i] == null || homes[i] == null || (mask & (1 << i)) == 0 || !Free(bags[i])) continue;
+            if (bags[i] == null || homes[i] == null || (mask & (1 << i)) == 0 || !Free(i)) continue;
             Networking.SetOwner(lp, bags[i]);
             Place(bags[i], homes[i].position, homes[i].rotation);
         }
     }
 
-    private bool Free(GameObject o)
+    private bool Free(int i)
     {
-        VRCPickup p = (VRCPickup)o.GetComponent(typeof(VRCPickup));
+        if (seats != null && i < seats.Length && seats[i] != null && seats[i].IsOccupied()) return false;
+        VRCPickup p = (VRCPickup)bags[i].GetComponent(typeof(VRCPickup));
         if (p == null) return true;
-        return !p.IsHeld && p.pickupable;
+        return !p.IsHeld;
     }
 
     private void Place(GameObject o, Vector3 pos, Quaternion rot)
