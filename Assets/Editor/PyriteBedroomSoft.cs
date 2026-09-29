@@ -2,7 +2,8 @@
 //  2026-09-30 관리자: 침대 주변 채우기 D = 바닥 쿠션, 6 = 빈백 담요는 "양털" (침대 체크 · 러그 킬림과 다른 무늬 없는 결)
 //  Z51z 쿠션 빌드 / Z52a 쿠션 되돌림  — TentBedroom/Cushions: TV 벽(−x) 쪽 바닥, 2장 쌓고 1장 따로. 올리브 · 오트밀 · 테라코타 (현대 캠핑 톤)
 //  Z52b 양털 빌드 / Z52c 양털 되돌림  — TentBedroom/Beanbags/Beanbag_1/Sheepskin: 머스터드 빈백 등받이를 감싸는 양털 러그
-//     빈백 표면을 중심에서 방사 레이캐스트로 따라가 1.4 cm 띄운 패치. 가장자리는 불규칙한 양털 윤곽(알파 컷아웃)
+//     빈백 표면을 중심에서 방사 레이캐스트로 따라가 1.4 cm 띄운 띠(꼭대기를 넘어 좌석 쪽 조금 ~ 등 중간). 가장자리는 불규칙한 양털 윤곽(알파 컷아웃)
+//     (첫 판: 극좌표 패치가 등 반구 전체를 덮어 "흰 알"처럼 보임 → 일정 폭 띠로)
 //  장식용 (앉기·충돌 없음)
 #if UNITY_EDITOR
 using System.Collections.Generic;
@@ -120,19 +121,22 @@ public static class PyriteBedroomSoft
         int hit = 0, miss = 0;
         try
         {
-            // 등받이(로컬 −Z) 중심 방사 패치: 극각 th (위 0 → 옆 π/2 넘어서) · 방위 ph (뒤 π 중심)
-            const int NU = 28, NV = 22; float cy = 0.26f;   // 방사 중심 높이 (빈백 높이 0.62)
+            // 걸친 담요 띠: 꼭대기를 지나 앞(좌석 쪽)으로 조금 넘어오고 뒤(등받이)로 내려감. 폭은 일정한 각도 띠
+            //  t: 호 위치 (−0.20π 앞쪽 ~ 0 꼭대기 ~ +0.50π 등 중간), α: 옆 폭 (±0.24π) — 호의 접선 축으로 돌려 옆으로 펼침
+            const int NU = 26, NV = 30; float cy = 0.24f;   // 방사 중심 높이 (빈백 높이 0.62)
             var vs = new List<Vector3>(); var uv = new List<Vector2>(); var ts = new List<int>();
             var center = body.TransformPoint(new Vector3(0f, cy, 0.02f));
             for (int j = 0; j <= NV; j++)
             {
                 float tv = j / (float)NV;
-                float th = Mathf.Lerp(0.06f, 0.74f, tv) * Mathf.PI;          // 위에서 등 아래쪽까지
+                float t = Mathf.Lerp(-0.20f, 0.50f, tv) * Mathf.PI;
+                var d0 = new Vector3(0f, Mathf.Cos(t), -Mathf.Sin(t));        // 로컬 −Z = 등 쪽
+                var tan = new Vector3(0f, -Mathf.Sin(t), -Mathf.Cos(t));
                 for (int i = 0; i <= NU; i++)
                 {
                     float tu = i / (float)NU;
-                    float ph = Mathf.PI + Mathf.Lerp(-0.34f, 0.34f, tu) * Mathf.PI * Mathf.Lerp(0.55f, 1f, Mathf.Sin(th));   // 위쪽은 좁게
-                    var dirL = new Vector3(Mathf.Sin(th) * Mathf.Sin(ph), Mathf.Cos(th), Mathf.Sin(th) * Mathf.Cos(ph));
+                    float al = Mathf.Lerp(-0.24f, 0.24f, tu) * 180f;
+                    var dirL = Quaternion.AngleAxis(al, tan) * d0;
                     var dirW = body.TransformDirection(dirL).normalized;
                     Vector3 pW;
                     if (mc.Raycast(new Ray(center + dirW * 2f, -dirW), out var h, 3f)) { pW = h.point + h.normal * 0.014f; hit++; }
