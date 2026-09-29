@@ -115,6 +115,9 @@ public class PyriteCampPool : UdonSharpBehaviour
 
     private bool Free(GameObject o)
     {
+        // 앉은·누운 사람이 있으면 건너뜀 (09-30: 의자는 앉아 있어도 들 수 있게 바꿔서 pickupable 만으로는 앉음을 모름)
+        PyriteCarrySeat[] seats = o.GetComponentsInChildren<PyriteCarrySeat>();
+        for (int i = 0; i < seats.Length; i++) if (seats[i] != null && seats[i].IsOccupied()) return false;
         VRCPickup p = (VRCPickup)o.GetComponent(typeof(VRCPickup));
         if (p == null) return true;
         return !p.IsHeld && p.pickupable;
