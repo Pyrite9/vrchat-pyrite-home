@@ -6,8 +6,8 @@
 
 <p align="center">
   <b>황철석과 호수와 주상절리.</b><br>
-  기둥 절벽에 둘러싸인 호숫가 캠프, 네모필라 꽃밭과 반딧불이. 12분마다 하루가 흐릅니다.<br>
-  <sub>Pyrite, lake, and basalt columns — a lakeside camp ringed by columnar cliffs. A full day passes every 12 minutes.</sub>
+  기둥 절벽에 둘러싸인 호숫가 캠프와 텐트 침실, 네모필라 꽃밭과 반딧불이. 12분마다 하루가 흐릅니다.<br>
+  <sub>Pyrite, lake, and basalt columns — a lakeside camp and tent bedroom ringed by columnar cliffs. A full day passes every 12 minutes.</sub>
 </p>
 
 <p align="center">
@@ -117,14 +117,37 @@
 | | |
 |---|---|
 | 시간 | 분 단위 슬라이더, 자동 흐름 (모두에게 동기화) |
-| 화면 | 밝기, 블룸 |
+| 화면 | 밝기, 블룸, 밤에 빛나는 꽃 (0~200%, 기본 끔) |
 | 반사 | 호수 반사, 캠프 거울 |
 | 소리 | 환경음 크기 |
 | 성능 | 꽃 보이는 거리, 반딧불, 해 그림자, 불빛 그림자 |
+| **2쪽** 캠프 | 의자(0~10) · 돗자리(0~6) 개수, 모두 제자리 (모두에게 동기화) |
+| **2쪽** QvPen | 펜 · 지우개를 내 앞으로 불러오기, 펜 모두 제자리 |
 
-**상호작용 13종** — 설정 프로젝터 · 영상 프로젝터(ProTV) · 손거울 · 랜턴(들고 다니다 걸이에 걸기) · 의자 · 야전침대 · 돗자리 · 마시멜로(불에 굽고 먹기) · 주전자와 스토브 · 머그(따르고 마시기) · 망원경 · 물수제비 돌 · 나룻배. 머그·마시멜로·돌은 모두에게 동기화되고 효과음이 난다.
+**상호작용 15종** — 설정 프로젝터 · 영상 프로젝터(ProTV) · 손거울 · 랜턴(들고 다니다 걸이에 걸기) · 의자 · 야전침대 · 텐트(→ 침실) · 돗자리 · 마시멜로(불에 굽고 먹기) · 주전자와 스토브 · 머그(따르고 마시기) · 망원경 · 물수제비 돌 · 나룻배 · QvPen(타프 뒤 거치대). 머그·마시멜로·돌은 모두에게 동기화되고 효과음이 난다. 의자·돗자리는 누가 앉거나 누워 있어도 들어서 옮길 수 있다.
 
 **그 밖에** — 밤마다 호수 쪽 하늘에 별똥별(인스턴스의 모두가 같은 순간에 본다), 새벽 호수의 낮은 물안개, 수면 파문, 모닥불 불티.
+
+---
+
+## 텐트 침실
+
+<p align="center">
+  <img src="docs/images/bedroom_night.jpg" alt="밤의 텐트 침실 — 에어매트, 러그, 빈백, 줄전구" width="100%">
+</p>
+
+캠프 텐트를 누르면 텐트 안 침실로 들어간다. 돔 6.8 × 5.6 m, 입구 천막을 누르면 캠프로 돌아온다.
+
+| 빈백 6개 + TV | 수면 모드 100% · 천장의 별 |
+|:---:|:---:|
+| ![빈백과 TV](docs/images/bedroom_lounge.jpg) | ![수면 모드](docs/images/bedroom_sleep.jpg) |
+
+- **에어매트** 2.25 × 2.2 m 에 네 명이 눕는다. 이불 주머니를 누르면 이불이 덮이고(모두에게), 셰이더가 누운 사람의 뼈 위치로 이불을 들어 올려 몸 모양대로 불룩해진다
+- **머리맡 패널**(벽의 달 아이콘, 나에게만) — 수면 모드(방 불빛 5% 까지, 창밖도 어둡게), 자연 소리(풀벌레 · 물가), 전신 거울, **빈백 0~6개**(모두에게), 알람(PC 시계, 현재 시각과 알람 시각은 협탁 탁상시계에도 표시). 위의 ▶ 아이콘은 침실 전용 TV(ProTV)
+- **창밖**은 캠프 앞에 둔 카메라가 머리 위치를 따라 실시간으로 그린다. 침실에 있을 때만 켜진다
+- **무드등** — 별이 박힌 발광 구(눌러서 켜고 끔)가 천장에 별을 비추고, 수면 모드를 올리면 밝아지며 천천히 돈다. 폴을 따라 줄전구 52개
+- **빈백** — 머스터드 · 딥 틸 · 오트밀 3색. 앞쪽을 누르면 앉고(빈백 전용 앉기 자세), 뒤쪽을 잡으면 들어서 옮긴다. 앉아 있어도 들 수 있다
+- 그 밖에 협탁 · 폴딩 컨테이너(뚜껑이 열린다, 모두에게) · 폴라로이드 줄(이 월드의 사진 6장) · 바닥 쿠션 · 킬림 러그 · 작은 QvPen 세트
 
 ---
 
@@ -132,11 +155,13 @@
 
 - Unity 2022.3.22f1 · VRChat SDK Worlds 3.10.5 · UdonSharp · ProTV 3.0
 - 지형·절벽 기둥(1,350개)·결정·부두·꽃 밀도·환경음은 `Tools/python/` 스크립트로 생성
-- 씬 변경은 모두 **에디터 스크립트**(`Assets/Editor/Pyrite*.cs`, 메뉴 `Tools ▸ Pyrite` / `Tools ▸ Pyrite2`)로 했다. 손으로 씬을 만지지 않고, 메뉴마다 되돌리기가 있다
+- 꽃은 타일을 깔지 않고 포기 단위로 뿌렸다 — 1 m² 당 20포기, 11.6만 포기
+- 씬 변경은 모두 **에디터 스크립트**(`Assets/Editor/Pyrite*.cs`, 메뉴 `Tools ▸ Pyrite` / `Pyrite2` / `Pyrite3`)로 했다. 손으로 씬을 만지지 않고, 메뉴마다 되돌리기가 있다
+- 침실 가구(에어매트·빈백·협탁·컨테이너·쿠션·무드등)와 이불·창·패널 셰이더도 전부 코드로 만든 절차적 메시다
 - 조명: Baked Indirect + 시간대별 반사 큐브맵, 밤 전용 라이팅(`PyriteNight.cginc`)으로 구운 조명만 어둡게
 - 효과음 4종(물보라·따르기·마시기·한입)은 numpy 로 합성한 절차적 사운드
 
-<sub>이 README 의 사진 중 맨 위 한 장은 인게임 스크린샷, 나머지는 에디터 렌더(`Tools ▸ Pyrite2 ▸ Z41a. README Shots`)다. 인게임과 색·밝기가 조금 다를 수 있다.</sub>
+<sub>이 README 의 사진 중 맨 위 한 장은 인게임 스크린샷, 나머지는 에디터 렌더(`Tools ▸ Pyrite2 ▸ Z41a. README Shots`, 침실은 `Tools ▸ Pyrite3 ▸ Z52n. README Bedroom Shots`)다. 인게임과 색·밝기가 조금 다를 수 있다.</sub>
 
 ---
 
@@ -151,18 +176,21 @@
 | `Assets/Sakana-Water/` | サカナ VRC向け水面シェーダー |
 | `Assets/Sorafield Atmosphere Sky/` · `Sorafield Procedural Skies - VRChat Addon/` | Sorafield Atmosphere Sky |
 | `Assets/WoodBoat/` | 木製ボート (ootwn) |
-| `Assets/Flora/Generated/` | 위 꽃 에셋에서 합쳐 만든 파생 메시 |
+| `Assets/Flora/Generated/` | 위 꽃 에셋에서 합쳐 만든 파생 메시 (포기 뿌리기 메시 포함) |
+| `Assets/VRCSDK3A/` | VRChat 아바타 SDK 3.10.5 의 `VRCSDK3A.dll` + 에디터 스크립트 2개 — 눕기 자리의 Tracking Control 용 (SDK 바이너리라 제외) |
+| `Packages/` | VPM 패키지(SDK · ProTV · QvPen)는 `vpm-manifest.json` 만 들어 있다 |
 | `Assets/TerrainAssets/T_grass_dusk.png` · `T_Ground_dusk.png` | 꽃 팩 지면 텍스처를 색만 누른 파생본 |
 | `M_LakeWater.mat` · `M_Sky_PyriteDusk.mat` | 위 패키지 폴더 안에서 조정한 머티리얼 — 값은 `PyriteTunedMaterials.cs` 에 있음 |
 
 ## 복구 순서
 
-1. VCC 에 저장소 추가: `https://vpm.techanon.dev/index.json` (ProTV), Settings ▸ Packages ▸ **Show Pre-Release Packages** 켜기
+1. VCC 에 저장소 추가: `https://vpm.techanon.dev/index.json` (ProTV), `https://vpm.ureishi.net/repos.json` (QvPen), Settings ▸ Packages ▸ **Show Pre-Release Packages** 켜기
 2. VCC ▸ Add Existing Project 로 이 폴더를 열면 `Packages/vpm-manifest.json` 기준으로 SDK·ProTV 가 복원된다
 3. Unity 를 열고 위 Booth 패키지 5개 임포트
+   같은 버전(3.10.5) 아바타 SDK 의 `Packages/com.vrchat.avatars` 에서 `VRCSDK3A.dll` 과 `Editor/VRCAnimatorTrackingControlEditor.cs` · `VRCAnimatorTemporaryPoseSpaceEditor.cs`(각 .meta 포함)를 `Assets/VRCSDK3A/` 로 복사
 4. `Tools ▸ Pyrite ▸ A2. Rebuild Dusk Ground Textures` — 지면 텍스처 재생성 + 지형 레이어 재연결
    `Tools ▸ Pyrite ▸ A3. Recreate Tuned Materials` — 호수 물·황혼 하늘 머티리얼을 원래 GUID 로 재생성
-5. `Tools ▸ Pyrite ▸ I. Build Flower Field Meshes` — 꽃 파생 메시 재생성
+5. 꽃 파생 메시 재생성: `Tools ▸ Pyrite ▸ I. Build Flower Field Meshes` → `E` → `Y4` → `Y5` → `Tools ▸ Pyrite3 ▸ Z46a`(포기 뿌리기) → `Tools ▸ Pyrite2 ▸ Z35c`(오클루전)
 6. `Tools ▸ Pyrite ▸ F. Bake Lighting Now` → `T. Bake Reflection Sets`
 
 ## 생성 스크립트
@@ -179,13 +207,14 @@ Unity 밖에서 돌려 만든 결과물(`Terrain.raw`, `Splat4.bin`, `Assets/Mes
 - 木製ボート — ootwn
 - Sorafield Atmosphere Sky — SoraField (https://sorafield.booth.pm/)
 - ProTV — ArchiTechVR
+- QvPen — ureishi (https://ureishi.booth.pm/)
 - Noto Sans KR — Google Fonts (SIL Open Font License)
 - UdonSharp — Merlin · VRChat SDK — VRChat
 
-지형 · 절벽 · 결정 · 부두 · 셰이더 · 효과음은 Pyrite9 가 직접 만들었다.
+지형 · 절벽 · 결정 · 부두 · 텐트 침실 · 셰이더 · 효과음은 Pyrite9 가 직접 만들었다.
 
 ## 규약
 
 - 월드는 **Public** — 위 유료 에셋 모두 퍼블릭 월드 사용 허용 (재배포는 불가라 저장소에 없음)
-- ProTV 는 잠금 상태로 시작한다 (`Tools ▸ Pyrite ▸ W. Lock Media Player`) — 인스턴스 마스터·소유자·슈퍼유저만 영상 변경
-- 제작 기록은 Claude 프로젝트 문서(`world-pyritehome-*.md`, `PyriteHome_00_현재상태.md`)에 있다
+- ProTV 는 누구나 조작할 수 있다 (`Tools ▸ Pyrite3 ▸ Z48a`). 인스턴스 마스터·소유자는 잠글 수 있고, 처음부터 잠그려면 `Tools ▸ Pyrite ▸ W. Lock Media Player`
+- 제작 기록은 Claude 프로젝트 문서(`world-pyritehome-*.md`, `PyriteHome_00_현재상태.md`, `PyriteHome_텐트침실_*.md`)에 있다
