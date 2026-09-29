@@ -3,6 +3,7 @@
 //  수면 모드 0~1: 침실 광원 기준 밝기 × (1 → 0.05), 창밖(M_Backdrop _Dim) × (1 → 0.4)
 //  거울: 오른쪽 벽 전신거울 켜기/끄기
 //  침실 환경광: 방(부모) 반경 안에 있으면 PostLateUpdate 에서 DayCycle 이 쓴 환경광(Trilight)·반사 세기의 "밤보다 밝은 몫"을 dayAmbient × (1 − 수면) 만 남김. 나가면 DayCycle 값 복원
+//  빈백: − n/6 + · RESET → PyriteBeanbagPool (모두에게 동기화). 개수 글자는 0.5 s 마다 새로 읽음 (다른 사람이 바꿔도 맞게)
 //  알람: AM/PM·시·분 화살표 (누르고 있으면 0.45 s 뒤부터 반복, 1.5 s 뒤 더 빠르게), 켜짐이면 PC 시계로 그 분이 되면 울림. STOP 또는 아이콘으로 끔. 5분 뒤 자동으로 끔
 using System;
 using TMPro;
@@ -53,6 +54,8 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     public Material globeMat;               // 별 구(협탁 위) 발광 머티리얼 — 끄면 발광 0 (Z51r)
     public Color globeEmit = new Color(1.1f, 1.1f, 1.1f, 1f);
     public Color stringEmit = new Color(2.2f, 1.54f, 0.79f, 1f);
+    public PyriteBeanbagPool bagPool;       // 빈백 개수 (Z52i)
+    public TextMeshProUGUI bagValue;
     public float minWindowDay = 0.13f;     // 낮 수면 100% 창 밝기 (Z50e: 창 카메라 정오 99~105 vs 밤 33 → ×0.13 ≈ 밤 ×0.4)
 
     private bool inRoom;
@@ -116,6 +119,17 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     }
 
     public void OnClose() { panel.SetActive(false); }
+
+    // ── 빈백 개수 (모두에게) ──
+    public void OnBagAdd() { if (bagPool != null) bagPool.Add(); RefreshBags(); }
+    public void OnBagRemove() { if (bagPool != null) bagPool.Remove(); RefreshBags(); }
+    public void OnBagReset() { if (bagPool != null) bagPool.ResetAll(); }
+
+    private void RefreshBags()
+    {
+        if (bagPool == null || bagValue == null) return;
+        bagValue.text = bagPool.Count() + " / " + bagPool.Max();
+    }
 
     // ── 동영상 플레이어 (위 아이콘) ──
     public void OnVideo()
@@ -249,6 +263,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         {
             nextClock = Time.time + 0.5f;
             UpdateClock();
+            if (panel.activeSelf) RefreshBags();
         }
         if (ringing)
         {

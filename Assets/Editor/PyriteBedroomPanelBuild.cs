@@ -31,8 +31,8 @@ public static class PyriteBedroomPanelBuild
     const string ROOT = "BedroomPanel";
     const string TV_PREFAB = "Packages/dev.architech.protv/Simple (ProTV).prefab";
     const float TV_W = 2.0f, TV_Y = 1.20f, TV_Z = -0.90f, TV_GAP = 0.06f;   // 21:23 관리자: 침대 왼쪽(입구 쪽, −X 벽), 수직
-    const float PW = 900f, PH = 740f, PX = 0.001f;          // 패널 캔버스 px, 1 px = 1 mm
-    const float PANEL_Y = 0.86f, ICON_Y = 0.80f, ICON_X = 0.60f, WALL_GAP = 0.07f;   // 21:58 자연 소리 줄 추가로 패널 +120 px → 중심 0.86 (아래 끝 0.49 그대로)          // 20:48 관리자: 통째로 내려서 침대 조금 위 (패널 아래 끝 0.49 m, 매트 윗면 ~0.36 m). 아이콘은 패널 오른쪽
+    const float PW = 900f, PH = 812f, PX = 0.001f;          // 09-30 빈백 줄 +72 px          // 패널 캔버스 px, 1 px = 1 mm
+    const float PANEL_Y = 0.896f, ICON_Y = 0.80f, ICON_X = 0.60f, WALL_GAP = 0.07f;   // 21:58 자연 소리 줄 +120 px → 0.86, 09-30 빈백 줄 +72 px → 0.896 (아래 끝 0.49 그대로, 위 끝 1.30 < 폴라로이드 1.34)          // 20:48 관리자: 통째로 내려서 침대 조금 위 (패널 아래 끝 0.49 m, 매트 윗면 ~0.36 m). 아이콘은 패널 오른쪽
     const float MIR_W = 2.4f, MIR_Z = -0.6f, MIR_Y0 = 0.15f, MIR_Y1 = 1.75f, MIR_GAP = 0.06f;   // 20:48 관리자: 수직으로, HQ(전체 반사)
     static readonly Color W = new Color(0.96f, 0.96f, 0.95f, 1f);
     static readonly Color W2 = new Color(0.96f, 0.96f, 0.95f, 0.55f);
@@ -86,7 +86,7 @@ public static class PyriteBedroomPanelBuild
         if (!EnsureProgram("PyriteBedroomPanel")) return false;
         var room = Root("TentBedroom"); if (room == null) { sb.AppendLine("!! TentBedroom 없음"); return false; }
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FA); if (font == null) { sb.AppendLine("!! 글꼴 없음 " + FA); return false; }
-        string need = "BEDROOMSLPMIRATNUD0123456789:%× NO";
+        string need = "BEDROOMSLPMIRATNUD0123456789:%× NOGBE+-/";
         foreach (var c in need) if (!font.HasCharacter(c)) sb.AppendLine("!! 글꼴에 없는 글자 '" + c + "'");
         var backdrop = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/M_Backdrop.mat");
         if (backdrop == null || !backdrop.HasProperty("_Dim")) { sb.AppendLine("!! M_Backdrop 에 _Dim 없음 (셰이더 갱신 전?)"); return false; }
@@ -133,15 +133,22 @@ public static class PyriteBedroomPanelBuild
         var natureVal = Txt(pc, "NatureValue", PW - 240, 236, 200, 48, "50%", 30, W, TextAlignmentOptions.MidlineRight);
         var nature = Sld(pc, "NatureSlider", 40, 292, PW - 80); nature.value = 0.5f;
         var (mirT, _) = Tgl(pc, "MirrorToggle", 40, 356, 400, "MIRROR");
-        Img(pc, "Div2", 40, 438, PW - 80, 2, W2, sFill);
+        // 빈백 개수 (09-30): BEANBAGS  [−] n / 6 [+]  [RESET]
+        const float DY = 72f;
+        Txt(pc, "BagLabel", 40, 428, 400, 56, "BEANBAGS", 30, W, TextAlignmentOptions.MidlineLeft, 6f);
+        var bagMinus = Btn(pc, "BagMinus", 470, 428, 56, 56, "-", 36);   // "−"(U+2212) 는 글꼴에 없음
+        var bagVal = Txt(pc, "BagValue", 530, 428, 132, 56, "2 / 6", 30, W, TextAlignmentOptions.Center);
+        var bagPlus = Btn(pc, "BagPlus", 666, 428, 56, 56, "+", 36);
+        var bagReset = Btn(pc, "BagReset", 736, 428, 124, 56, "RESET", 24);
+        Img(pc, "Div2", 40, 438 + DY, PW - 80, 2, W2, sFill);
 
-        var clock = Txt(pc, "Clock", 40, 458, 420, 96, "12:00 AM", 76, W, TextAlignmentOptions.MidlineLeft);
-        Txt(pc, "ClockNote", 42, 552, 420, 32, "NOW", 22, W2, TextAlignmentOptions.MidlineLeft, 6f);
-        var (alarmT, _) = Tgl(pc, "AlarmToggle", 40, 610, 400, "ALARM");
-        var stop = Btn(pc, "Stop", 40, 668, 380, 56, "STOP", 30);
+        var clock = Txt(pc, "Clock", 40, 458 + DY, 420, 96, "12:00 AM", 76, W, TextAlignmentOptions.MidlineLeft);
+        Txt(pc, "ClockNote", 42, 552 + DY, 420, 32, "NOW", 22, W2, TextAlignmentOptions.MidlineLeft, 6f);
+        var (alarmT, _) = Tgl(pc, "AlarmToggle", 40, 610 + DY, 400, "ALARM");
+        var stop = Btn(pc, "Stop", 40, 668 + DY, 380, 56, "STOP", 30);
 
         // 알람 시각: 세로 3칸 (AM/PM · 시 · 분), 각 칸 ▲ 값 ▼
-        float colY = 460f, colW = 110f;
+        float colY = 460f + DY, colW = 110f;
         float[] cx = { 480f, 620f, 760f };
         Txt(pc, "Colon", cx[1] + colW - 4, colY + 70, 40, 90, ":", 60, W, TextAlignmentOptions.Center);
         var ampm = Col(pc, "AmPm", cx[0], colY, colW, "AM", "AmPm", "AmPm", false);
@@ -179,6 +186,7 @@ public static class PyriteBedroomPanelBuild
         { var st = o.Find("Mood/StarLamp/StarLight"); pb.starLight = st ? st.GetComponent<Light>() : null; }   // 무드등 (Z51i) — 있으면 연결
         pb.stringMat = o.Find("Mood/StringLights") ? AssetDatabase.LoadAssetAtPath<Material>(PyriteBedroomMood.DIR + "M_StringBulb.mat") : null;
         pb.starMax = PyriteBedroomMood.STAR_MAX; pb.stringEmit = PyriteBedroomMood.STRING_EMIT;
+        { var bp = o.GetComponentInChildren<PyriteBeanbagPool>(true); pb.bagPool = bp; pb.bagValue = bagVal; sb.AppendLine("빈백 풀 " + (bp ? "연결 (" + bp.bags.Length + "개)" : "없음 (Z52i 전)")); }
         PyriteBedside.WirePanel(o, pb);   // 탁상시계 · 별 구 (Z51r) — 있으면 연결 (CopyProxyToUdon 포함)
 
         // 이벤트 연결 (U# 가 붙은 뒤)
@@ -190,6 +198,9 @@ public static class PyriteBedroomPanelBuild
         Wire(nature.onValueChanged, "OnNature");
         Wire(mirT.onValueChanged, "OnMirror");
         Wire(alarmT.onValueChanged, "OnAlarmToggle");
+        Wire(bagMinus.onClick, "OnBagRemove");
+        Wire(bagPlus.onClick, "OnBagAdd");
+        Wire(bagReset.onClick, "OnBagReset");
         foreach (var (n, m) in pending) Hook(n, m);
         pending.Clear();
 
