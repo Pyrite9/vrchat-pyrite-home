@@ -50,6 +50,8 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     public Light starLight;                 // 무드등: 별 조명(스팟 + 쿠키). 수면 올리면 밝아지고 천천히 돎
     public float starMax = 2f;
     public Material stringMat;              // 무드등: 줄전구 전구 머티리얼. 수면 올리면 어두워짐
+    public Material globeMat;               // 별 구(협탁 위) 발광 머티리얼 — 끄면 발광 0 (Z51r)
+    public Color globeEmit = new Color(1.1f, 1.1f, 1.1f, 1f);
     public Color stringEmit = new Color(2.2f, 1.54f, 0.79f, 1f);
     public float minWindowDay = 0.13f;     // 낮 수면 100% 창 밝기 (Z50e: 창 카메라 정오 99~105 vs 밤 33 → ×0.13 ≈ 밤 ×0.4)
 
@@ -76,6 +78,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     private float nextRepeat;
     private float nextClock;
     private bool updating;
+    private bool starOff;                   // 별 구 눌러서 끔 (로컬)
 
     void Start()
     {
@@ -89,6 +92,20 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         SetNature(0f, 0f);
         RefreshAlarm();
         UpdateClock();
+        ApplyStar();
+    }
+
+    // ── 별 조명 켜기/끄기 (협탁 위 별 구를 누름, 로컬) ──
+    public void ToggleStar()
+    {
+        starOff = !starOff;
+        ApplyStar();
+    }
+
+    private void ApplyStar()
+    {
+        if (starLight != null) starLight.enabled = !starOff;
+        if (globeMat != null) globeMat.SetColor("_EmissionColor", starOff ? Color.black : globeEmit);
     }
 
     // ── 아이콘 · 패널 ──
@@ -284,7 +301,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         if (backdrop != null) backdrop.SetFloat("_Dim", Mathf.Lerp(1f, Mathf.Lerp(minWindow, minWindowDay, dayK), sleepSlider.value));
         SetNature(natureSlider.value, 1f - dayK);
         float sl = sleepSlider.value;
-        if (starLight != null)
+        if (starLight != null && !starOff)
         {
             starLight.intensity = starMax * Mathf.Lerp(0.15f, 1f, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.1f, 0.7f, sl)));
             starLight.transform.Rotate(0f, 0f, 1.5f * Time.deltaTime, Space.Self);

@@ -40,6 +40,7 @@ public static class PyriteBedside
     const float NS_W = 0.38f, NS_H = 0.40f;
     const float CT_W = 0.40f, CT_L = 0.62f, CT_H = 0.32f;
     static readonly Color CLOCK_COL = new Color(1f, 0.58f, 0.22f, 1f);
+    static readonly Color GLOBE_EMIT = new Color(1.1f, 1.1f, 1.1f, 1f);
     static StringBuilder sb;
     static int tris;
 
@@ -65,7 +66,7 @@ public static class PyriteBedside
             var t = o.Find(ROOT); if (t) { Object.DestroyImmediate(t.gameObject); sb.AppendLine(ROOT + " 삭제"); }
             RestoreLamp(o);
             var bottle = o.Find("Props/WaterBottle"); if (bottle) { bottle.localPosition = BOTTLE_OLD; bottle.localRotation = Quaternion.identity; sb.AppendLine("물병 → " + V(BOTTLE_OLD)); }
-            WireClock(o, null);
+            WirePanel(o);
         }
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene()); EditorSceneManager.SaveOpenScenes();
         sb.AppendLine("RESULT: DONE"); Flush();
@@ -119,7 +120,8 @@ public static class PyriteBedside
     // ═════════════════════════════════════════════════════════════
     static bool Inner()
     {
-        if (!EnsureProgram("PyriteTrunkLid")) return false;
+        bool p1 = EnsureProgram("PyriteTrunkLid"), p2 = EnsureProgram("PyriteStarGlobe");
+        if (!p1 || !p2) return false;
         var room = Root("TentBedroom"); if (room == null) { sb.AppendLine("!! TentBedroom 없음"); return false; }
         var o = room.transform;
         Directory.CreateDirectory(DIR);
@@ -153,7 +155,7 @@ public static class PyriteBedside
             r.gameObject.layer = PyriteBedroomV3.LAYER; r.lightProbeUsage = LightProbeUsage.Off;
             if (r is MeshRenderer) r.shadowCastingMode = ShadowCastingMode.On;
         }
-        WireClock(o, clock);
+        WirePanel(o);
         sb.AppendLine("삼각형 합계 " + tris);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
@@ -206,13 +208,20 @@ public static class PyriteBedside
         return tmp;
     }
 
-    static void WireClock(Transform room, TextMeshPro tmp)
+    // 패널 U# ↔ 탁상시계 · 별 구 연결. Z51r · Z51s · Z50a(패널 재빌드) 가 부른다. 없는 건 null 로 (되돌림)
+    public const string GLOBE_TOUCH = "Mood/StarLamp/BS_GlobeTouch";
+    public static void WirePanel(Transform room, PyriteBedroomPanel pb = null)
     {
-        var p = room.Find("BedroomPanel"); var pb = p ? p.GetComponent<PyriteBedroomPanel>() : null;
-        if (pb == null) { sb.AppendLine("  (BedroomPanel 없음 — 시계 연결 안 함)"); return; }
-        pb.deskClock = tmp; pb.deskClockColor = CLOCK_COL;
+        if (pb == null) { var p = room.Find("BedroomPanel"); pb = p ? p.GetComponent<PyriteBedroomPanel>() : null; }
+        if (pb == null) { sb?.AppendLine("  (BedroomPanel 없음 — 시계·별 구 연결 안 함)"); return; }
+        var dc = room.Find(CLOCK_PATH);
+        pb.deskClock = dc ? dc.GetComponent<TextMeshPro>() : null; pb.deskClockColor = CLOCK_COL;
+        bool hasGlobe = room.Find("Mood/StarLamp/BS_Globe") != null;
+        pb.globeMat = hasGlobe ? AssetDatabase.LoadAssetAtPath<Material>(DIR + "M_StarGlobe.mat") : null; pb.globeEmit = GLOBE_EMIT;
         UdonSharpEditorUtility.CopyProxyToUdon(pb); EditorUtility.SetDirty(pb);
-        sb.AppendLine("  패널 deskClock " + (tmp != null ? "연결" : "해제"));
+        var touch = room.Find(GLOBE_TOUCH); var sg = touch ? touch.GetComponent<PyriteStarGlobe>() : null;
+        if (sg != null) { sg.panel = pb; UdonSharpEditorUtility.CopyProxyToUdon(sg); EditorUtility.SetDirty(sg); }
+        sb?.AppendLine("  패널 연결: deskClock " + (pb.deskClock != null) + " · globeMat " + (pb.globeMat != null) + " · 별 구 누르기 " + (sg != null));
     }
 
     // ── 별 조명: 위치를 작은 협탁 위로, 외형 교체 (옛 Base·Dome 은 끄고 EditorOnly) ──
@@ -225,10 +234,18 @@ public static class PyriteBedside
         if (wood && wood.mainTexture) { baseMat.mainTexture = wood.mainTexture; baseMat.color = wood.color; }
         var prof = new[] { new Vector2(0.001f, 0f), new Vector2(0.066f, 0f), new Vector2(0.068f, 0.006f), new Vector2(0.064f, 0.030f), new Vector2(0.050f, 0.036f), new Vector2(0.030f, 0.040f), new Vector2(0.001f, 0.040f) };
         MeshObj(lamp, "BS_GlobeBase", SaveMesh(Lathe(prof, 36), "GlobeBase"), baseMat);
-        var globe = Mat("M_StarGlobe", new Color(0.035f, 0.045f, 0.10f), 0.92f, 0f, Color.white * 1.1f);
+        var globe = Mat("M_StarGlobe", new Color(0.035f, 0.045f, 0.10f), 0.92f, 0f, GLOBE_EMIT);
         globe.SetTexture("_EmissionMap", StarGlobeTex(512, 256));
         var g = MeshObj(lamp, "BS_Globe", SaveMesh(UVSphere(0.072f, 28, 18), "StarGlobe"), globe);
         g.transform.localPosition = new Vector3(0f, 0.040f + 0.068f, 0f);
+        // 누르기 판정: 구보다 조금 큰 구 콜라이더 (Default 레이어) + PyriteStarGlobe → 패널.ToggleStar (로컬)
+        var touch = new GameObject("BS_GlobeTouch"); touch.transform.SetParent(lamp, false); touch.layer = 0;
+        touch.transform.localPosition = g.transform.localPosition;
+        var sc = touch.AddComponent<SphereCollider>(); sc.radius = 0.085f;
+        var sg = UdonSharpUndo.AddComponent<PyriteStarGlobe>(touch);
+        UdonSharpEditorUtility.CopyProxyToUdon(sg);
+        var sub = UdonSharpEditorUtility.GetBackingUdonBehaviour(sg);
+        if (sub != null) { sub.interactText = "Star Light"; sub.proximity = 1.5f; EditorUtility.SetDirty(sub); }
         var light = lamp.Find("StarLight");
         if (light) light.localPosition = new Vector3(0f, 0.040f + 0.068f, 0f);
         foreach (var r in lamp.GetComponentsInChildren<Renderer>(true)) { r.gameObject.layer = PyriteBedroomV3.LAYER; r.lightProbeUsage = LightProbeUsage.Off; r.shadowCastingMode = ShadowCastingMode.Off; }
@@ -437,6 +454,13 @@ public static class PyriteBedside
             cam.fieldOfView = 60f;
             Shot(cam, W(0.2f, 1.45f, 0.4f), W(1.45f, 0.30f, -1.45f), "bd_right");
             Shot(cam, W(0.80f, 0.95f, -1.45f), W(1.46f, 0.46f, -2.08f), "bd_nightstand");   // 협탁 위 (별 구 · 시계 · 물병)
+            {   // 별 구 끈 상태 흉내 (런타임 ToggleStar 와 같은 효과: 광원 끔 + 구 발광 0)
+                var sl = room.Find("Mood/StarLamp/StarLight"); var gm = AssetDatabase.LoadAssetAtPath<Material>(DIR + "M_StarGlobe.mat");
+                var lt = sl ? sl.GetComponent<Light>() : null; bool en = lt && lt.enabled;
+                if (lt) lt.enabled = false; if (gm) gm.SetColor("_EmissionColor", Color.black);
+                Shot(cam, W(0.80f, 0.95f, -1.45f), W(1.46f, 0.46f, -2.08f), "bd_nightstand_off");
+                if (lt) lt.enabled = en; if (gm) gm.SetColor("_EmissionColor", GLOBE_EMIT);
+            }
             Shot(cam, W(1.05f, 0.70f, -1.55f), W(1.45f, 0.44f, -2.01f), "bd_clock");
             Shot(cam, W(-0.84f, 0.45f, -1.72f), W(0.1f, 2.6f, 0.6f), "bd_lie_up");
             Shot(cam, W(1.6f, 1.55f, 2.1f), W(0f, 0.35f, -1.4f), "bd_room");
