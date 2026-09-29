@@ -3,7 +3,8 @@
 //  Z51q 실측(방 로컬): 매트 x −1.13~1.14 · z −2.40~−0.20 (머리 −z). +x 쪽 매트 끝 ~ 거울(x 2.67) 1.53 m 빔
 //  루트 TentBedroom/Bedside
 //   NightstandR (1.50, −2.05): 협탁 + 탁상시계(TMP 3D, PyriteBedroomPanel.deskClock 이 PC 시각·알람 표시) + 물병(Props/WaterBottle 이동)
-//   NightstandL (−1.55, −2.05): 작은 협탁. Mood/StarLamp 를 위로 옮기고 외형 교체(나무 받침 + 별이 박힌 발광 구). 광원·쿠키·패널 연결은 그대로
+//   별 조명: Mood/StarLamp 를 오른쪽 협탁 위로 옮기고 외형 교체(나무 받침 + 별이 박힌 발광 구). 광원·쿠키·패널 연결은 그대로
+//    (8adc782 에서는 왼쪽 작은 협탁 NightstandL 위였음 → 03:14 관리자가 오른쪽으로 옮기고 왼쪽 협탁 삭제)
 //   Container (1.52, −1.20): 폴딩 컨테이너(올리브 PP + 나무 상판), 긴 축 z. 뚜껑 = 벽 쪽 경첩, 누르면 열림(PyriteTrunkLid, 동기화). 안에 접힌 담요
 //    (8adc782 의 가죽 트렁크는 캠핑과 안 어울린다는 관리자 의견으로 교체)
 #if UNITY_EDITOR
@@ -28,12 +29,15 @@ public static class PyriteBedside
     const string FA = "Assets/Fonts/NotoSansKR/NotoSansKR-UI SDF.asset";
 
     static readonly Vector3 NS_R = new Vector3(1.50f, 0f, -2.05f);
-    static readonly Vector3 NS_L = new Vector3(-1.55f, 0f, -2.05f);
+    // 오른쪽 협탁 위 배치 (협탁 기준 로컬 x, z). 03:14 관리자 수동 배치를 Z51u 로 읽은 값
+    static readonly Vector3 NSR_LAMP = new Vector3(-0.10f, 0f, -0.11f);     // 별 조명 (머리 쪽 안쪽)
+    static readonly Vector3 NSR_CLOCK = new Vector3(-0.08f, 0f, 0.10f);     // 탁상시계 (발치 쪽 안쪽), yaw 는 CLOCK_AIM 으로 308°
+    static readonly Vector3 NSR_BOTTLE = new Vector3(0.02f, 0f, 0.01f);     // 물병 (가운데), yaw 30°
     static readonly Vector3 CONTAINER = new Vector3(1.52f, 0f, -1.20f);    // 협탁 쪽으로 붙임 (트렁크 때 −1.05)
     static readonly Vector3 CLOCK_AIM = new Vector3(0.55f, 0f, -1.30f);          // 누운 자리(Lie_3·4)와 방 쪽
     static readonly Vector3 LAMP_OLD = new Vector3(-1.50f, 0f, -2.10f);          // PyriteBedroomMood.LAMP_POS
     static readonly Vector3 BOTTLE_OLD = new Vector3(1.30f, 0f, -2.05f);         // PyriteBedroomProps 물병
-    const float NS_W = 0.38f, NS_H = 0.40f, NS_W_L = 0.32f, NS_H_L = 0.36f;
+    const float NS_W = 0.38f, NS_H = 0.40f;
     const float CT_W = 0.40f, CT_L = 0.62f, CT_H = 0.32f;
     static readonly Color CLOCK_COL = new Color(1f, 0.58f, 0.22f, 1f);
     static StringBuilder sb;
@@ -72,6 +76,24 @@ public static class PyriteBedside
     {
         sb = new StringBuilder("[Z51t] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
         try { Renders(); sb.AppendLine("RESULT: DONE"); } catch (System.Exception e) { sb.AppendLine("EXCEPTION " + e); }
+        Flush();
+    }
+
+    // 손으로 옮긴 배치를 읽어 로그로 남김 (스크립트 상수에 옮겨 적기용). 읽기 전용
+    [MenuItem("Tools/Pyrite3/Z51u. Bedside Capture Layout", false, 5121)]
+    public static void Capture()
+    {
+        sb = new StringBuilder("[Z51u] " + System.DateTime.Now.ToString("HH:mm:ss") + "\n");
+        var room = Root("TentBedroom"); if (room == null) { sb.AppendLine("!! TentBedroom 없음"); Flush(); return; }
+        var o = room.transform; var ns = o.Find(ROOT + "/NightstandR");
+        foreach (var path in new[] { ROOT + "/NightstandR", ROOT + "/NightstandL", ROOT + "/Container", ROOT + "/NightstandR/Clock", "Props/WaterBottle", "Mood/StarLamp", "Mood/StarLamp/StarLight" })
+        {
+            var t = o.Find(path);
+            if (t == null) { sb.AppendLine(path + " : 없음"); continue; }
+            var lp = o.InverseTransformPoint(t.position); var le = (Quaternion.Inverse(o.rotation) * t.rotation).eulerAngles;
+            string rel = ns ? " · NightstandR 기준 " + V(ns.InverseTransformPoint(t.position)) : "";
+            sb.AppendLine(path + " : 방 " + V(lp) + " rot " + le.ToString("F1") + " scale " + t.lossyScale.ToString("F3") + rel + " active " + t.gameObject.activeInHierarchy);
+        }
         Flush();
     }
 
@@ -115,14 +137,13 @@ public static class PyriteBedside
 
         // ── 오른쪽 협탁 + 시계 + 물병 ──
         var nsR = Nightstand(root, "NightstandR", NS_R, NS_W, NS_H, wood, brass);
-        var clock = BuildClock(nsR, new Vector3(-0.05f, NS_H, 0.04f), o);
+        var clock = BuildClock(nsR, NSR_CLOCK + new Vector3(0f, NS_H, 0f), o);
         var bottle = o.Find("Props/WaterBottle");
-        if (bottle) { bottle.localPosition = NS_R + new Vector3(0.10f, NS_H, -0.10f); sb.AppendLine("물병 " + V(BOTTLE_OLD) + " → " + V(bottle.localPosition) + " (협탁 위)"); }
+        if (bottle) { bottle.localPosition = NS_R + NSR_BOTTLE + new Vector3(0f, NS_H, 0f); bottle.localRotation = Quaternion.Euler(0f, 30f, 0f); sb.AppendLine("물병 " + V(BOTTLE_OLD) + " → " + V(bottle.localPosition) + " (협탁 위)"); }
         else sb.AppendLine("  (Props/WaterBottle 없음)");
 
-        // ── 왼쪽 작은 협탁 + 별 조명 ──
-        var nsL = Nightstand(root, "NightstandL", NS_L, NS_W_L, NS_H_L, wood, brass);
-        MoveLamp(o, NS_L + new Vector3(0f, NS_H_L, 0f), wood);
+        // ── 별 조명: 오른쪽 협탁 위 (2026-09-30 03:14 관리자가 손으로 옮긴 배치, Z51u 실측). 왼쪽 협탁은 관리자가 삭제 → 만들지 않음 ──
+        MoveLamp(o, NS_R + NSR_LAMP + new Vector3(0f, NS_H, 0f), wood);
 
         // ── 트렁크 ──
         BuildContainer(root, o, wood);
@@ -415,7 +436,7 @@ public static class PyriteBedside
             Vector3 W(float x, float y, float z) => room.TransformPoint(new Vector3(x, y, z));
             cam.fieldOfView = 60f;
             Shot(cam, W(0.2f, 1.45f, 0.4f), W(1.45f, 0.30f, -1.45f), "bd_right");
-            Shot(cam, W(-0.35f, 1.05f, -0.85f), W(-1.55f, 0.42f, -2.05f), "bd_left");
+            Shot(cam, W(0.80f, 0.95f, -1.45f), W(1.46f, 0.46f, -2.08f), "bd_nightstand");   // 협탁 위 (별 구 · 시계 · 물병)
             Shot(cam, W(1.05f, 0.70f, -1.55f), W(1.45f, 0.44f, -2.01f), "bd_clock");
             Shot(cam, W(-0.84f, 0.45f, -1.72f), W(0.1f, 2.6f, 0.6f), "bd_lie_up");
             Shot(cam, W(1.6f, 1.55f, 2.1f), W(0f, 0.35f, -1.4f), "bd_room");
