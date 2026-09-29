@@ -1,12 +1,11 @@
-// PyriteLapBlanketBuild.cs — 머스터드 빈백 양털을 앉은 사람 무릎에 덮기 (Z52d 실측 / Z52e 빌드 / Z52f 되돌림). 재실행 안전
-//  2026-09-30 관리자: "누르면 담요가 걸쳐지면 좋겠어" → "플레이어 무릎에 담요를 덮는 걸 생각" · 동기화
-//  흐름: 평소 = 등받이에 걸친 양털(Z52b). 빈백에 앉은 사람이 자기 무릎(판정)을 누르면 무릎에 덮임 → 다시 누르거나 일어나면 등받이로
-//  메시: A_BeanbagSit 을 기준 아바타(humanScale 0.85)에 샘플링 → 몸을 굽힌 메시(BakeMesh)를 콜라이더로 삼아
-//        허벅지 좌표계(원점 = 허벅지 뿌리 중점, +Z = 무릎 쪽, +Y = 위) 격자에서 위→아래 레이캐스트 → 높이장
-//        → 원뿔 팽창(기울기 SLOPE 로 흘러내림) → 매끈하게. 빈백 표면·바닥도 받침으로 포함. 앞뒷면 (가장자리 안쪽이 보여서)
-//  런타임(PyriteLapBlanket): owner 의 허벅지 뿌리·무릎 bone 으로 위치·방향, 크기 = 허벅지 길이 / 기준 길이
-//  구조: Beanbag_1/LapThrow (Default 레이어, BoxCollider + U#) / Mesh (렌더러, 침실 레이어)
-//  ⚠ Z52b(양털 재빌드) · Z51o(앉기 재보정) 뒤에는 Z52e 다시
+// PyriteLapBlanketBuild.cs — 머스터드 빈백 양털 한 장 + 앉은 사람 다리 위로 불룩 (Z52d 실측 / Z52e 빌드 / Z52f 되돌림). 재실행 안전
+//  2026-09-30 관리자: (fbb88db 고정 모양 무릎 담요는) "본만 보고 옷을 상정하지 않아 옷 안으로 파고듦" → "이불처럼, on/off 토글 없애고 기본 on"
+//   빈 상태 = "좌석까지 한 장 (침대식)"
+//  흐름: 양털 한 장이 등받이 → 좌석 → 앞면 → 앞 바닥까지 덮여 있음. 앉으면 그 사람 다리 뼈 선분으로 셰이더가 정점을 위로 들어 올림
+//   (침대 이불 Pyrite/Blanket 과 같은 계산, 셰이더 Pyrite/SheepThrow = 양털 컷아웃 텍스처판). 누르기·동기화 없음
+//  메시: 빈백 로컬 위→아래 높이장(빈백 표면 +1.2 cm, 바닥 +0.6 cm) → 원뿔 팽창(기울기 SLOPE, 모서리에서 천이 흘러내림) → 매끈
+//  구조: Beanbag_1/SheepThrow (침실 레이어, 렌더러 + U# PyriteLapBlanket). 옛 Sheepskin(Z52b)은 끄고 EditorOnly — Z52f 로 복구
+//  ⚠ Z52b(양털 재빌드) · Z51l(빈백 재빌드) 뒤에는 Z52e 다시. Z51o(앉기 재보정) 뒤에는 Z52d 로 들림 확인
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
@@ -28,100 +27,120 @@ public static class PyriteLapBlanketBuild
     const float REF_HS = 0.85f;
     static readonly float[] SIZES = { 0.65f, 0.85f, 1.06f };
 
-    // 격자 (허벅지 좌표계, m, 기준 크기)
-    const float W = 0.26f;          // 반폭 (첫 판 0.31: 옆이 바닥까지 흘러내림)
-    const float Z0 = -0.06f;        // 뒤끝 (배 쪽)
-    const float PAST = 0.14f;       // 무릎 너머 (첫 판 0.24: 정강이 따라 바닥까지)
-    const int NX = 32, NZ = 36;
-    const float TOP = 0.6f;         // 레이 시작 높이
-    const float SLOPE = 1.7f;       // 받침에서 멀어질 때 내려가는 기울기 (≈ 60°)
-    const float CLR_BODY = 0.022f, CLR_BAG = 0.012f, CLR_FLOOR = 0.006f;
-    const float YMIN = -0.50f;
+    // 담요 한 장 (빈백 로컬, m)
+    const float XW = 0.31f;          // 반폭
+    const float ZB = -0.34f;         // 뒤끝 (등받이 비탈)
+    const float ZF = 0.66f;          // 앞끝 (바닥, 무릎 z 0.43~0.60 보다 앞)
+    const float STEP = 0.02f;
+    const float SLOPE = 3.0f;        // 빈백 모서리에서 흘러내리는 기울기 (≈ 72°)
+    const float CLR_BAG = 0.012f, CLR_FLOOR = 0.006f;
+    // 들어올림 (U# 와 같은 값)
+    const float THIGH_R = 0.30f, SHIN_R = 0.23f, R_MIN = 0.06f, R_MAX = 0.14f;
+    const float THICK = 0.03f, SKIRT = 0.14f;
 
     static StringBuilder sb;
     static bool loggedMat, loggedTri;
 
     [MenuItem("Tools/Pyrite3/Z52d. Lap Blanket Report", false, 5130)]
-    public static void Report() => Run("Z52d", () => Measure(false));
+    public static void Report() => Run("Z52d", () => Main(false));
 
     [MenuItem("Tools/Pyrite3/Z52e. Lap Blanket Build", false, 5131)]
-    public static void Build() => Run("Z52e", () => Measure(true));
+    public static void Build() => Run("Z52e", () => Main(true));
 
     [MenuItem("Tools/Pyrite3/Z52f. Lap Blanket Revert", false, 5132)]
     public static void Revert() => Run("Z52f", () =>
     {
         var bag = Bag(); if (bag == null) return false;
-        var t = bag.Find("LapThrow"); if (t) { Object.DestroyImmediate(t.gameObject); sb.AppendLine("LapThrow 삭제"); }
-        var sk = bag.Find("Sheepskin"); if (sk) { var r = sk.GetComponent<Renderer>(); if (r) r.enabled = true; }
+        foreach (var n in new[] { "LapThrow", "SheepThrow" }) { var t = bag.Find(n); if (t) { Object.DestroyImmediate(t.gameObject); sb.AppendLine(n + " 삭제"); } }
+        var sk = bag.Find("Sheepskin");
+        if (sk) { sk.gameObject.SetActive(true); sk.gameObject.tag = "Untagged"; var r = sk.GetComponent<Renderer>(); if (r) r.enabled = true; sb.AppendLine("Sheepskin(등받이 띠) 복구"); }
         Save(); return true;
     });
 
     // ═════════════════════════════════════════════════════════════
-    static bool Measure(bool build)
+    static bool Main(bool build)
     {
         if (build && !EnsureProgram("PyriteLapBlanket")) return false;
         var bag = Bag(); if (bag == null) return false;
         var room = bag.parent.parent;
-        var sp = bag.Find("Seat/SitPoint"); var seat = bag.Find("Seat");
-        var sheep = bag.Find("Sheepskin");
+        var sp = bag.Find("Seat/SitPoint");
         var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(CLIP_PATH);
         var model = Humanoid();
-        if (sp == null || clip == null || model == null) { sb.AppendLine("!! SitPoint " + (sp != null) + " · 클립 " + (clip != null) + " · 휴머노이드 " + (model != null)); return false; }
-        if (build && sheep == null) { sb.AppendLine("!! Beanbag_1/Sheepskin 없음 (Z52b 먼저)"); return false; }
+        var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DIR + "T_Sheepskin.png");
+        var shader = Shader.Find("Pyrite/SheepThrow");
+        if (sp == null || clip == null || model == null || tex == null || shader == null) { sb.AppendLine("!! SitPoint " + (sp != null) + " · 클립 " + (clip != null) + " · 휴머노이드 " + (model != null) + " · T_Sheepskin " + (tex != null) + " · 셰이더 " + (shader != null)); return false; }
 
-        // ── 배치 · 판정 ──
-        sb.AppendLine("빈백 (방 로컬):");
-        foreach (Transform b in bag.parent) sb.AppendLine("  " + b.name + " " + V(room.InverseTransformPoint(b.position)) + " yaw " + (Quaternion.Inverse(room.rotation) * b.rotation).eulerAngles.y.ToString("F0") + " scale " + b.lossyScale.ToString("F2"));
-        sb.AppendLine(bag.name + " SitPoint (빈백 로컬) " + V(bag.InverseTransformPoint(sp.position)) + " · Seat 컴포넌트 [" + string.Join(", ", seat.GetComponents<Component>().Select(c => c.GetType().Name)) + "]");
-        foreach (var bc in bag.GetComponentsInChildren<BoxCollider>(true))
-            sb.AppendLine("  BoxCollider " + Path(bc.transform, bag) + " 빈백 로컬 중심 " + V(bag.InverseTransformPoint(bc.transform.TransformPoint(bc.center))) + " 크기 " + V(Vector3.Scale(bc.size, bc.transform.lossyScale)) + " trigger " + bc.isTrigger + " layer " + LayerMask.LayerToName(bc.gameObject.layer));
-        foreach (var c in bag.GetComponentsInChildren<Collider>(true).Where(c => !(c is BoxCollider)))
-            sb.AppendLine("  " + c.GetType().Name + " " + Path(c.transform, bag) + " bounds " + V(c.bounds.center - bag.position) + " / " + V(c.bounds.size));
-        Bounds sheepB = default;
-        if (sheep) { sheepB = LocalBounds(sheep.GetComponent<MeshFilter>(), bag); sb.AppendLine("양털(걸침) 빈백 로컬 bounds 중심 " + V(sheepB.center) + " 크기 " + V(sheepB.size)); }
+        Transform thr = bag.Find("SheepThrow");
+        Material mat;
+        if (build)
+        {
+            foreach (var n in new[] { "LapThrow", "SheepThrow" }) { var t = bag.Find(n); if (t) Object.DestroyImmediate(t.gameObject); }
+            var sk = bag.Find("Sheepskin"); if (sk) { sk.gameObject.SetActive(false); sk.gameObject.tag = "EditorOnly"; sb.AppendLine("옛 Sheepskin(등받이 띠) 끔 + EditorOnly"); }
+            var mesh = RestMesh(bag);
+            mesh = SaveMesh(mesh, "SheepThrow");
+            mat = AssetDatabase.LoadAssetAtPath<Material>(DIR + "M_SheepThrow.mat");
+            if (mat == null) { mat = new Material(shader); AssetDatabase.CreateAsset(mat, DIR + "M_SheepThrow.mat"); }
+            mat.shader = shader; mat.mainTexture = tex; mat.color = new Color(0.93f, 0.89f, 0.81f);
+            mat.SetFloat("_Cutoff", 0.5f); mat.SetFloat("_Glossiness", 0.04f); mat.SetFloat("_Thick", THICK); mat.SetFloat("_Skirt", SKIRT); mat.SetFloat("_SegCount", 0f);
+            mat.renderQueue = (int)RenderQueue.AlphaTest; EditorUtility.SetDirty(mat);
+            var go = new GameObject("SheepThrow"); go.transform.SetParent(bag, false); go.layer = PyriteBedroomV3.LAYER;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat; mr.lightProbeUsage = LightProbeUsage.Off; mr.shadowCastingMode = ShadowCastingMode.On;
+            var lb = UdonSharpUndo.AddComponent<PyriteLapBlanket>(go);
+            lb.mat = mat; lb.sitPoint = sp; lb.thighR = THIGH_R; lb.shinR = SHIN_R; lb.rMin = R_MIN; lb.rMax = R_MAX;
+            UdonSharpEditorUtility.CopyProxyToUdon(lb);
+            thr = go.transform;
+            Save();
+        }
+        else
+        {
+            if (thr == null) { sb.AppendLine("!! SheepThrow 없음 (Z52e 먼저)"); return false; }
+            mat = thr.GetComponent<Renderer>().sharedMaterial;
+        }
+        var rest = thr.GetComponent<MeshFilter>().sharedMesh;
+        sb.AppendLine("양털 한 장: " + (2 * XW).ToString("F2") + " × " + (ZF - ZB).ToString("F2") + " m (빈백 로컬 z " + ZB + " ~ " + ZF + "), 정점 " + rest.vertexCount + " · 삼각형 " + rest.triangles.Length / 3 + " (Cull Off 한 면)");
 
-        var bagBody = bag.Find("Body");
-        var bagMc = bagBody.gameObject.AddComponent<MeshCollider>(); bagMc.sharedMesh = bagBody.GetComponent<MeshFilter>().sharedMesh;
-        var floor = new Plane(bag.up, bag.position);
+        // ── 크기별: 뼈 선분 → CPU 로 셰이더 들어올림 재현 → 관통·띄움 측정 + 렌더 ──
+        var cam = Camera.main; var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
+        var cyc = Object.FindObjectOfType<PyriteDayCycle>();
         GameObject probe = null; MeshCollider bodyMc = null;
-        Mesh lapMesh = null; float refThigh = 0f; Vector3 refPos = Vector3.zero; Quaternion refRot = Quaternion.identity;
-        var poses = new Dictionary<float, (Vector3 u, Quaternion q, float s, Vector3 head)>();
+        Directory.CreateDirectory(PREV);
         try
         {
+            if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(21f); }
+            cam.fieldOfView = 50f;
+            var c = bag.position + bag.up * 0.5f;
+            var eye34 = c + bag.right * 1.5f + bag.forward * 0.9f + bag.up * 0.35f;
+            SetSegs(mat, new List<Vector4>());
+            if (build)
+            {
+                Shot(cam, eye34, c, "thr_empty_34");
+                Shot(cam, c + bag.right * 1.6f + bag.up * 0.05f, c, "thr_empty_side");
+                Shot(cam, c + bag.forward * 1.7f + bag.up * 0.45f, c, "thr_empty_front");
+            }
             AnimationMode.StartAnimationMode();
-            // 기준 크기 먼저 (메시), 그다음 크기별 측정
-            foreach (float hs in new[] { REF_HS }.Concat(SIZES.Where(s => s != REF_HS)))
+            foreach (var hs in SIZES)
             {
                 probe = Spawn(model, sp, hs, out var an);
                 AnimationMode.BeginSampling(); AnimationMode.SampleAnimationClip(probe, clip, 0f); AnimationMode.EndSampling();
-                Transform B(HumanBodyBones hb) => an.GetBoneTransform(hb);
-                var U = (B(HumanBodyBones.LeftUpperLeg).position + B(HumanBodyBones.RightUpperLeg).position) * 0.5f;
-                var K = (B(HumanBodyBones.LeftLowerLeg).position + B(HumanBodyBones.RightLowerLeg).position) * 0.5f;
-                var hips = B(HumanBodyBones.Hips).position; var head = B(HumanBodyBones.Head).position;
-                var f = (K - U).normalized; var r = Vector3.ProjectOnPlane(sp.right, f).normalized; var up = Vector3.Cross(f, r);
-                float thigh = (K - U).magnitude;
-                var dh = hips - sp.position; float dUp = Vector3.Dot(dh, sp.up), dHor = Vector3.ProjectOnPlane(dh, sp.up).magnitude;
-                var kl = bag.InverseTransformPoint(K);
-                sb.AppendLine("크기 " + hs + ": 허벅지 " + thigh.ToString("F3") + " m · 방향(위 성분) " + Vector3.Dot(f, sp.up).ToString("F2") + " (" + (Mathf.Asin(Vector3.Dot(f, sp.up)) * Mathf.Rad2Deg).ToString("F0") + "°)"
-                              + " · 무릎 사이 " + (B(HumanBodyBones.LeftLowerLeg).position - B(HumanBodyBones.RightLowerLeg).position).magnitude.ToString("F3")
-                              + " · 골반−SitPoint 위 " + dUp.ToString("F3") + " / 수평 " + dHor.ToString("F3") + " · 무릎 빈백로컬 " + V(kl)
-                              + " · 머리 빈백로컬 " + V(bag.InverseTransformPoint(head)));
-                if (sheep) { var hl = bag.InverseTransformPoint(head); sb.AppendLine("  머리가 걸침 양털 박스 안? " + sheepB.Contains(hl) + " (박스 윗면 " + sheepB.max.y.ToString("F2") + ")"); }
-
+                var segs = Segs(an);
+                var hips = an.GetBoneTransform(HumanBodyBones.Hips).position;
                 loggedMat = false; loggedTri = false;
                 bodyMc = BakeBody(probe, an, hips);
-                if (hs == REF_HS)
+                Measure(rest, thr, segs, bodyMc, hs);
+                SetSegs(mat, segs);
+                if (build)
                 {
-                    refThigh = thigh;
-                    refPos = sp.InverseTransformPoint(U); refRot = Quaternion.Inverse(sp.rotation) * Quaternion.LookRotation(f, up);
-                    lapMesh = MakeMesh(U, f, r, up, thigh, bodyMc, bagMc, floor, out int hitB, out int hitG, out int hitF);
-                    sb.AppendLine("  무릎 담요 격자 " + (NX + 1) + "×" + (NZ + 1) + " · 받침 적중 몸 " + hitB + " / 빈백 " + hitG + " / 바닥 " + hitF + " · 삼각형 " + lapMesh.triangles.Length / 3 + " (앞뒷면) · bounds " + V(lapMesh.bounds.size));
-                }
-                if (lapMesh != null)
-                {
-                    float s = thigh / refThigh; var q = Quaternion.LookRotation(f, up);
-                    poses[hs] = (U, q, s, head);
-                    Poke(lapMesh, U, q, s, bodyMc, hs);
+                    string tag = "thr_" + Mathf.RoundToInt(hs * 100);
+                    Shot(cam, eye34, c, tag + "_34");
+                    Shot(cam, c + bag.right * 1.6f + bag.up * 0.05f, c, tag + "_side");
+                    if (hs == REF_HS)
+                    {
+                        Shot(cam, c + bag.forward * 1.7f + bag.up * 0.45f, c, tag + "_front");
+                        var head = an.GetBoneTransform(HumanBodyBones.Head).position;
+                        var kn = an.GetBoneTransform(HumanBodyBones.LeftLowerLeg).position;
+                        Shot(cam, head + bag.forward * 0.10f + bag.up * 0.05f, kn - bag.right * 0.08f, tag + "_eye");
+                    }
                 }
                 Object.DestroyImmediate(bodyMc.gameObject); bodyMc = null;
                 Object.DestroyImmediate(probe); probe = null;
@@ -132,108 +151,111 @@ public static class PyriteLapBlanketBuild
             if (AnimationMode.InAnimationMode()) AnimationMode.StopAnimationMode();
             if (probe) Object.DestroyImmediate(probe);
             if (bodyMc) Object.DestroyImmediate(bodyMc.gameObject);
-            Object.DestroyImmediate(bagMc);
+            SetSegs(mat, new List<Vector4>());
+            cam.fieldOfView = f0; cam.transform.SetPositionAndRotation(p0, r0);
+            if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(PyriteDayCycleSetup.EDITOR_HOUR); }
         }
-        if (!build) { if (lapMesh) Object.DestroyImmediate(lapMesh); return true; }
-
-        // ── 오브젝트 ──
-        var old = bag.Find("LapThrow"); if (old) Object.DestroyImmediate(old.gameObject);
-        lapMesh = SaveMesh(lapMesh, "LapBlanket");
-        var mat = AssetDatabase.LoadAssetAtPath<Material>(DIR + "M_Sheepskin.mat");
-        var go = new GameObject("LapThrow"); go.transform.SetParent(bag, false); go.layer = 0;
-        var mesh = new GameObject("Mesh"); mesh.transform.SetParent(go.transform, false); mesh.layer = PyriteBedroomV3.LAYER;
-        mesh.AddComponent<MeshFilter>().sharedMesh = lapMesh;
-        var mr = mesh.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat; mr.lightProbeUsage = LightProbeUsage.Off; mr.shadowCastingMode = ShadowCastingMode.On; mr.enabled = false;
-        // 판정: 담요 bounds + 위로 18 cm (Seat 판정 박스 윗면 0.62 보다 위에서 먼저 맞게 — 무릎 쪽 z > 0.36 은 Seat 박스 밖)
-        var lb = lapMesh.bounds; var box = go.AddComponent<BoxCollider>();
-        box.center = lb.center + new Vector3(0f, 0.09f, 0f); box.size = lb.size + new Vector3(0f, 0.18f, 0f);
-        // 쉬는 자세: 판정 박스가 걸친 양털을 감싸게 (비대칭 스케일, 이때 렌더러는 꺼져 있음)
-        var ds = new Vector3(sheepB.size.x / box.size.x, sheepB.size.y / box.size.y, sheepB.size.z / box.size.z);
-        var dp = sheepB.center - Vector3.Scale(ds, box.center);
-        go.transform.localPosition = dp; go.transform.localScale = ds;
-        var lbh = UdonSharpUndo.AddComponent<PyriteLapBlanket>(go);
-        lbh.sitPoint = sp; lbh.drape = sheep.GetComponent<Renderer>(); lbh.lap = mr; lbh.refThigh = refThigh;
-        lbh.refPos = refPos; lbh.refRot = refRot; lbh.drapePos = dp; lbh.drapeRot = Quaternion.identity; lbh.drapeScale = ds;
-        UdonSharpEditorUtility.CopyProxyToUdon(lbh);
-        var ub = UdonSharpEditorUtility.GetBackingUdonBehaviour(lbh);
-        if (ub != null) { ub.interactText = "Cover Lap"; ub.proximity = 1.5f; EditorUtility.SetDirty(ub); }
-        sb.AppendLine("LapThrow: 기준 허벅지 " + refThigh.ToString("F3") + " m · 판정 " + V(box.size) + " · 쉬는 자세 " + V(dp) + " × " + V(ds) + " · 기준 자세(SitPoint 로컬) " + V(refPos) + " / " + (refRot.eulerAngles).ToString("F0"));
-        Save();
-        Renders(room, bag, model, sp, clip, go.transform, mr, sheep.GetComponent<Renderer>(), poses);
         return true;
     }
 
-    // 허벅지 좌표계 높이장 → 원뿔 팽창 → 매끈 → 앞뒷면 메시
-    static Mesh MakeMesh(Vector3 U, Vector3 f, Vector3 r, Vector3 up, float thigh, MeshCollider body, MeshCollider bagMc, Plane floor, out int hitB, out int hitG, out int hitF)
+    // U# 와 같은 선분: 허벅지 2 · 사타구니 1 · 정강이 2. 반지름 = 허벅지 길이 비례
+    static List<Vector4> Segs(Animator an)
     {
-        hitB = hitG = hitF = 0;
-        float Z1 = thigh + PAST;
-        int nx = NX + 1, nz = NZ + 1, n = nx * nz;
-        var X = new float[n]; var Z = new float[n]; var H = new float[n];
-        for (int j = 0; j < nz; j++) for (int i = 0; i < nx; i++)
-        {
-            int k = j * nx + i; float x = -W + 2f * W * i / NX, z = Z0 + (Z1 - Z0) * j / NZ; X[k] = x; Z[k] = z;
-            var ray = new Ray(U + r * x + f * z + up * TOP, -up);
-            float best = float.MaxValue; int src = -1;
-            if (body.Raycast(ray, out var h1, 2f) && h1.distance - CLR_BODY < best) { best = h1.distance - CLR_BODY; src = 0; }
-            if (bagMc.Raycast(ray, out var h2, 2f) && h2.distance - CLR_BAG < best) { best = h2.distance - CLR_BAG; src = 1; }
-            if (floor.Raycast(ray, out float d3) && d3 - CLR_FLOOR < best) { best = d3 - CLR_FLOOR; src = 2; }
-            H[k] = src < 0 ? float.NegativeInfinity : TOP - best;
-            if (src == 0) hitB++; else if (src == 1) hitG++; else if (src == 2) hitF++;
-        }
-        var Y = new float[n];
-        for (int a = 0; a < n; a++)
-        {
-            float m = YMIN;
-            for (int b = 0; b < n; b++) { if (float.IsNegativeInfinity(H[b])) continue; float dx = X[a] - X[b], dz = Z[a] - Z[b]; float v = H[b] - SLOPE * Mathf.Sqrt(dx * dx + dz * dz); if (v > m) m = v; }
-            Y[a] = m;
-        }
-        for (int pass = 0; pass < 6; pass++)
-        {
-            var Y2 = (float[])Y.Clone();
-            for (int j = 1; j < nz - 1; j++) for (int i = 1; i < nx - 1; i++)
-            {
-                int k = j * nx + i; float avg = 0.25f * (Y[k - 1] + Y[k + 1] + Y[k - nx] + Y[k + nx]);
-                Y2[k] = Mathf.Max(0.5f * Y[k] + 0.5f * avg, float.IsNegativeInfinity(H[k]) ? YMIN : H[k]);
-            }
-            Y = Y2;
-        }
-        var vs = new List<Vector3>(); var uv = new List<Vector2>(); var ts = new List<int>();
-        for (int side = 0; side < 2; side++)
-        {
-            int b0 = vs.Count;
-            for (int k = 0; k < n; k++) { vs.Add(new Vector3(X[k], Y[k], Z[k])); uv.Add(new Vector2((X[k] + W) / (2f * W), (Z[k] - Z0) / (Z1 - Z0))); }
-            for (int j = 0; j < NZ; j++) for (int i = 0; i < NX; i++)
-            {
-                int p = b0 + j * nx + i, q = p + 1, s = p + nx, t = s + 1;
-                if (side == 0) { ts.Add(p); ts.Add(s); ts.Add(q); ts.Add(q); ts.Add(s); ts.Add(t); }
-                else { ts.Add(p); ts.Add(q); ts.Add(s); ts.Add(q); ts.Add(t); ts.Add(s); }
-            }
-        }
-        var mesh = new Mesh { name = "LapBlanket" }; mesh.SetVertices(vs); mesh.SetUVs(0, uv); mesh.SetTriangles(ts, 0);
-        mesh.RecalculateNormals(); mesh.RecalculateBounds();
-        // 윗면 법선이 위(+Y)를 보는지 확인, 아니면 두 면 감김을 서로 바꿈
-        var nr = mesh.normals; float upSum = 0f; for (int k = 0; k < n; k++) upSum += nr[k].y;
-        if (upSum < 0f) { var t2 = mesh.triangles; for (int k = 0; k < t2.Length; k += 3) { int tmp = t2[k + 1]; t2[k + 1] = t2[k + 2]; t2[k + 2] = tmp; } mesh.triangles = t2; mesh.RecalculateNormals(); sb.AppendLine("  (감김 뒤집음)"); }
-        return mesh;
+        Vector3 P(HumanBodyBones b) => an.GetBoneTransform(b).position;
+        var lu = P(HumanBodyBones.LeftUpperLeg); var ru = P(HumanBodyBones.RightUpperLeg);
+        var lk = P(HumanBodyBones.LeftLowerLeg); var rk = P(HumanBodyBones.RightLowerLeg);
+        var lf = P(HumanBodyBones.LeftFoot); var rf = P(HumanBodyBones.RightFoot);
+        float len = (lk - lu).magnitude;
+        float tr = Mathf.Clamp(len * THIGH_R, R_MIN, R_MAX), sr = Mathf.Clamp(len * SHIN_R, R_MIN * 0.8f, R_MAX);
+        var l = new List<Vector4>();
+        void S(Vector3 a, Vector3 b, float r) { l.Add(new Vector4(a.x, a.y, a.z, r)); l.Add(new Vector4(b.x, b.y, b.z, 0f)); }
+        S(lu, lk, tr); S(ru, rk, tr); S(lu, ru, tr * 1.1f); S(lk, lf, sr); S(rk, rf, sr);
+        sb.AppendLine("크기 " + (an.humanScale * an.transform.localScale.x).ToString("F2") + ": 허벅지 " + len.ToString("F3") + " m → 반지름 허벅지 " + tr.ToString("F3") + " · 정강이 " + sr.ToString("F3") + " (+ 두께 " + THICK + ")");
+        return l;
     }
 
-    // 몸이 담요를 뚫는지: 윗면 정점마다 위에서 아래로 몸에 레이 — 몸 표면이 정점보다 위면 관통
-    static void Poke(Mesh m, Vector3 U, Quaternion q, float s, MeshCollider body, float hs)
+    static void SetSegs(Material m, List<Vector4> segs)
     {
-        var vs = m.vertices; int n = vs.Length / 2, poke = 0, near = 0; float worst = 0f, gapSum = 0f;
-        var up = q * Vector3.up;
-        for (int k = 0; k < n; k++)
+        var arr = new Vector4[32]; for (int i = 0; i < segs.Count && i < 32; i++) arr[i] = segs[i];
+        m.SetVectorArray("_Seg", arr); m.SetFloat("_SegCount", segs.Count / 2);
+    }
+
+    // 셰이더 BodyH 그대로
+    static float BodyH(Vector3 p, float y0, List<Vector4> s)
+    {
+        float h = y0;
+        for (int i = 0; i + 1 < s.Count; i += 2)
         {
-            var w = U + q * (vs[k] * s);
-            if (body.Raycast(new Ray(w + up * 0.3f, -up), out var h, 0.6f))
+            Vector4 a = s[i], b = s[i + 1]; float r = a.w;
+            var ab = new Vector2(b.x - a.x, b.z - a.z); var ap = new Vector2(p.x - a.x, p.z - a.z);
+            float t = Mathf.Clamp01(Vector2.Dot(ap, ab) / Mathf.Max(Vector2.Dot(ab, ab), 1e-5f));
+            float d = (ap - ab * t).magnitude; float cy = Mathf.Lerp(a.y, b.y, t);
+            float top = cy + r + THICK; float sm = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(r * 0.55f, r + SKIRT, d));
+            h = Mathf.Max(h, Mathf.Lerp(y0, Mathf.Max(top, y0), sm));
+        }
+        return h;
+    }
+
+    // 몸(골반·다리)이 담요를 뚫는지 + 몸 위 띄움 (= 옷 두께 여유)
+    static void Measure(Mesh rest, Transform thr, List<Vector4> segs, MeshCollider body, float hs)
+    {
+        var vs = rest.vertices; int poke = 0, over = 0, lifted = 0; float worst = 0f, sum = 0f, minGap = 9f;
+        foreach (var v in vs)
+        {
+            var w = thr.TransformPoint(v); float h = BodyH(w, w.y, segs); if (h - w.y > 0.005f) lifted++; w.y = h;
+            if (body.Raycast(new Ray(w + Vector3.up * 0.4f, Vector3.down), out var hit, 0.8f))
             {
-                float gap = 0.3f - h.distance;    // > 0 = 몸이 정점 위로 나옴
-                if (gap > 0.002f) { poke++; worst = Mathf.Max(worst, gap); }
-                else if (-gap < 0.08f) { near++; gapSum += -gap; }
+                float gap = w.y - hit.point.y;
+                if (gap < -0.002f) { poke++; worst = Mathf.Max(worst, -gap); }
+                else { over++; sum += gap; minGap = Mathf.Min(minGap, gap); }
             }
         }
-        sb.AppendLine("  크기 " + hs + " 배율 " + s.ToString("F2") + ": 관통 정점 " + poke + " / " + n + " (" + (100f * poke / n).ToString("F1") + "%) 최대 " + (worst * 100f).ToString("F1") + " cm · 몸 위 평균 띄움 " + (near > 0 ? (gapSum / near * 100f).ToString("F1") : "-") + " cm (" + near + " 정점)");
+        sb.AppendLine("  들린 정점 " + lifted + " / " + vs.Length + " · 몸 위 정점 " + (poke + over) + " 중 관통 " + poke + " (최대 " + (worst * 100f).ToString("F1") + " cm) · 몸 위 띄움 평균 " + (over > 0 ? (sum / over * 100f).ToString("F1") : "-") + " / 최소 " + (over > 0 ? (minGap * 100f).ToString("F1") : "-") + " cm");
+    }
+
+    // 빈 상태 모양: 빈백 로컬 높이장 → 원뿔 팽창 → 매끈
+    static Mesh RestMesh(Transform bag)
+    {
+        var body = bag.Find("Body");
+        var mc = body.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = body.GetComponent<MeshFilter>().sharedMesh;
+        try
+        {
+            int nx = Mathf.RoundToInt(2 * XW / STEP) + 1, nz = Mathf.RoundToInt((ZF - ZB) / STEP) + 1, n = nx * nz;
+            var X = new float[n]; var Z = new float[n]; var H = new float[n]; int hitB = 0;
+            for (int j = 0; j < nz; j++) for (int i = 0; i < nx; i++)
+            {
+                int k = j * nx + i; float x = -XW + 2f * XW * i / (nx - 1), z = ZB + (ZF - ZB) * j / (nz - 1); X[k] = x; Z[k] = z;
+                float y = CLR_FLOOR;
+                if (mc.Raycast(new Ray(bag.TransformPoint(new Vector3(x, 2f, z)), -bag.up), out var h, 3f)) { y = Mathf.Max(y, bag.InverseTransformPoint(h.point).y + CLR_BAG); hitB++; }
+                H[k] = y;
+            }
+            var Y = new float[n];
+            for (int a = 0; a < n; a++)
+            {
+                float m = H[a];
+                for (int b = 0; b < n; b++) { float dx = X[a] - X[b], dz = Z[a] - Z[b]; float v = H[b] - SLOPE * Mathf.Sqrt(dx * dx + dz * dz); if (v > m) m = v; }
+                Y[a] = m;
+            }
+            for (int pass = 0; pass < 4; pass++)
+            {
+                var Y2 = (float[])Y.Clone();
+                for (int j = 1; j < nz - 1; j++) for (int i = 1; i < nx - 1; i++)
+                { int k = j * nx + i; Y2[k] = Mathf.Max(0.5f * Y[k] + 0.125f * (Y[k - 1] + Y[k + 1] + Y[k - nx] + Y[k + nx]), H[k]); }
+                Y = Y2;
+            }
+            var vs = new List<Vector3>(); var uv = new List<Vector2>(); var col = new List<Color>(); var ts = new List<int>();
+            for (int k = 0; k < n; k++) { vs.Add(new Vector3(X[k], Y[k], Z[k])); uv.Add(new Vector2((X[k] + XW) / (2f * XW), (Z[k] - ZB) / (ZF - ZB))); col.Add(new Color(1f, 0f, 0f, 1f)); }
+            for (int j = 0; j < nz - 1; j++) for (int i = 0; i < nx - 1; i++)
+            { int p = j * nx + i, q = p + 1, s = p + nx, t = s + 1; ts.Add(p); ts.Add(s); ts.Add(q); ts.Add(q); ts.Add(s); ts.Add(t); }
+            var mesh = new Mesh { name = "SheepThrow" }; mesh.SetVertices(vs); mesh.SetUVs(0, uv); mesh.SetColors(col); mesh.SetTriangles(ts, 0);
+            mesh.RecalculateNormals();
+            if (mesh.normals.Sum(q => q.y) < 0f) { var t2 = mesh.triangles; for (int k = 0; k < t2.Length; k += 3) { int tmp = t2[k + 1]; t2[k + 1] = t2[k + 2]; t2[k + 2] = tmp; } mesh.triangles = t2; mesh.RecalculateNormals(); sb.AppendLine("  (감김 뒤집음)"); }
+            mesh.RecalculateBounds();
+            var bb = mesh.bounds; bb.Encapsulate(bb.max + Vector3.up * 0.35f); mesh.bounds = bb;   // 셰이더 들어올림 몫 (컬링)
+            sb.AppendLine("  높이장 " + nx + "×" + nz + " · 빈백 적중 " + hitB + " · 높이 " + Y.Min().ToString("F2") + " ~ " + Y.Max().ToString("F2") + " m");
+            return mesh;
+        }
+        finally { Object.DestroyImmediate(mc); }
     }
 
     // 받침 = 골반·다리에 붙은 삼각형만 (첫 판: 허벅지 위 손·팔꿈치까지 받쳐서 담요가 뾰족한 텐트처럼 솟음)
@@ -310,56 +332,6 @@ public static class PyriteLapBlanketBuild
             return go;
         }
         return null;
-    }
-
-    // ── 렌더: 걸침(전) + 크기별 무릎 덮음(후) ──
-    static void Renders(Transform room, Transform bag, GameObject model, Transform sp, AnimationClip clip, Transform throwT, Renderer lapR, Renderer drapeR, Dictionary<float, (Vector3 u, Quaternion q, float s, Vector3 head)> poses)
-    {
-        var cam = Camera.main; var p0 = cam.transform.position; var r0 = cam.transform.rotation; float f0 = cam.fieldOfView;
-        var cyc = Object.FindObjectOfType<PyriteDayCycle>();
-        var tp = throwT.localPosition; var tr = throwT.localRotation; var ts = throwT.localScale;
-        GameObject probe = null;
-        Directory.CreateDirectory(PREV);
-        try
-        {
-            if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(21f); }
-            AnimationMode.StartAnimationMode();
-            cam.fieldOfView = 50f;
-            var c = bag.position + bag.up * 0.5f;
-            foreach (var hs in SIZES)
-            {
-                if (!poses.ContainsKey(hs)) continue;
-                probe = Spawn(model, sp, hs, out var an);
-                AnimationMode.BeginSampling(); AnimationMode.SampleAnimationClip(probe, clip, 0f); AnimationMode.EndSampling();
-                string tag = "lap_" + Mathf.RoundToInt(hs * 100);
-                if (hs == REF_HS)
-                {   // 전: 걸친 상태로 앉음
-                    lapR.enabled = false; drapeR.enabled = true;
-                    Shot(cam, c + bag.right * 1.5f + bag.forward * 0.9f + bag.up * 0.35f, c, "lap_before");
-                }
-                var ps = poses[hs];
-                throwT.SetPositionAndRotation(ps.u, ps.q); throwT.localScale = Vector3.one * ps.s;
-                lapR.enabled = true; drapeR.enabled = false;
-                Shot(cam, c + bag.right * 1.5f + bag.forward * 0.9f + bag.up * 0.35f, c, tag + "_34");
-                Shot(cam, c + bag.right * 1.6f + bag.up * 0.05f, c, tag + "_side");
-                if (hs == REF_HS)
-                {
-                    Shot(cam, c + bag.forward * 1.7f + bag.up * 0.45f, c, tag + "_front");
-                    var eye = an.GetBoneTransform(HumanBodyBones.Head).position + bag.forward * 0.10f + bag.up * 0.05f;
-                    Shot(cam, eye, ps.u + (ps.q * Vector3.forward) * 0.35f * ps.s, tag + "_eye");
-                }
-                Object.DestroyImmediate(probe); probe = null;
-            }
-        }
-        finally
-        {
-            if (AnimationMode.InAnimationMode()) AnimationMode.StopAnimationMode();
-            if (probe) Object.DestroyImmediate(probe);
-            throwT.localPosition = tp; throwT.localRotation = tr; throwT.localScale = ts;
-            lapR.enabled = false; drapeR.enabled = true;
-            cam.fieldOfView = f0; cam.transform.SetPositionAndRotation(p0, r0);
-            if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(PyriteDayCycleSetup.EDITOR_HOUR); }
-        }
     }
 
     static void Shot(Camera cam, Vector3 eye, Vector3 at, string tag)
