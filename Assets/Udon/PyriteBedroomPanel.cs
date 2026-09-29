@@ -27,6 +27,8 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     public TextMeshProUGUI sleepValue;
     public Toggle mirrorToggle;
     public TextMeshProUGUI clockText;
+    public TextMeshPro deskClock;           // 오른쪽 협탁 탁상시계 (Z51r). 같은 시각, 알람 켜짐이면 알람 시각 한 줄, 울리면 깜박임
+    public Color deskClockColor = new Color(1f, 0.58f, 0.22f, 1f);
     public Toggle alarmToggle;
     public TextMeshProUGUI ampmText;
     public TextMeshProUGUI hourText;
@@ -192,6 +194,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         if (alarmSource != null) alarmSource.Stop();
         stopButton.SetActive(false);
         icon.color = Color.white;
+        if (deskClock != null) deskClock.color = deskClockColor;
     }
 
     private void Ring()
@@ -209,6 +212,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         int h12 = h % 12; if (h12 == 0) h12 = 12;
         string mm = now.Minute < 10 ? "0" + now.Minute : now.Minute.ToString();
         clockText.text = h12 + ":" + mm + (h < 12 ? " AM" : " PM");
+        if (deskClock != null) deskClock.text = h12 + ":" + mm + "<size=40%> " + (h < 12 ? "AM" : "PM") + (alarmOn ? "\n<size=30%>ALARM " + hour12 + ":" + (minute < 10 ? "0" + minute : minute.ToString()) + (pm ? " PM" : " AM") : "");
         int key = h * 60 + now.Minute;
         if (alarmOn && !ringing && h == AlarmHour24() && now.Minute == minute && key != lastFiredKey)
         {
@@ -233,6 +237,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         {
             float a = 0.35f + 0.65f * (0.5f + 0.5f * Mathf.Sin(Time.time * 8f));
             icon.color = new Color(1f, 1f, 1f, a);
+            if (deskClock != null) deskClock.color = new Color(deskClockColor.r, deskClockColor.g, deskClockColor.b, a);
             if (Time.time - ringStart > ringMaxSeconds) StopAlarm();
         }
     }

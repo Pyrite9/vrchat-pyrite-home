@@ -179,6 +179,7 @@ public static class PyriteBedroomPanelBuild
         { var st = o.Find("Mood/StarLamp/StarLight"); pb.starLight = st ? st.GetComponent<Light>() : null; }   // 무드등 (Z51i) — 있으면 연결
         pb.stringMat = o.Find("Mood/StringLights") ? AssetDatabase.LoadAssetAtPath<Material>(PyriteBedroomMood.DIR + "M_StringBulb.mat") : null;
         pb.starMax = PyriteBedroomMood.STAR_MAX; pb.stringEmit = PyriteBedroomMood.STRING_EMIT;
+        { var dc = o.Find(PyriteBedside.CLOCK_PATH); pb.deskClock = dc ? dc.GetComponent<TextMeshPro>() : null; }   // 탁상시계 (Z51r) — 있으면 연결
         UdonSharpEditorUtility.CopyProxyToUdon(pb); EditorUtility.SetDirty(pb);
 
         // 이벤트 연결 (U# 가 붙은 뒤)
