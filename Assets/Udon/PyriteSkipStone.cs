@@ -1,6 +1,7 @@
 // 물수제비 돌 — 부두 끝 쟁반에서 집어 던진다
 //  데스크톱 (2026-09-24): 클릭 = 집기(AutoHold), 우클릭 = 놓기(VRChat 기본), 좌클릭 꾹 → 떼면 던지기. 오래 누를수록 세게, 시선 방향으로 낮게
 //  VR 은 AutoHold No — 쥐고 있는 동안만 든다 (2026-09-27)
+//  손 바꿔 잡기(OnDrop → OnPickup)는 던지기로 치지 않는다 (2026-09-30 23:3x, 0.08 초 기다렸다 발사)
 //  VR 던지기 (2026-09-30, 손 스윙은 입사각·속도 맞추기가 어려웠다): 쥐고 있는 시간만큼 힘이 모이고(vrMinHold 뒤 vrChargeTime 동안 throwMin→throwMax,
 //   손 진동이 점점 세짐), 손을 펴면 손이 가리키는 수평 방향으로 낮게 날아간다(피치 -4~10°, 데스크톱과 같음). 손 속도는 무시
 //   vrMinHold 보다 짧게 쥐었다 놓으면 그냥 떨어뜨린다. 손 '가리키는 축'은 handAxis (트래킹 회전 기준)
@@ -48,6 +49,8 @@ public class PyriteSkipStone : UdonSharpBehaviour
     private bool vrLocal, vrHeld;
     private float holdStart, hapT;
     private VRC_Pickup.PickupHand hand;
+    private float throwPend = -1f;        // 손 바꾸기 판별: 놓은 뒤 이만큼 기다렸다 던진다 (다시 잡히면 취소)
+    private Vector3 throwPos;
 
     private void Start()
     {
@@ -86,10 +89,26 @@ public class PyriteSkipStone : UdonSharpBehaviour
         if (flat.sqrMagnitude < 0.0001f) flat = lp.GetRotation() * Vector3.forward;
         flat.Normalize();
         float pitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(f.normalized.y, -1f, 1f)) * Mathf.Rad2Deg, -4f, 10f) * Mathf.Deg2Rad;
-        throwVel = flat * (sp * Mathf.Cos(pitch)) + Vector3.up * (sp * Mathf.Sin(pitch));
+        throwVel = flat * (sp * Mathf.Cos(pitch)) + Vector3.up * (sp * Mathf.Sin(pitch));   // 세기·방향은 놓는 순간 값
+        // 🔴 반대손으로 고쳐 잡아도 VRChat 은 OnDrop → OnPickup 을 보낸다(2026-09-30 23:30) → 바로 던지면 손 바꾸기가 던지기가 된다
+        //  0.08 초 제자리에 붙잡아 두고, 그 사이 다시 잡히면 취소. 아니면 놓은 자리에서 발사
+        throwPend = 0.08f;
+        throwPos = transform.position;
+    }
+
+    private void ThrowTick()
+    {
+        if (throwPend < 0f || rb == null) return;
+        if (pickup != null && pickup.IsHeld) { throwPend = -1f; return; }    // 손 바꾸기 → 던지지 않음
+        throwPend -= Time.deltaTime;
+        transform.position = throwPos;
+        if (!rb.isKinematic) rb.velocity = Vector3.zero;
+        if (throwPend > 0f) return;
+        throwPend = -1f;
         Launch();                    // 손에서 놓은 자리 그대로 발사
-        throwFrames = 2;             // VRChat 이 놓은 직후 손 속도를 다시 넣으므로 두 프레임 더 덮어쓴다
-        lp.PlayHapticEventInHand(hand, 0.08f, 0.6f, 180f);
+        throwFrames = 2;             // VRChat 이 놓은 직후 손 속도를 다시 넣을 수 있어 두 프레임 더 덮어쓴다
+        VRCPlayerApi lp = Networking.LocalPlayer;
+        if (Utilities.IsValid(lp)) lp.PlayHapticEventInHand(hand, 0.08f, 0.6f, 180f);
     }
 
     // VR: 쥐고 있는 동안 힘이 모이는 걸 진동으로 — 점점 세고 빠르게, 가득 차면 0.6 초마다 한 번
@@ -168,6 +187,7 @@ public class PyriteSkipStone : UdonSharpBehaviour
 
     private void Update()
     {
+        ThrowTick();
         if (throwFrames > 0 && rb != null) { throwFrames--; Launch(); }
         if (vrHeld && held) ChargeHaptics();
         float y = transform.position.y;

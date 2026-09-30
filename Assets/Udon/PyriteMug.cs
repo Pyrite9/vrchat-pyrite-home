@@ -18,6 +18,8 @@ public class PyriteMug : UdonSharpBehaviour
     public float sipCooldown = 1.1f;
     private float sipCool;
     private VRCPickup pk;
+    private float dropT = -1f;
+    private VRCPickup dropPk;
 
     private void Start()
     {
@@ -40,6 +42,7 @@ public class PyriteMug : UdonSharpBehaviour
 
     private void Update()
     {
+        DropTick();
         if (sipCool > 0f) sipCool -= Time.deltaTime;
         if (pk != null && pk.IsHeld && state != null && sipCool <= 0f && Networking.IsOwner(gameObject)) MouthSip();
     }
@@ -60,7 +63,20 @@ public class PyriteMug : UdonSharpBehaviour
         sipCool = sipCooldown;
     }
 
-    public override void OnDrop()
+    // 🔴 반대손으로 고쳐 잡으면 VRChat 은 OnDrop → OnPickup 을 보낸다(관리자 2026-09-30 23:30 재현). 놓기 처리를 바로 하면
+    //  새 손이 잡은 물건을 세우기·물리 켜기로 덮어써 굳는다 → dropT 초 미루고, 그 사이 다시 잡혀 있으면 취소
+    public override void OnDrop() { dropT = 0.12f; }
+
+    private void DropTick()
+    {
+        if (dropT < 0f) return;
+        if (dropPk == null) dropPk = (VRCPickup)GetComponent(typeof(VRCPickup));
+        if (dropPk != null && dropPk.IsHeld) { dropT = -1f; return; }   // 손 바꾸기 → 취소
+        dropT -= Time.deltaTime;
+        if (dropT <= 0f) { dropT = -1f; DoDrop(); }
+    }
+
+    private void DoDrop()
     {
         if (!Networking.IsOwner(gameObject)) return;
         VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));

@@ -98,11 +98,23 @@ public static class PyriteBeerPlayTest
                 W("after sips: " + St());
                 Check("8모금 뒤 빈 병 (sips 0, 빈 유리)", (int)S.GetProgramVariable("sips") == 0 && Act("Visual/Body/GlassEmpty") && !Act("Visual/Body/GlassFull"));
                 beer.transform.position += new Vector3(1.2f, 0f, -0.8f);
-                W("moved → " + beer.transform.position.ToString("F3"));
-                B.SendCustomEvent("ReturnHome"); W("-> ReturnHome");
+                beer.transform.rotation = Quaternion.Euler(30f, 40f, 0f);
+                W("moved → " + beer.transform.position.ToString("F3") + " (기울임 30°)");
+                B.SendCustomEvent("_onDrop"); W("-> _onDrop (놓기 0.12 s 지연)");
+                W("   dropT 직후 " + B.GetProgramVariable("dropT") + " · held " + B.GetProgramVariable("held"));
+                var rb0 = beer.GetComponent<Rigidbody>();
+                Check("놓은 직후엔 아직 처리 전 (키네마틱 그대로)", rb0 != null && rb0.isKinematic);
                 step = 3;
             }
             else if (step == 3 && t > 5.4f)
+            {
+                var rb1 = beer.GetComponent<Rigidbody>();
+                W("   step3 dropT " + B.GetProgramVariable("dropT") + " · kin " + (rb1 ? rb1.isKinematic.ToString() : "?") + " · rot " + beer.transform.eulerAngles.ToString("F1") + " · pk.IsHeld " + (beer.GetComponent<VRC.SDK3.Components.VRCPickup>() ? beer.GetComponent<VRC.SDK3.Components.VRCPickup>().IsHeld.ToString() : "?"));
+                Check(string.Format("0.12 s 뒤 놓기 처리됨: 물리 켜짐 · 똑바로 (기울기 {0:F1}°)", Vector3.Angle(beer.transform.up, Vector3.up)), rb1 != null && !rb1.isKinematic && Vector3.Angle(beer.transform.up, Vector3.up) < 1f);
+                B.SendCustomEvent("ReturnHome"); W("-> ReturnHome");
+                step = 31;
+            }
+            else if (step == 31 && t > 5.9f)
             {
                 var home = GameObject.Find("BeerCooler/Container/Slots/Slot_0").transform;
                 W("returned: " + St() + " home " + home.position.ToString("F3"));

@@ -23,6 +23,8 @@ public class PyriteSkewer : UdonSharpBehaviour
     public Transform visual;            // 몸체 (피벗 = 손잡이). 들 때 방향은 손을 그대로 따른다 — 관리자: 초기 버전이 더 좋음 (머리 기준 세우기 폐기)
 
     private bool held;
+    private float dropT = -1f;
+    private VRCPickup dropPk;
 
     public override void OnPickup()
     {
@@ -37,10 +39,26 @@ public class PyriteSkewer : UdonSharpBehaviour
         if (state.eaten) state.Renew(); else state.Eat();
     }
 
+    // 🔴 반대손으로 고쳐 잡으면 VRChat 은 OnDrop → OnPickup 을 보낸다(관리자 2026-09-30 23:30 재현). 놓기 처리를 바로 하면
+    //  새 손이 잡은 물건을 세우기·물리 켜기로 덮어써 굳는다 → dropT 초 미루고, 그 사이 다시 잡혀 있으면 취소
     public override void OnDrop()
     {
         held = false;
         if (state != null) state.Flush();
+        dropT = 0.12f;
+    }
+
+    private void DropTick()
+    {
+        if (dropT < 0f) return;
+        if (dropPk == null) dropPk = (VRCPickup)GetComponent(typeof(VRCPickup));
+        if (dropPk != null && dropPk.IsHeld) { dropT = -1f; return; }   // 손 바꾸기 → 취소
+        dropT -= Time.deltaTime;
+        if (dropT <= 0f) { dropT = -1f; DoDrop(); }
+    }
+
+    private void DoDrop()
+    {
         if (!Networking.IsOwner(gameObject)) return;
         VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         Transform s = FreeSlotNear();
@@ -55,6 +73,7 @@ public class PyriteSkewer : UdonSharpBehaviour
 
     private void Update()
     {
+        DropTick();
         if (!held || state == null || tip == null || fire == null || state.eaten) return;
         Vector3 d = tip.position - fire.position;
         float dy = d.y; d.y = 0f;

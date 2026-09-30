@@ -20,6 +20,8 @@ public class PyriteLanternHook : UdonSharpBehaviour
     public float swing = 10f;       // 클수록 빨리 세워진다 (살짝 흔들리는 느낌)
 
     private bool hangNext = false;
+    private float dropT = -1f;
+    private VRCPickup dropPk;
 
     public override void PostLateUpdate()
     {
@@ -44,7 +46,22 @@ public class PyriteLanternHook : UdonSharpBehaviour
         if (pk != null) pk.Drop();
     }
 
-    public override void OnDrop()
+    // 🔴 반대손으로 고쳐 잡으면 VRChat 은 OnDrop → OnPickup 을 보낸다(관리자 2026-09-30 23:30 재현). 놓기 처리를 바로 하면
+    //  새 손이 잡은 물건을 세우기·물리 켜기로 덮어써 굳는다 → dropT 초 미루고, 그 사이 다시 잡혀 있으면 취소
+    public override void OnDrop() { dropT = hangNext ? 0.02f : 0.12f; }   // 사용으로 걸 땐 거의 바로
+
+    private void Update() { DropTick(); }
+
+    private void DropTick()
+    {
+        if (dropT < 0f) return;
+        if (dropPk == null) dropPk = (VRCPickup)GetComponent(typeof(VRCPickup));
+        if (dropPk != null && dropPk.IsHeld) { dropT = -1f; return; }   // 손 바꾸기 → 취소
+        dropT -= Time.deltaTime;
+        if (dropT <= 0f) { dropT = -1f; DoDrop(); }
+    }
+
+    private void DoDrop()
     {
         if (!Networking.IsOwner(gameObject)) return;
         VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
