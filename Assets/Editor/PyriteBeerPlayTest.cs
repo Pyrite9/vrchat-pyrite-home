@@ -99,6 +99,7 @@ public static class PyriteBeerPlayTest
                 Check("8모금 뒤 빈 병 (sips 0, 빈 유리)", (int)S.GetProgramVariable("sips") == 0 && Act("Visual/Body/GlassEmpty") && !Act("Visual/Body/GlassFull"));
                 beer.transform.position += new Vector3(1.2f, 0f, -0.8f);
                 beer.transform.rotation = Quaternion.Euler(30f, 40f, 0f);
+                Physics.SyncTransforms();   // 손에 든 물건처럼 리지드바디 자세도 같게 (안 하면 보간이 놓기 처리의 세우기를 덮는다 — 시험만의 문제)
                 W("moved → " + beer.transform.position.ToString("F3") + " (기울임 30°)");
                 B.SendCustomEvent("_onDrop"); W("-> _onDrop (놓기 0.12 s 지연)");
                 W("   dropT 직후 " + B.GetProgramVariable("dropT") + " · held " + B.GetProgramVariable("held"));
@@ -111,7 +112,12 @@ public static class PyriteBeerPlayTest
                 var rb1 = beer.GetComponent<Rigidbody>();
                 W("   step3 dropT " + B.GetProgramVariable("dropT") + " · kin " + (rb1 ? rb1.isKinematic.ToString() : "?") + " · rot " + beer.transform.eulerAngles.ToString("F1") + " · pk.IsHeld " + (beer.GetComponent<VRC.SDK3.Components.VRCPickup>() ? beer.GetComponent<VRC.SDK3.Components.VRCPickup>().IsHeld.ToString() : "?"));
                 Check(string.Format("0.12 s 뒤 놓기 처리됨: 물리 켜짐 · 똑바로 (기울기 {0:F1}°)", Vector3.Angle(beer.transform.up, Vector3.up)), rb1 != null && !rb1.isKinematic && Vector3.Angle(beer.transform.up, Vector3.up) < 1f);
+                Check("놓기 처리 뒤 회전 잠김 (" + (rb1 ? rb1.constraints.ToString() : "?") + ")", rb1 != null && rb1.constraints == RigidbodyConstraints.FreezeRotation);
+                B.SendCustomEvent("_onPickup"); W("-> _onPickup");
+                Check("다시 잡으면 회전 풀림 (" + (rb1 ? rb1.constraints.ToString() : "?") + ")", rb1 != null && rb1.constraints == RigidbodyConstraints.None);
+                B.SetProgramVariable("held", false);   // 시험은 OnDrop 을 안 보내므로 직접 (안 그러면 뚜껑 판정이 멈춘다)
                 B.SendCustomEvent("ReturnHome"); W("-> ReturnHome");
+                Check("복귀하면 다시 잠김 (" + (rb1 ? rb1.constraints.ToString() : "?") + ")", rb1 != null && rb1.constraints == RigidbodyConstraints.FreezeRotation);
                 step = 31;
             }
             else if (step == 31 && t > 5.9f)

@@ -28,6 +28,7 @@ public class PyriteMug : UdonSharpBehaviour
 
     public override void OnPickup()
     {
+        RotLock(false);
         sipCool = 0f;
         if (state != null && !Networking.IsOwner(state.gameObject)) Networking.SetOwner(Networking.LocalPlayer, state.gameObject);
     }
@@ -76,6 +77,24 @@ public class PyriteMug : UdonSharpBehaviour
         if (dropT <= 0f) { dropT = -1f; DoDrop(); }
     }
 
+    // 🔴 2026-10-01 01:32 관리자 인게임: 떨어뜨린 뒤 다시 들면 수직으로 굳어 각도가 안 변함
+    //  원인: Rigidbody.constraints = FreezeRotation. 키네마틱일 땐 무관하지만 놓기 처리(SetKinematic(false)) 뒤 동적 몸체가 되면
+    //  VRChat 이 들고 있는 동안에도 물리로 옮겨 회전이 잠긴다 → 잡으면 풀고, 놓기 처리에서 다시 잠근다(쓰러져 구르지 않게)
+    private Rigidbody lockRb;
+    private void RotLock(bool on)
+    {
+        if (lockRb == null) lockRb = (Rigidbody)GetComponent(typeof(Rigidbody));
+        if (lockRb != null) lockRb.constraints = on ? RigidbodyConstraints.FreezeRotation : RigidbodyConstraints.None;
+    }
+
+    // 자세 옮기기: transform 과 리지드바디 자세를 같이 (보간 리지드바디는 transform 만 바꾸면 다음 보간이 옛 자세로 덮는다 — Z53e 01:44 실측)
+    private void Teleport(Vector3 p, Quaternion r)
+    {
+        transform.SetPositionAndRotation(p, r);
+        if (lockRb == null) lockRb = (Rigidbody)GetComponent(typeof(Rigidbody));
+        if (lockRb != null) { lockRb.position = p; lockRb.rotation = r; }
+    }
+
     private void DoDrop()
     {
         if (!Networking.IsOwner(gameObject)) return;
@@ -83,9 +102,10 @@ public class PyriteMug : UdonSharpBehaviour
         Transform t = visual != null ? visual : transform;
         Quaternion up = Quaternion.Euler(0f, YawOf(t), 0f);
         Vector3 o = visual != null ? visual.position - up * visual.localPosition : transform.position;
-        transform.SetPositionAndRotation(o, up);
+        Teleport(o, up);
         if (visual != null) visual.localRotation = Quaternion.identity;
         if (sync != null) { sync.SetKinematic(false); sync.SetGravity(true); sync.FlagDiscontinuity(); }
+        RotLock(true);   // 자세·물리를 정한 뒤에 잠근다 (먼저 잠그면 세우기가 안 먹었다 — Z53e)
     }
 
     private float YawOf(Transform t)
