@@ -80,6 +80,7 @@ public class PyriteSettings : UdonSharpBehaviour
     public PyriteCampPool pool;
     public TextMeshProUGUI chairCountText;
     public TextMeshProUGUI matCountText;
+    public PyriteBeer[] beers;            // 캠프 맥주 (2026-09-30, BeerCooler)
     private int page = 0;
 
     private bool updating = false;
@@ -161,6 +162,11 @@ public class PyriteSettings : UdonSharpBehaviour
     public void SummonPen() { if (pool != null) pool.SummonPen(); }
     public void SummonEraser() { if (pool != null) pool.SummonEraser(); }
     public void PensBack() { if (pool != null) pool.ReturnPens(); }
+    public void BeerRefill()          // 들고 있는 병은 건너뛰고, 나머지를 박스 제자리로 = 새 병
+    {
+        if (beers == null) return;
+        for (int i = 0; i < beers.Length; i++) if (beers[i] != null) beers[i].Refill();
+    }
 
     // 현재 상태 → UI (이벤트가 다시 들어오지 않게 updating 으로 막는다)
     private void Refresh(bool all)

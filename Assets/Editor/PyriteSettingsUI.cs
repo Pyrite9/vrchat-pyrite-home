@@ -8,7 +8,8 @@
 //   LakeMirrorSwitch 는 렌더러·콜라이더만 끈다(스크립트는 살아서 호수 거울 상태를 쥔다) → 설정의 호수 반사 토글이 SetOn 으로 조작
 //   패널 queue 2990 / 빛줄기 2980 → UI(3000) 가 패널 유리 위에 그려진다
 //  2026-09-27: 패널 3.0 → 3.5 m (캔버스 1920 → 2240 px, 1 px 크기 그대로). 기존 칸은 Frame(가운데 1920) 안, 양옆 160 px 에 << >> 쪽 넘김
-//   2쪽(Content2) = 캠프(의자 · 돗자리 개수 + / −, 모두 제자리) · QvPen(펜 · 지우개 불러오기, 펜 제자리) → CampPool(Z43b) 이 먼저 있어야 한다
+//   2쪽(Content2) = 캠프(의자 · 돗자리 개수 + / −, 맥주 모두 채우기, 모두 제자리) · QvPen(펜 · 지우개 불러오기, 펜 제자리) → CampPool(Z43b) 이 먼저 있어야 한다
+//   2026-09-30: 캠프 칸에 맥주 줄(BeerCooler, Z53b 먼저) + 상호작용 팝업에 맥주 (16개, 8+8)
 //  렌더 Assets/_preview/projector/ui_*.png (테이블에 선 눈높이 1.6 m, FOV 60 = VRChat 데스크톱 기본)
 #if UNITY_EDITOR
 using System.Collections.Generic;
@@ -191,15 +192,18 @@ public static class PyriteSettingsUI
 
         // ── 2쪽 (2026-09-27): 캠프 · QvPen ──
         var cCamp = Card("CardCamp", 0, 0, "campHead", content2);
-        L(Txt(cCamp, "ChairLabel", 32, 86, 250, 60, "", 30, WHITE), S["chairs"]);
-        Btn(cCamp, "ChairMinus", 290, 86, 62, 60, "-", "ChairMinus");
-        var chairCnt = Txt(cCamp, "ChairCount", 352, 86, 106, 60, "3 / 10", 28, GOLD, TextAlignmentOptions.Center);
-        Btn(cCamp, "ChairPlus", 459, 86, 62, 60, "+", "ChairPlus");
-        L(Txt(cCamp, "MatLabel", 32, 164, 250, 60, "", 30, WHITE), S["mats"]);
-        Btn(cCamp, "MatMinus", 290, 164, 62, 60, "-", "MatMinus");
-        var matCnt = Txt(cCamp, "MatCount", 352, 164, 106, 60, "1 / 6", 28, GOLD, TextAlignmentOptions.Center);
-        Btn(cCamp, "MatPlus", 459, 164, 62, 60, "+", "MatPlus");
-        var (_, _, backL) = Btn(cCamp, "PropsBack", 32, 244, 489, 62, "", "PropsBack"); L(backL, S["propsBack"]);
+        // 2026-09-30 맥주 줄 추가: 줄 y 86/164/244 → 80/146/212, 모두 제자리 290 (칸 높이 370 안)
+        L(Txt(cCamp, "ChairLabel", 32, 80, 250, 60, "", 30, WHITE), S["chairs"]);
+        Btn(cCamp, "ChairMinus", 290, 80, 62, 60, "-", "ChairMinus");
+        var chairCnt = Txt(cCamp, "ChairCount", 352, 80, 106, 60, "3 / 10", 28, GOLD, TextAlignmentOptions.Center);
+        Btn(cCamp, "ChairPlus", 459, 80, 62, 60, "+", "ChairPlus");
+        L(Txt(cCamp, "MatLabel", 32, 146, 250, 60, "", 30, WHITE), S["mats"]);
+        Btn(cCamp, "MatMinus", 290, 146, 62, 60, "-", "MatMinus");
+        var matCnt = Txt(cCamp, "MatCount", 352, 146, 106, 60, "1 / 6", 28, GOLD, TextAlignmentOptions.Center);
+        Btn(cCamp, "MatPlus", 459, 146, 62, 60, "+", "MatPlus");
+        L(Txt(cCamp, "BeerLabel", 32, 212, 250, 60, "", 30, WHITE), S["beer"]);
+        var (_, _, beerL) = Btn(cCamp, "BeerRefill", 290, 212, 231, 60, "", "BeerRefill"); L(beerL, S["beerRefill"]);
+        var (_, _, backL) = Btn(cCamp, "PropsBack", 32, 290, 489, 60, "", "PropsBack"); L(backL, S["propsBack"]);
 
         var cPen = Card("CardQvPen", 1, 0, "penHead", content2);
         var (_, _, penL) = Btn(cPen, "SummonPen", 32, 86, 489, 62, "", "SummonPen"); L(penL, S["penBring"]);
@@ -245,7 +249,7 @@ public static class PyriteSettingsUI
             var (_, gdim, _) = Btn(guide.transform, "Dim", -PAD, 0, CW, H, "", "CloseGuide");
             gdim.sprite = null; gdim.type = Image.Type.Simple; gdim.color = new Color(0f, 0f, 0f, 0.8f);
             var gcb = gdim.GetComponent<Button>().colors; gcb.highlightedColor = Color.white; gcb.pressedColor = Color.white; gdim.GetComponent<Button>().colors = gcb;
-            const float gx0 = 200f, gy0 = 40f, gw = 1520f, gh = 1000f;   // 15개(8+7) → 높이 920 → 1000
+            const float gx0 = 200f, gy0 = 40f, gw = 1520f, gh = 1000f;   // 15개(8+7) → 높이 920 → 1000. 16개(8+8, 맥주 2026-09-30)도 그대로 맞음
             var gbox = Img(guide.transform, "Box", gx0, gy0, gw, gh, new Color(0.045f, 0.05f, 0.06f, 1f), spr); gbox.raycastTarget = true;
             Img(gbox.transform, "Edge", 0, 0, gw, 3, new Color(GOLD.r, GOLD.g, GOLD.b, 0.6f), null);
             L(Txt(gbox.transform, "Title", 60, 36, 1100, 60, "", 42, GOLD, spacing: 6f), S["guideTitle"]);
@@ -309,6 +313,8 @@ public static class PyriteSettingsUI
         st.assetsPopup = popup; st.guidePopup = guide; st.panelRoot = go;
         st.pages = new[] { content.gameObject, content2.gameObject }; st.prevButton = prevB.gameObject; st.nextButton = nextB.gameObject; st.pageText = pageText;
         st.pool = Object.FindObjectOfType<PyriteCampPool>(true); st.chairCountText = chairCnt; st.matCountText = matCnt;
+        st.beers = Object.FindObjectsOfType<PyriteBeer>(true).OrderBy(b => b.name).ToArray();
+        sb.AppendLine("beers: " + st.beers.Length + (st.beers.Length == 0 ? " — !! BeerCooler 없음 (Z53b 먼저, 맥주 채우기 버튼이 동작 안 함)" : ""));
         if (st.pool == null) sb.AppendLine("!! CampPool 없음 — Z43b 먼저 (2쪽 버튼이 동작 안 함)");
         else sb.AppendLine(string.Format("pool: chairs {0} mats {1} pens {2} erasers {3}", st.pool.chairs.Length, st.pool.mats.Length, st.pool.pens.Length, st.pool.erasers.Length));
         {   // 첫 방문 안내 (2026-09-24 관리자): 처음 온 사람에게만 패널 + 상호작용 팝업. 항상 켜져 있는 프로젝터 루트에
@@ -457,6 +463,8 @@ public static class PyriteSettingsUI
         ["gKetD"] = ("Steams on the stove. Use over a mug to pour.", "스토브 위에서 김이 납니다. 머그 위에서 사용하면 따릅니다."),
         ["gMugN"] = ("Mugs", "머그"),
         ["gMugD"] = ("Use to take a sip. Six sips empty it.", "사용하면 한 모금. 여섯 모금이면 비웁니다."),
+        ["gBerN"] = ("Beer", "맥주"),
+        ["gBerD"] = ("In the cooler by the table. Use to open, use again to drink.", "탁자 옆 아이스박스에서 꺼냅니다. 사용하면 따고, 다시 사용하면 마십니다."),   // 2026-09-30
         ["gScpN"] = ("Telescope", "망원경"),
         ["gScpD"] = ("Bring your face to the eyepiece. The tube follows your view.", "접안렌즈에 얼굴을 대면 경통이 시선을 따라 돕니다."),
         ["gStnN"] = ("Skipping stones", "물수제비 돌"),
@@ -467,6 +475,8 @@ public static class PyriteSettingsUI
         ["chairs"] = ("Chairs", "의자"),
         ["mats"] = ("Picnic mats", "돗자리"),
         ["propsBack"] = ("Put everything back", "모두 제자리로"),
+        ["beer"] = ("Beer", "맥주"),
+        ["beerRefill"] = ("Refill all", "모두 채우기"),
         ["penHead"] = ("QVPEN", "QvPen"),
         ["penBring"] = ("Bring a pen", "펜 가져오기"),
         ["eraserBring"] = ("Bring an eraser", "지우개 가져오기"),
@@ -478,7 +488,7 @@ public static class PyriteSettingsUI
     };
 
     // 상호작용 사물 목록 (문구 키 앞부분 — N 이름 / D 설명). 왼쪽 열 7개 → 오른쪽 열
-    static readonly string[] GUIDE = { "gSet", "gVid", "gMir", "gLan", "gChr", "gCot", "gTnt", "gMat", "gSkw", "gKet", "gMug", "gScp", "gStn", "gBt", "gPen" };
+    static readonly string[] GUIDE = { "gSet", "gVid", "gMir", "gLan", "gChr", "gCot", "gTnt", "gMat", "gSkw", "gKet", "gMug", "gBer", "gScp", "gStn", "gBt", "gPen" };   // 16개 = 8 + 8
 
     static void L(TextMeshProUGUI t, (string en, string ko) s) { loc.Add((t, s.en, s.ko)); }
 
@@ -512,6 +522,10 @@ public static class PyriteSettingsUI
         set.Remove('\n');
         var chars = new string(set.OrderBy(c => c).ToArray());
 
+        // 2026-09-30: 글꼴 에셋을 지우고 새로 만들면 GUID 가 바뀌어, 이 도구 밖에서 같은 글꼴을 쓰는 글자(침실 탁상시계 Digits · 머리맡 패널)가 글꼴을 잃는다
+        //  → 지우기 전에 쓰는 곳을 모아 두었다가 새 에셋으로 다시 연결. 이미 끊긴 것(font null)도 같이
+        var oldFa = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FA);
+        var users = Object.FindObjectsOfType<TMP_Text>(true).Where(x => x.font == null || (oldFa != null && x.font == oldFa)).ToList();
         if (AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FA) != null) AssetDatabase.DeleteAsset(FA);
         var fa = TMP_FontAsset.CreateFontAsset(src, 72, 8, GlyphRenderMode.SDFAA, 1024, 1024, AtlasPopulationMode.Dynamic);
         fa.name = "NotoSansKR-UI SDF";
@@ -526,6 +540,10 @@ public static class PyriteSettingsUI
         AssetDatabase.SaveAssets();
         AssetDatabase.ImportAsset(FA);
         fa = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FA);
+        int relinked = 0;
+        foreach (var u in users) { if (u == null) continue; u.font = fa; u.fontSharedMaterial = fa.material; EditorUtility.SetDirty(u); relinked++; }
+        var outside = users.Where(u => u != null && !u.transform.root.name.StartsWith("SettingsProjector")).Select(u => u.transform.root.name + "/…/" + u.name).Distinct().Take(12).ToArray();
+        sb.AppendLine("font relink: " + relinked + " texts (패널 밖: " + (outside.Length == 0 ? "없음" : string.Join(", ", outside)) + ")");
         sb.AppendLine(string.Format("font: {0} chars (hangul {1}) ok {2} missing '{3}' atlas {4}x{5} glyphs {6}",
             chars.Length, chars.Count(c => c >= 0xAC00 && c <= 0xD7A3), ok, missing, fa.atlasTexture.width, fa.atlasTexture.height, fa.glyphTable.Count));
         return fa;

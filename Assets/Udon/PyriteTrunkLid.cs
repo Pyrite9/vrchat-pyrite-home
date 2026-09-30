@@ -1,4 +1,5 @@
 // PyriteTrunkLid — 침실 트렁크 뚜껑. 누르면 열림/닫힘 (모두에게 동기화). 경첩 = 이 오브젝트, 로컬 Z 축으로 회전
+//  2026-09-30: 캠프 맥주 박스(BeerCooler)도 같이 쓴다 — 병이 IsOpen() 으로 집을 수 있는지 판정
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -18,6 +19,8 @@ public class PyriteTrunkLid : UdonSharpBehaviour
         open = !open;
         RequestSerialization();
     }
+
+    public bool IsOpen() { return open; }
 
     void Update()
     {
