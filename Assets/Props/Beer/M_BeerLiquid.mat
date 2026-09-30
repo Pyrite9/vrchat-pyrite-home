@@ -22,12 +22,19 @@ Material:
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
-    m_TexEnvs: []
+    m_TexEnvs:
+    - _LevelMap:
+        m_Texture: {fileID: 2800000, guid: 4569cf4bedde48c4ba6264bc45b4fe0a, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _Emission: 0.08
     - _Glossiness: 0.85
     - _Level: 0.192
+    - _LevelMax: 0.2072
+    - _MapN: 64
+    - _MapOn: 1
     m_Colors:
     - _Color: {r: 0.46, g: 0.23, b: 0.035, a: 1}
     - _TopColor: {r: 0.78, g: 0.58, b: 0.24, a: 1}
