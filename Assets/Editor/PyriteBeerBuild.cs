@@ -209,7 +209,7 @@ public static class PyriteBeerBuild
             var cc = go.AddComponent<CapsuleCollider>(); cc.center = new Vector3(0, 0.1125f, 0); cc.radius = 0.031f; cc.height = 0.226f; cc.direction = 1;
             var pk = go.AddComponent<VRCPickup>();
             if (tpl != null) EditorUtility.CopySerialized(tpl, pk);
-            pk.ExactGrip = grip; pk.ExactGun = null; pk.orientation = VRC_Pickup.PickupOrientation.Grip;
+            pk.ExactGrip = null; pk.ExactGun = null; pk.orientation = VRC_Pickup.PickupOrientation.Any;   // 23:19 PC/VR 구분 제거 → 누구나 잡은 자세 그대로 (Z54a 와 같은 값)
             pk.AutoHold = VRC_Pickup.AutoHoldMode.Yes; pk.InteractionText = "Beer"; pk.UseText = "Open / Drink"; pk.pickupable = true;
             EditorUtility.SetDirty(pk);
             go.AddComponent<VRCObjectSync>().AllowCollisionOwnershipTransfer = false;

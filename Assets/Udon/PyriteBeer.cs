@@ -1,7 +1,7 @@
 // 병맥주 — 캠프 아이스박스(BeerCooler)에서 꺼내 마신다. 상태(뚜껑 · 모금)는 자식 PyriteBeerState(Manual)
 //  첫 사용(트리거) = 병뚜껑 따기(뽕 · 탄산 · 뚜껑이 날아감 · 거품). 그 뒤 사용 = 한 모금 (8모금이면 빈 병)
-//  데스크톱: 머그처럼 똑바로 + 시선 yaw 로 들고(visual 피벗 = Grip), 사용하면 입 쪽으로 기울이는 연출
-//  VR: 각도 고정 없음(Any + AutoHold No). 병 입구를 입가(mouthDist 안)로 가져가 sipTilt° 이상 기울이면 한 모금. 트리거는 따기·한 모금(연출 없음)
+//  2026-09-30 23:19: PC/VR 구분 제거. 픽업은 에디터에서 Any(잡은 자세 그대로)로 고정(Z54a), 스크립트는 회전을 건드리지 않는다
+//   사용(트리거·좌클릭) = 따기 · 한 모금. 병 입구를 입가(mouthDist 안)로 가져가 sipTilt° 이상 기울여도 한 모금
 //  박스 안(제자리)에 있을 때는 뚜껑이 열려 있어야 집힌다(각자 판정). 박스 위에서 놓으면 제자리로, 밖에 60 초 두면(물에 빠지면 3 초) 제자리로 → 새 병
 using UdonSharp;
 using UnityEngine;
@@ -23,8 +23,6 @@ public class PyriteBeer : UdonSharpBehaviour
     public float levelLast = 0.022f;      // 한 모금 남았을 때
     public Rigidbody capFly;              // 날아가는 병뚜껑 (월드에 따로, 꺼 둠)
     public ParticleSystem foam;
-    public bool vrFreeGrip = true;
-    public bool vrHoldToCarry = true;
     public float sipTilt = 50f;
     public float mouthDist = 0.14f;
     public float sipCooldown = 1.1f;
@@ -34,10 +32,7 @@ public class PyriteBeer : UdonSharpBehaviour
     private VRCPickup pk;
     private VRCObjectSync sync;
     private Rigidbody rb;
-    private bool vrLocal;
     private bool held;
-    private float sipT = -1f;
-    private float tilt;
     private float sipCool;
     private float idleT;
     private float flyT;
@@ -49,13 +44,6 @@ public class PyriteBeer : UdonSharpBehaviour
         pk = (VRCPickup)GetComponent(typeof(VRCPickup));
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         rb = (Rigidbody)GetComponent(typeof(Rigidbody));
-        VRCPlayerApi lp = Networking.LocalPlayer;
-        vrLocal = Utilities.IsValid(lp) && lp.IsUserInVR();
-        if (vrLocal && pk != null)
-        {
-            if (vrFreeGrip) pk.orientation = VRC_Pickup.PickupOrientation.Any;
-            if (vrHoldToCarry) pk.AutoHold = VRC_Pickup.AutoHoldMode.No;
-        }
     }
 
     public override void OnPickup()
@@ -69,10 +57,9 @@ public class PyriteBeer : UdonSharpBehaviour
         if (state == null) return;
         if (!Networking.IsOwner(state.gameObject)) Networking.SetOwner(Networking.LocalPlayer, state.gameObject);
         if (!state.opened) { state.Open(); sipCool = 0.8f; return; }
-        if (state.sips <= 0 || sipT >= 0f) return;
-        if (!(vrLocal && vrFreeGrip)) sipT = 0f;          // 기울이는 연출은 데스크톱만
+        if (state.sips <= 0 || sipCool > 0f) return;
         state.Sip();
-        sipCool = sipCooldown;
+        sipCool = 0.35f;
     }
 
     private void Update()
@@ -90,7 +77,7 @@ public class PyriteBeer : UdonSharpBehaviour
             if (pk.pickupable != can) pk.pickupable = can;
         }
 
-        if (held && vrLocal && vrFreeGrip && state != null && state.opened && state.sips > 0 && sipCool <= 0f) VrSip();
+        if (held && state != null && state.opened && state.sips > 0 && sipCool <= 0f && Networking.IsOwner(gameObject)) MouthSip();
 
         // 주인: 밖에 놓인 병은 60 초(물에 빠지면 3 초) 가만있으면 제자리로
         if (!held && home != null && rb != null && Networking.IsOwner(gameObject) && !AtHome())
@@ -100,20 +87,12 @@ public class PyriteBeer : UdonSharpBehaviour
             if (still || wet) idleT += dt; else idleT = 0f;
             if (idleT > (wet ? 3f : idleReturn)) ReturnHome();
         }
-
-        tilt = 0f;
-        if (sipT >= 0f)
-        {
-            sipT += dt;
-            float a = sipT < 0.35f ? sipT / 0.35f : Mathf.Max(0f, 1f - (sipT - 0.8f) / 0.35f);
-            tilt = -a * 70f;
-            if (sipT > 1.15f) { sipT = -1f; tilt = 0f; }
-        }
     }
 
-    private void VrSip()
+    private void MouthSip()
     {
         VRCPlayerApi lp = Networking.LocalPlayer;
+        if (!Utilities.IsValid(lp)) return;
         VRCPlayerApi.TrackingData h = lp.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
         Vector3 mouth = h.position + h.rotation * new Vector3(0f, -0.07f, 0.07f);
         Vector3 lip = transform.TransformPoint(0f, 0.225f, 0f);           // 병 입구 (루트 = 병 바닥)
@@ -124,21 +103,9 @@ public class PyriteBeer : UdonSharpBehaviour
         sipCool = sipCooldown;
     }
 
-    public override void PostLateUpdate()
-    {
-        if (visual == null) return;
-        VRCPlayerApi p = (pk != null && pk.IsHeld) ? pk.currentPlayer : null;
-        if (Utilities.IsValid(p) && !(vrFreeGrip && p.IsUserInVR()))
-        {
-            Vector3 f = p.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).rotation * Vector3.forward;
-            visual.rotation = Quaternion.Euler(0f, Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg, 0f) * Quaternion.Euler(tilt, 0f, 0f);
-        }
-        else visual.localRotation = Quaternion.Euler(tilt, 0f, 0f);
-    }
-
     public override void OnDrop()
     {
-        held = false; sipT = -1f; tilt = 0f; idleT = 0f;
+        held = false; idleT = 0f;
         if (!Networking.IsOwner(gameObject)) return;
         if (visual != null && OverBox(visual.position)) { ReturnHome(); return; }
         Transform t = visual != null ? visual : transform;
