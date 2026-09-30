@@ -1,12 +1,14 @@
 // PyriteBeerBuild.cs — 캠프 맥주 박스 (Tools ▸ Pyrite4 ▸ Z53b 빌드 / Z53c 되돌림 / Z53d 렌더). 재실행 안전 (BeerCooler 를 지우고 다시 만든다)
 //  2026-09-30 관리자: 텐트 침실 폴딩 컨테이너를 재활용해 병맥주 + 얼음, 뚜껑 여닫기, 캠프 탁자 오른쪽(스토브·주전자 쪽). 첫 사용 = 뽕 + 탄산, 그 뒤 = 마시기
 //  Z53a 실측: 탁자 x −11.34~−9.87 · z 52.53~53.21, 옆 땅 1.809 평평 · 꽃 없음. 탁자 끝에 붙이면(A1) CarryChair_2 앞 20 cm 라 앉은 무릎과 겹침
-//   → 긴 변을 탁자와 나란히(x), 앞면을 탁자 앞선(z 52.53)에 맞춤: 중심 (−11.70, 52.73), 의자와 45 cm · 스토브 15 cm
+//   (15:4x 첫 빌드: 긴 변 x, 중심 (−11.70, 52.73))
+//  20:26 관리자 인게임: 세로(긴 변 z)로, 뚜껑은 탁자 쪽으로 열리게 → yaw 0, 경첩 = 로컬 +x = 탁자 쪽. 중심 (−11.64, 52.73)
+//   탁자 끝과 10 cm (5 cm 면 −100° 연 뚜껑이 상판 모서리를 6 mm 파고듦), z 는 그대로 → 의자 앞면(53.38)까지 34 cm, 탁자 앞선보다 11 cm 모닥불 쪽
 //  구성 (루트 BeerCooler, 정적 플래그 없음 → 라이트맵 재베이크 불필요)
-//   Container: 침실 컨테이너(PyriteBedside.BuildContainer)와 같은 모양·재질, 파트를 재질별로 합친 메시. 뚜껑 경첩 = 의자 쪽(+z), 모닥불 쪽에서 열림
+//   Container: 침실 컨테이너(PyriteBedside.BuildContainer)와 같은 모양·재질, 파트를 재질별로 합친 메시. 뚜껑 경첩 = 탁자 쪽(+x), 사람은 −x 쪽에서 꺼냄
 //    콜라이더는 벽 4 + 바닥 (통짜 상자면 안의 병이 가려져 집히지 않는다)
 //   Ice: 얼음판 + 얼음 조각 110 (합친 메시 1개). 병은 3 × 4 = 12, 제자리 = Container/Slots/Slot_n
-//   Bottles/Beer_n: 갈색 유리 330 ml(Ø 6 cm · 높이 22.7 cm) + 라벨(가상 상표 PYRITE LAGER, T_BeerLabel.png 코드 밖에서 만듦) + 왕관 병뚜껑
+//   Bottles/Beer_n: 반투명 갈색 유리 330 ml(Ø 6 cm · 높이 22.7 cm) + 속 맥주(Pyrite/BeerLiquid, 모금마다 수면이 내려감) + 라벨(가상 상표 PYRITE LAGER) + 왕관 병뚜껑
 //    Pickup(Mug_0 설정 복사) + ObjectSync + PyriteBeer, 자식 State = PyriteBeerState(Manual) + AudioSource(따기·마시기)
 //   CapFly/CapFly_n: 딸 때 날아가는 병뚜껑 (각자 물리, 꺼 둠, 레이어 17 Walkthrough)
 #if UNITY_EDITOR
@@ -29,8 +31,8 @@ public static class PyriteBeerBuild
     const string DIR = "Assets/Props/Beer/";
     const string SFX = "Assets/Audio/SFX/";
     const string PREV = "Assets/_preview/beer/";
-    static readonly Vector3 POS = new Vector3(-11.70f, 0f, 52.73f);
-    const float YAW = -90f;                                  // 컨테이너 로컬 +z(긴 변) → 월드 −x, 로컬 +x(경첩) → 월드 +z(의자 쪽)
+    static readonly Vector3 POS = new Vector3(-11.64f, 0f, 52.73f);
+    const float YAW = 0f;                                    // 컨테이너 긴 변(로컬 z) = 월드 z, 경첩(로컬 +x) = 탁자 쪽 → 뚜껑이 탁자 쪽으로 넘어가며 열림
     const float CT_W = 0.40f, CT_L = 0.62f, CT_H = 0.32f, WT = 0.012f, FLOOR = 0.032f;
     static readonly float[] SX = { -0.115f, 0f, 0.115f };
     static readonly float[] SZ = { -0.21f, -0.07f, 0.07f, 0.21f };
@@ -82,8 +84,9 @@ public static class PyriteBeerBuild
         var blk = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/Bedside/M_ContainerBlack.mat");
         var wood = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/M_TableWood.mat");
         if (!pp || !ppd || !blk || !wood) { sb.AppendLine("!! 침실 컨테이너 재질 없음 (pp " + (pp != null) + " ppd " + (ppd != null) + " blk " + (blk != null) + " wood " + (wood != null) + ") — Z51r 먼저"); return false; }
-        var mGlass = Mat("M_BeerGlass", new Color(0.23f, 0.105f, 0.03f), 0.05f, 0.93f);
-        var mGlassE = Mat("M_BeerGlassEmpty", new Color(0.46f, 0.30f, 0.15f), 0.05f, 0.93f);
+        var mGlass = GlassMat("M_BeerGlass", new Color(0.30f, 0.13f, 0.03f, 0.52f));          // 20:26 관리자: 속 액체가 보이게 → 반투명 (Standard Transparent)
+        var mGlassE = GlassMat("M_BeerGlassEmpty", new Color(0.40f, 0.22f, 0.08f, 0.38f));
+        var mLiquid = LiquidMat();
         var mCap = Mat("M_BeerCap", new Color(0.80f, 0.64f, 0.30f), 0.90f, 0.62f);
         var mIce = Mat("M_BeerIce", new Color(0.50f, 0.62f, 0.70f), 0f, 0.96f);        // 15:43 렌더: 0.80~0.95 는 흰 종이처럼 평평 → 어둡고 매끈하게
         var mLabel = LabelMat();
@@ -94,7 +97,7 @@ public static class PyriteBeerBuild
         float g = Ground(POS);
         var root = new GameObject(ROOT).transform;
         root.SetPositionAndRotation(new Vector3(POS.x, g, POS.z), Quaternion.Euler(0f, YAW, 0f));
-        sb.AppendLine(string.Format("루트 ({0:F2}, {1:F3}, {2:F2}) yaw {3} — 긴 변 x, 앞면(모닥불 쪽) z {4:F2}", POS.x, g, POS.z, YAW, POS.z - CT_W / 2f));
+        sb.AppendLine(string.Format("루트 ({0:F2}, {1:F3}, {2:F2}) yaw {3} — 긴 변 z ({4:F2}~{5:F2}), 탁자 쪽 벽 x {6:F2}", POS.x, g, POS.z, YAW, POS.z - CT_L / 2f, POS.z + CT_L / 2f, POS.x + CT_W / 2f));
 
         // ── 컨테이너 몸통 (침실 것과 같은 모양, 재질별로 합침) ──
         var ct = new GameObject("Container").transform; ct.SetParent(root, false);
@@ -155,6 +158,9 @@ public static class PyriteBeerBuild
             V(0, 0), V(0.026f, 0), V(0.0295f, 0.004f), V(0.030f, 0.012f), V(0.030f, 0.140f), V(0.028f, 0.156f), V(0.020f, 0.176f),
             V(0.0145f, 0.192f), V(0.0135f, 0.208f), V(0.0138f, 0.214f), V(0.0150f, 0.216f), V(0.0150f, 0.2215f), V(0.0132f, 0.2230f), V(0, 0.2232f) }, 16), "BeerGlass");
         var labelMesh = SaveMesh(Lathe(new[] { V(0.0304f, 0.034f), V(0.0304f, 0.106f) }, 24), "BeerLabel");
+        var liquidMesh = SaveMesh(Lathe(new[] {
+            V(0, 0.006f), V(0.0262f, 0.006f), V(0.0283f, 0.012f), V(0.0283f, 0.139f), V(0.0264f, 0.155f), V(0.0187f, 0.175f),
+            V(0.0131f, 0.191f), V(0.0121f, 0.207f), V(0, 0.2072f) }, 16), "BeerLiquid");   // 유리 안쪽 1.7 mm
         var capMesh = SaveMesh(Lathe(new[] { V(0.0162f, -0.004f), V(0.0166f, -0.0025f), V(0.0163f, 0.0018f), V(0.0128f, 0.0035f), V(0, 0.0038f) }, 16), "BeerCap");   // 가운데 = 원점 (날아가는 뚜껑과 같이 씀)
 
         // ── 제자리 ──
@@ -192,6 +198,7 @@ public static class PyriteBeerBuild
             var bodyT = new GameObject("Body").transform; bodyT.SetParent(vis, false); bodyT.localPosition = new Vector3(0, -GRIP_Y, 0);
             var gf = MeshObj(bodyT, "GlassFull", glassMesh, mGlass);
             var ge = MeshObj(bodyT, "GlassEmpty", glassMesh, mGlassE); ge.SetActive(false); tris -= glassMesh.triangles.Length / 3;
+            var liq = MeshObj(bodyT, "Liquid", liquidMesh, mLiquid); liq.transform.SetSiblingIndex(0);
             MeshObj(bodyT, "Label", labelMesh, mLabel);
             var cap = MeshObj(bodyT, "Cap", capMesh, mCap); cap.transform.localPosition = new Vector3(0, 0.2232f, 0);
             var foam = Foam(bodyT, new Vector3(0, LIP_Y, 0), mFoam);
@@ -212,7 +219,7 @@ public static class PyriteBeerBuild
             bs.opened = false; bs.sips = 8; bs.maxSips = 8; bs.audioSrc = Src(st, 10f); bs.openClip = openClip; bs.sipClip = sipClip;
             var b = UdonSharpUndo.AddComponent<PyriteBeer>(go);
             b.state = bs; b.visual = vis; b.home = h; b.lid = lid; b.glassFull = gf; b.glassEmpty = ge; b.cap = cap;
-            b.capFly = frb; b.foam = foam;
+            b.capFly = frb; b.foam = foam; b.liquid = liq.GetComponent<MeshRenderer>();
             bs.beer = b;
             UdonSharpEditorUtility.CopyProxyToUdon(bs); EditorUtility.SetDirty(bs);
             UdonSharpEditorUtility.CopyProxyToUdon(b); EditorUtility.SetDirty(b);
@@ -303,6 +310,33 @@ public static class PyriteBeerBuild
         ti.SaveAndReimport();
         var m = Mat("M_BeerLabel", Color.white, 0f, 0.35f);
         m.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(tp));
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
+    // Standard Transparent (반사는 남고 알파만 비침) — 병 속 맥주가 보이게
+    static Material GlassMat(string name, Color c)
+    {
+        var m = Mat(name, c, 0.05f, 0.95f);
+        m.SetFloat("_Mode", 3f);
+        m.SetInt("_SrcBlend", (int)BlendMode.One); m.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha); m.SetInt("_ZWrite", 0);
+        m.DisableKeyword("_ALPHATEST_ON"); m.DisableKeyword("_ALPHABLEND_ON"); m.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+        m.renderQueue = 3000;
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
+    static Material LiquidMat()
+    {
+        string p = DIR + "M_BeerLiquid.mat";
+        var sh = Shader.Find("Pyrite/BeerLiquid");
+        if (sh == null) { sb.AppendLine("!! 셰이더 Pyrite/BeerLiquid 없음"); return null; }
+        var m = AssetDatabase.LoadAssetAtPath<Material>(p);
+        if (m == null) { m = new Material(sh); AssetDatabase.CreateAsset(m, p); }
+        m.shader = sh;
+        m.SetColor("_Color", new Color(0.46f, 0.23f, 0.035f)); m.SetColor("_TopColor", new Color(0.78f, 0.58f, 0.24f));   // 20:3x 1차(0.72/0.40/0.07, 발광 0.35)는 오렌지 주스처럼 밝고 밤에 빛남
+        m.SetFloat("_Level", 0.192f); m.SetFloat("_Glossiness", 0.85f); m.SetFloat("_Emission", 0.08f);
+        m.enableInstancing = true;
         EditorUtility.SetDirty(m);
         return m;
     }
@@ -421,7 +455,7 @@ public static class PyriteBeerBuild
         var c = root.transform.position;
         var eye = new Vector3(-10.9f, g + 1.55f, 51.55f);                       // 모닥불 옆에 서서 탁자 오른쪽을 봄
         var at = new Vector3(-11.45f, g + 0.25f, 52.85f);
-        var near = new Vector3(-11.55f, g + 0.95f, 52.15f);                      // 박스 앞 가까이, 내려다봄
+        var near = new Vector3(-12.30f, g + 0.95f, 52.45f);                      // 박스 바깥쪽(−x, 탁자 반대편)에서 내려다봄
         try
         {
             foreach (var hour in new[] { 18.33f, 21f })
@@ -438,25 +472,40 @@ public static class PyriteBeerBuild
                 Shot(cam, near, c + Vector3.up * 0.15f, 55f, "b_open_2100");
                 if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(18.33f); }
                 Shot(cam, near, c + Vector3.up * 0.15f, 55f, "b_open_1820");
-                Shot(cam, c + new Vector3(0.05f, 0.45f, -0.30f), c + new Vector3(0f, 0.18f, 0.02f), 45f, "b_bottles_1820");
+                Shot(cam, c + new Vector3(-0.34f, 0.42f, -0.06f), c + new Vector3(0.02f, 0.16f, 0f), 45f, "b_bottles_1820");
                 // 딴 병 · 빈 병 흉내: 앞줄 가운데 병 뚜껑 숨김, 그 옆 병 빈 유리
                 var b1 = root.transform.Find("Bottles/Beer_1/Visual/Body"); var b0 = root.transform.Find("Bottles/Beer_0/Visual/Body");
                 if (b1 && b0)
                 {
                     var cap = b1.Find("Cap"); cap.gameObject.SetActive(false);
                     b0.Find("GlassFull").gameObject.SetActive(false); b0.Find("GlassEmpty").gameObject.SetActive(true); b0.Find("Cap").gameObject.SetActive(false);
-                    Shot(cam, c + new Vector3(0.05f, 0.45f, -0.30f), c + new Vector3(0f, 0.18f, 0.02f), 45f, "b_bottles_open_empty_1820");
+                    Shot(cam, c + new Vector3(-0.34f, 0.42f, -0.06f), c + new Vector3(0.02f, 0.16f, 0f), 45f, "b_bottles_open_empty_1820");
                     cap.gameObject.SetActive(true);
                     b0.Find("GlassFull").gameObject.SetActive(true); b0.Find("GlassEmpty").gameObject.SetActive(false); b0.Find("Cap").gameObject.SetActive(true);
                 }
-                // 병 하나 들어 올린 모습 (라벨)
-                var bt = root.transform.Find("Bottles/Beer_4");
-                if (bt)
+                // 병 넷을 들어 올려 나란히: 가득 · 반(4/8) · 한 모금 · 반을 35° 기울임 (수면이 수평인지). 수면은 MaterialPropertyBlock 으로 흉내
+                var names = new[] { "Bottles/Beer_4", "Bottles/Beer_5", "Bottles/Beer_6", "Bottles/Beer_7" };
+                var lv = new[] { 0.192f, Mathf.Lerp(0.022f, 0.192f, 3f / 7f), 0.022f, Mathf.Lerp(0.022f, 0.192f, 3f / 7f) };
+                var saved = new List<(Transform t, Vector3 p, Quaternion q)>();
+                var mpb = new MaterialPropertyBlock();
+                var basePos = c + new Vector3(0f, 0.55f, -0.55f);
+                for (int i = 0; i < names.Length; i++)
                 {
-                    var bp = bt.position; var bq = bt.rotation;
-                    bt.position = c + new Vector3(0f, 0.55f, -0.45f); bt.rotation = Quaternion.identity;
-                    Shot(cam, bt.position + new Vector3(0f, 0.12f, -0.38f), bt.position + new Vector3(0f, 0.11f, 0f), 40f, "b_label_1820");
-                    bt.SetPositionAndRotation(bp, bq);
+                    var bt = root.transform.Find(names[i]); if (!bt) continue;
+                    saved.Add((bt, bt.position, bt.rotation));
+                    bt.position = basePos + new Vector3(-0.12f + i * 0.085f, 0f, 0f);
+                    bt.rotation = i == 3 ? Quaternion.Euler(0f, 0f, -35f) : Quaternion.identity;
+                    var liqR = bt.Find("Visual/Body/Liquid")?.GetComponent<Renderer>();
+                    if (liqR) { mpb.Clear(); mpb.SetFloat("_Level", lv[i]); liqR.SetPropertyBlock(mpb); }
+                    if (i == 0) Shot(cam, bt.position + new Vector3(0f, 0.12f, -0.34f), bt.position + new Vector3(0f, 0.11f, 0f), 40f, "b_label_1820");
+                }
+                Shot(cam, basePos + new Vector3(0.01f, 0.13f, -0.52f), basePos + new Vector3(0.01f, 0.10f, 0f), 42f, "b_liquid_1820");
+                if (cyc) { cyc.ResetCache(); cyc.EvaluateAt(21f); }
+                Shot(cam, basePos + new Vector3(0.01f, 0.13f, -0.52f), basePos + new Vector3(0.01f, 0.10f, 0f), 42f, "b_liquid_2100");
+                foreach (var s in saved)
+                {
+                    s.t.SetPositionAndRotation(s.p, s.q);
+                    var liqR = s.t.Find("Visual/Body/Liquid")?.GetComponent<Renderer>(); if (liqR) liqR.SetPropertyBlock(null);
                 }
                 lid.localRotation = lr;
             }

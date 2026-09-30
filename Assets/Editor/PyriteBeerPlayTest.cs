@@ -87,8 +87,14 @@ public static class PyriteBeerPlayTest
                 Check("날아가는 뚜껑 켜짐 · 병뚜껑 자리에서 " + (fly != null ? Vector3.Distance(fly.transform.position, capW).ToString("F2") : "?") + " m · 위로 " + (fly != null ? (fly.transform.position.y - capW.y).ToString("F2") : "?") + " m", fly != null && fly.activeSelf && Vector3.Distance(fly.transform.position, capW) < 1.2f && fly.transform.position.y > capW.y - 0.05f);
                 var foam = beer.transform.Find("Visual/Body/Foam")?.GetComponent<ParticleSystem>();
                 Check("거품 파티클 " + (foam != null ? foam.particleCount.ToString() : "?") + "개", foam != null && foam.isPlaying && foam.particleCount > 0);
-                for (int i = 0; i < 9; i++) S.SendCustomEvent("Sip");
-                W("-> Sip x9");
+                var liqR = beer.transform.Find("Visual/Body/Liquid")?.GetComponent<Renderer>();
+                Check("가득일 땐 공유 재질 (" + (liqR ? liqR.sharedMaterial.name : "?") + ")", liqR != null && !liqR.sharedMaterial.name.Contains("Instance"));
+                for (int i = 0; i < 4; i++) S.SendCustomEvent("Sip");
+                float lv4 = liqR ? liqR.sharedMaterial.GetFloat("_Level") : -1f;
+                Check(string.Format("4모금 뒤 수면 {0:F3} (기대 {1:F3}) · 이 병만 복제 재질", lv4, Mathf.Lerp(0.022f, 0.192f, 3f / 7f)), liqR != null && Mathf.Abs(lv4 - Mathf.Lerp(0.022f, 0.192f, 3f / 7f)) < 0.002f && liqR.sharedMaterial.name.Contains("Instance"));
+                for (int i = 0; i < 5; i++) S.SendCustomEvent("Sip");
+                Check("8모금 뒤 액체 꺼짐", liqR != null && !liqR.gameObject.activeInHierarchy);
+                W("-> Sip x4 + x5");
                 W("after sips: " + St());
                 Check("8모금 뒤 빈 병 (sips 0, 빈 유리)", (int)S.GetProgramVariable("sips") == 0 && Act("Visual/Body/GlassEmpty") && !Act("Visual/Body/GlassFull"));
                 beer.transform.position += new Vector3(1.2f, 0f, -0.8f);
@@ -104,6 +110,8 @@ public static class PyriteBeerPlayTest
                 Check("복귀 = 새 병 (opened false, sips 8, 뚜껑·가득)", !(bool)S.GetProgramVariable("opened") && (int)S.GetProgramVariable("sips") == 8 && Act("Visual/Body/Cap") && Act("Visual/Body/GlassFull"));
                 var rb = beer.GetComponent<Rigidbody>();
                 Check("복귀 뒤 키네마틱 (박스 안에서 안 움직임)", rb != null && rb.isKinematic);
+                var lr2 = beer.transform.Find("Visual/Body/Liquid")?.GetComponent<Renderer>();
+                Check("복귀 = 액체 다시 가득 (" + (lr2 ? lr2.sharedMaterial.GetFloat("_Level").ToString("F3") : "?") + ")", lr2 != null && lr2.gameObject.activeInHierarchy && Mathf.Abs(lr2.sharedMaterial.GetFloat("_Level") - 0.192f) < 0.002f);
                 step = 4;
             }
             else if (step == 4 && t > 11.5f)

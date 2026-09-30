@@ -66,6 +66,6 @@ public class PyriteBeerState : UdonSharpBehaviour
         }
         lastOpened = opened;
         lastSips = sips;
-        if (beer != null) beer.ShowState(opened, sips > 0);
+        if (beer != null) beer.ShowState(opened, sips, maxSips);
     }
 }

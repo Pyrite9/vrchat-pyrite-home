@@ -18,6 +18,9 @@ public class PyriteBeer : UdonSharpBehaviour
     public GameObject glassFull;
     public GameObject glassEmpty;
     public GameObject cap;
+    public Renderer liquid;               // 병 속 맥주 (Pyrite/BeerLiquid, _Level = 로컬 수면 높이)
+    public float levelFull = 0.192f;
+    public float levelLast = 0.022f;      // 한 모금 남았을 때
     public Rigidbody capFly;              // 날아가는 병뚜껑 (월드에 따로, 꺼 둠)
     public ParticleSystem foam;
     public bool vrFreeGrip = true;
@@ -39,6 +42,7 @@ public class PyriteBeer : UdonSharpBehaviour
     private float idleT;
     private float flyT;
     private float pickT;
+    private Material liqMat;              // 가득일 땐 공유 재질(인스턴싱 유지), 한 모금이라도 줄면 이 병만 복제
 
     private void Start()
     {
@@ -194,11 +198,19 @@ public class PyriteBeer : UdonSharpBehaviour
     }
 
     // State 가 부른다 (모두에게)
-    public void ShowState(bool opened, bool hasBeer)
+    public void ShowState(bool opened, int sips, int maxSips)
     {
+        bool hasBeer = sips > 0;
         if (cap != null && cap.activeSelf == opened) cap.SetActive(!opened);
         if (glassFull != null && glassFull.activeSelf != hasBeer) glassFull.SetActive(hasBeer);
         if (glassEmpty != null && glassEmpty.activeSelf == hasBeer) glassEmpty.SetActive(!hasBeer);
+        if (liquid == null) return;
+        if (liquid.gameObject.activeSelf != hasBeer) liquid.gameObject.SetActive(hasBeer);
+        if (!hasBeer) return;
+        if (sips >= maxSips && liqMat == null) return;          // 새 병 = 공유 재질 기본값(가득)
+        if (liqMat == null) liqMat = liquid.material;
+        float k = maxSips > 1 ? (float)(sips - 1) / (maxSips - 1) : 1f;
+        liqMat.SetFloat("_Level", Mathf.Lerp(levelLast, levelFull, k));
     }
 
     public void PopFx()
