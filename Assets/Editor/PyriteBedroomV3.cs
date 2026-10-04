@@ -62,6 +62,26 @@ public static class PyriteBedroomV3
     const float CAPTURE_EYE = 0.9f, CAPTURE_HOUR = 20.4f;
     const string PANO = DIR + "/NightPano.png";
     static readonly float[] LIE_X = { -0.84f, -0.28f, 0.28f, 0.84f };
+    // 2026-10-01 관리자: "침대 눕기 상호작용 다 빼라 — 실제로 누워보니 컨트롤러에 걸려 엄청 거슬린다, 다 로코모션으로 누우면 된다"
+    // false 면 Z49i 가 매트 위 눕기 Station(Lie_1~4)을 만들지 않는다. 되돌리려면 true + Z49i, 또는 Z52l(Restore)
+    public const bool BUILD_LIE = false;
+
+    // Z52l 이 부르는 복구: 매트는 그대로 두고 Lie_1~4 만 다시 만든다
+    public static void RestoreLieStations(StringBuilder log)
+    {
+        sb = log;
+        var room = Root("TentBedroom");
+        var beds = room ? room.transform.Find("Beds") : null;
+        var cot = Root("Cot");
+        var cotSt = cot ? cot.GetComponent<VRC.SDK3.Components.VRCStation>() : null;
+        if (beds == null || cotSt == null) { sb.AppendLine("!! Beds 또는 Cot VRCStation 없음"); return; }
+        if (beds.Find("Lie_1") != null) { sb.AppendLine("Lie_1 이미 있음 — 건너뜀"); return; }
+        BuildStations(beds, cotSt);
+        foreach (var st in beds.GetComponentsInChildren<VRC.SDK3.Components.VRCStation>(true)) st.gameObject.layer = 13;
+        foreach (var ub in beds.GetComponentsInChildren<VRC.Udon.UdonBehaviour>(true)) if (ub.gameObject.layer != 13) ub.gameObject.layer = 0;
+        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        EditorSceneManager.SaveOpenScenes();
+    }
     static readonly string[] V3_CHILDREN = { "Beds", "Lights", "Window", "Backdrop", "Furniture" };
     static StringBuilder sb;
 
@@ -184,7 +204,8 @@ public static class PyriteBedroomV3
         SetupCanvas(room);
         var beds = Child(room.transform, "Beds");
         BuildMattress(beds);
-        BuildStations(beds, cotSt);
+        if (BUILD_LIE) BuildStations(beds, cotSt);
+        else sb.AppendLine("눕기 Station 생략 (BUILD_LIE = false — 2026-10-01 관리자: 컨트롤러에 걸려 거슬림, 누울 땐 로코모션)");
         BuildBlanket(beds);
         var furn = Child(room.transform, "Furniture");
         BuildTable(furn);

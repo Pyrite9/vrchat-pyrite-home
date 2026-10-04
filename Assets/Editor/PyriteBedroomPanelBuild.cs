@@ -1,4 +1,5 @@
 // PyriteBedroomPanelBuild.cs — 텐트 침실 머리맡 팝업 UI + 오른쪽 벽 전신거울 + 알람 (Z50a 빌드 / Z50b 되돌리기). 재실행 안전
+//  2026-10-05: 수면 모드 · 자연 소리 슬라이더 → − / + 단계 버튼 (Stepper). 되돌리기 = git 에서 이 파일 · PyriteBedroomPanel.cs · PyriteBedroomPanelTest.cs 를 이전 판으로 → Z50a
 //  2026-09-28 20:01 관리자: 머리맡 벽 팝업(심플, 배경 없이 흰 테두리) — 수면 모드 슬라이더 · 거울 토글(오른쪽 벽 가로로 긴 전신거울) · 알람시계(AM/PM·시·분 ▲▼, 꾹 누르면 연속)
 //  결정: 벽의 흰 달 아이콘으로 열고 닫음 / 영어만 / 알람은 나만(로컬) / 수면 최대 = 실내 광원 5% + 창밖 40%
 //  루트 TentBedroom/BedroomPanel: IconCanvas(0.14 m) · PanelCanvas(0.9×0.62 m, 머리맡 벽 기울기 따라) · Mirror(+X 벽, 2.4 m 폭) · U# PyriteBedroomPanel · AudioSource(알람, 2D, 로컬)
@@ -127,11 +128,11 @@ public static class PyriteBedroomPanelBuild
 
         Txt(pc, "SleepLabel", 40, 116, 500, 48, "SLEEP MODE", 30, W, TextAlignmentOptions.MidlineLeft, 6f);
         var sleepVal = Txt(pc, "SleepValue", PW - 240, 116, 200, 48, "0%", 30, W, TextAlignmentOptions.MidlineRight);
-        var sleep = Sld(pc, "SleepSlider", 40, 172, PW - 80);
+        var sleepBar = Stepper(pc, "SleepStep", 40, 168, PW - 80, 0f, "SleepUp", "SleepDown");   // 10-05 슬라이더 → − / + 단계 버튼 (드래그 중 핸들 튐)
 
         Txt(pc, "NatureLabel", 40, 236, 500, 48, "NATURE SOUNDS", 30, W, TextAlignmentOptions.MidlineLeft, 6f);
         var natureVal = Txt(pc, "NatureValue", PW - 240, 236, 200, 48, "50%", 30, W, TextAlignmentOptions.MidlineRight);
-        var nature = Sld(pc, "NatureSlider", 40, 292, PW - 80); nature.value = 0.5f;
+        var natureBar = Stepper(pc, "NatureStep", 40, 288, PW - 80, 0.5f, "NatureUp", "NatureDown");
         var (mirT, _) = Tgl(pc, "MirrorToggle", 40, 356, 400, "MIRROR");
         // 빈백 개수 (09-30): BEANBAGS  [−] n / 6 [+]  [RESET]
         const float DY = 72f;
@@ -179,7 +180,7 @@ public static class PyriteBedroomPanelBuild
         // U#
         var pb = UdonSharpUndo.AddComponent<PyriteBedroomPanel>(rootGo);
         ub = UdonSharpEditorUtility.GetBackingUdonBehaviour(pb);
-        pb.panel = pc.gameObject; pb.mirror = mirror; pb.tvRoot = tvRoot; pb.sleepSlider = sleep; pb.sleepValue = sleepVal; pb.natureSlider = nature; pb.natureValue = natureVal; pb.natureNight = natNight; pb.natureDay = natDay; pb.mirrorToggle = mirT;
+        pb.panel = pc.gameObject; pb.mirror = mirror; pb.tvRoot = tvRoot; pb.sleepBar = sleepBar; pb.sleepValue = sleepVal; pb.natureBar = natureBar; pb.natureValue = natureVal; pb.sleepPct = 0; pb.naturePct = 50; pb.natureNight = natNight; pb.natureDay = natDay; pb.mirrorToggle = mirT;
         pb.clockText = clock; pb.alarmToggle = alarmT; pb.ampmText = ampm; pb.hourText = hour; pb.minText = min; pb.stopButton = stop.gameObject;
         pb.icon = iconImg; pb.alarmSource = aud; pb.backdrop = backdrop;
         pb.lights = o.Find("Lights") ? o.Find("Lights").GetComponentsInChildren<Light>(true) : new Light[0];
@@ -194,8 +195,6 @@ public static class PyriteBedroomPanelBuild
         Wire(vBtn.onClick, "OnVideo");
         Wire(closeB.onClick, "OnClose");
         Wire(stop.onClick, "StopAlarm");
-        Wire(sleep.onValueChanged, "OnSleep");
-        Wire(nature.onValueChanged, "OnNature");
         Wire(mirT.onValueChanged, "OnMirror");
         Wire(alarmT.onValueChanged, "OnAlarmToggle");
         Wire(bagMinus.onClick, "OnBagRemove");
@@ -480,22 +479,21 @@ public static class PyriteBedroomPanelBuild
         return b;
     }
 
-    static Slider Sld(Transform parent, string name, float x, float y, float w)
+    // [−] ──막대── [+]  한 줄. 누르고 있으면 반복(Hook 의 EventTrigger). 돌려주는 값 = 채움 막대 Transform (피벗 왼쪽, localScale.x = 0~1)
+    static Transform Stepper(Transform parent, string name, float x, float y, float w, float val, string upM, string downM)
     {
-        const float hh = 44f;
-        var r = Rect(parent, name, x, y, w, hh);
-        var track = Img(r, "Track", 0, 16, w, 12, W, sOutline); track.raycastTarget = true;
-        var fillArea = Rect(r, "Fill Area", 3, 19, w - 6, 6);
-        var fill = Img(fillArea, "Fill", 0, 0, 0, 6, W, sFill);
-        var fr = fill.rectTransform; fr.anchorMin = new Vector2(0, 0); fr.anchorMax = new Vector2(0, 1); fr.pivot = new Vector2(0.5f, 0.5f); fr.sizeDelta = Vector2.zero; fr.anchoredPosition = Vector2.zero;
-        var handleArea = Rect(r, "Handle Slide Area", 18, 0, w - 36, hh);
-        var handle = Img(handleArea, "Handle", 0, 0, 36, 0, W, sDot); handle.raycastTarget = true;
-        var hr = handle.rectTransform; hr.anchorMin = new Vector2(0, 0); hr.anchorMax = new Vector2(0, 1); hr.pivot = new Vector2(0.5f, 0.5f); hr.sizeDelta = new Vector2(36f, -8f); hr.anchoredPosition = Vector2.zero;
-        var s = r.gameObject.AddComponent<Slider>();
-        s.fillRect = fr; s.handleRect = hr; s.targetGraphic = handle; s.direction = Slider.Direction.LeftToRight;
-        s.minValue = 0f; s.maxValue = 1f; s.wholeNumbers = false; s.value = 0f;
-        s.navigation = new Navigation { mode = Navigation.Mode.None };
-        return s;
+        const float bs = 56f, gap = 18f;
+        var r = Rect(parent, name, x, y, w, bs);
+        var minus = Img(r, "Minus", 0, 0, bs, bs, W, sOutline); minus.raycastTarget = true;
+        Txt(minus.transform, "Label", 0, 0, bs, bs, "-", 36, W, TextAlignmentOptions.Center);
+        var plus = Img(r, "Plus", w - bs, 0, bs, bs, W, sOutline); plus.raycastTarget = true;
+        Txt(plus.transform, "Label", 0, 0, bs, bs, "+", 36, W, TextAlignmentOptions.Center);
+        float tx = bs + gap, tw = w - 2f * (bs + gap);
+        Img(r, "Track", tx, bs / 2f - 6f, tw, 12, W, sOutline);
+        var fill = Img(r, "Fill", tx + 3f, bs / 2f - 3f, tw - 6f, 6, W, sFill);
+        fill.rectTransform.localScale = new Vector3(val, 1f, 1f);
+        pending.Add((plus.gameObject, upM)); pending.Add((minus.gameObject, downM));
+        return fill.transform;
     }
 
     static (Toggle, TextMeshProUGUI) Tgl(Transform parent, string name, float x, float y, float w, string label)

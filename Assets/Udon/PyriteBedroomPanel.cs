@@ -1,5 +1,6 @@
 // PyriteBedroomPanel — 텐트 침실 머리맡 팝업 (로컬 전용, 동기화 없음)
 //  아이콘(달) 누르기 = 패널 열기/닫기 (알람이 울리는 중이면 알람 끄기)
+//  수면 모드 · 자연 소리: − / + 단계 버튼 (5% 씩, 누르고 있으면 반복). 10-05 슬라이더 폐기 — 드래그 중 핸들이 좌우로 튐(관리자, PC·VR)
 //  수면 모드 0~1: 침실 광원 기준 밝기 × (1 → 0.05), 창밖(M_Backdrop _Dim) × (1 → 0.4)
 //  거울: 오른쪽 벽 전신거울 켜기/끄기
 //  침실 환경광: 방(부모) 반경 안에 있으면 PostLateUpdate 에서 DayCycle 이 쓴 환경광(Trilight)·반사 세기의 "밤보다 밝은 몫"을 dayAmbient × (1 − 수면) 만 남김. 나가면 DayCycle 값 복원
@@ -18,8 +19,11 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     public GameObject panel;
     public GameObject mirror;
     public GameObject tvRoot;               // 침실 전용 ProTV (씬에선 꺼진 채로 시작, 로컬 표시 토글)
-    public Slider sleepSlider;
-    public Slider natureSlider;
+    public int sleepPct = 0;                // 수면 모드 0~100 (단계 버튼)
+    public int naturePct = 50;              // 자연 소리 0~100
+    public int stepPct = 5;
+    public Transform sleepBar;              // 채움 막대 (피벗 왼쪽, localScale.x = 0~1)
+    public Transform natureBar;
     public TextMeshProUGUI natureValue;
     public AudioSource[] natureNight;       // 풀벌레 (밤일수록)
     public AudioSource[] natureDay;         // 물가 (항상)
@@ -90,8 +94,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         panel.SetActive(false);
         mirror.SetActive(false);
         stopButton.SetActive(false);
-        ApplySleep(0f);
-        OnNature();
+        ApplyLevels();
         SetNature(0f, 0f);
         RefreshAlarm();
         UpdateClock();
@@ -137,11 +140,21 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         if (tvRoot != null) tvRoot.SetActive(!tvRoot.activeSelf);
     }
 
-    // ── 수면 모드 ──
-    public void OnSleep()
+    // ── 수면 모드 · 자연 소리 (단계 버튼) ──
+    public void SleepUp() { Press(5); }
+    public void SleepDown() { Press(6); }
+    public void NatureUp() { Press(7); }
+    public void NatureDown() { Press(8); }
+
+    // 값(sleepPct · naturePct)을 범위 안으로 맞추고 화면·조명에 반영. 시험 도구도 이걸 부른다
+    public void ApplyLevels()
     {
-        if (updating) return;
-        ApplySleep(sleepSlider.value);
+        sleepPct = Mathf.Clamp(sleepPct, 0, 100);
+        naturePct = Mathf.Clamp(naturePct, 0, 100);
+        ApplySleep(sleepPct * 0.01f);
+        natureValue.text = naturePct + "%";
+        if (sleepBar != null) sleepBar.localScale = new Vector3(sleepPct * 0.01f, 1f, 1f);
+        if (natureBar != null) natureBar.localScale = new Vector3(naturePct * 0.01f, 1f, 1f);
     }
 
     private void ApplySleep(float s)
@@ -150,12 +163,6 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         for (int i = 0; i < lights.Length; i++) if (lights[i] != null) lights[i].intensity = baseI[i] * k;
         if (backdrop != null) backdrop.SetFloat("_Dim", Mathf.Lerp(1f, minWindow, s));
         sleepValue.text = Mathf.RoundToInt(s * 100f) + "%";
-    }
-
-    // ── 자연 소리 ──
-    public void OnNature()
-    {
-        natureValue.text = Mathf.RoundToInt(natureSlider.value * 100f) + "%";
     }
 
     private void SetNature(float level, float nightK)
@@ -201,6 +208,10 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         else if (dir == 2) { hour12 = (hour12 + 10) % 12 + 1; }
         else if (dir == 3) { minute = (minute + 1) % 60; }
         else if (dir == 4) { minute = (minute + 59) % 60; }
+        else if (dir == 5) { sleepPct += stepPct; ApplyLevels(); return; }
+        else if (dir == 6) { sleepPct -= stepPct; ApplyLevels(); return; }
+        else if (dir == 7) { naturePct += stepPct; ApplyLevels(); return; }
+        else if (dir == 8) { naturePct -= stepPct; ApplyLevels(); return; }
         lastFiredKey = -1;
         RefreshAlarm();
     }
@@ -257,7 +268,8 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         if (holdDir != 0 && Time.time >= nextRepeat)
         {
             Step(holdDir);
-            nextRepeat = Time.time + (Time.time - holdStart > 1.5f ? 0.04f : 0.09f);
+            if (holdDir >= 5) nextRepeat = Time.time + 0.12f;
+            else nextRepeat = Time.time + (Time.time - holdStart > 1.5f ? 0.04f : 0.09f);
         }
         if (Time.time >= nextClock)
         {
@@ -302,7 +314,8 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         {
             dSky = cs; dEq = ce; dGr = cg; dRefl = cr;   // DayCycle 가 새로 쓴 값
         }
-        float k = Mathf.Lerp(dayAmbient, 0f, sleepSlider.value);
+        float sl = sleepPct * 0.01f;
+        float k = Mathf.Lerp(dayAmbient, 0f, sl);
         wSky = Dim(nightSky, dSky, k);
         wEq = Dim(nightEq, dEq, k);
         wGr = Dim(nightGr, dGr, k);
@@ -313,9 +326,8 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
         RenderSettings.reflectionIntensity = wRefl;
         // 창: 밤은 minWindow 그대로, 낮일수록 minWindowDay 쪽 (낮 정도 = 환경광 sky 합, 밤 0.156 → 1.0 이상이면 낮)
         float dayK = Mathf.Clamp01((dSky.r + dSky.g + dSky.b - 0.156f) / 0.85f);
-        if (backdrop != null) backdrop.SetFloat("_Dim", Mathf.Lerp(1f, Mathf.Lerp(minWindow, minWindowDay, dayK), sleepSlider.value));
-        SetNature(natureSlider.value, 1f - dayK);
-        float sl = sleepSlider.value;
+        if (backdrop != null) backdrop.SetFloat("_Dim", Mathf.Lerp(1f, Mathf.Lerp(minWindow, minWindowDay, dayK), sl));
+        SetNature(naturePct * 0.01f, 1f - dayK);
         if (starLight != null && !starOff)
         {
             starLight.intensity = starMax * Mathf.Lerp(0.15f, 1f, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.1f, 0.7f, sl)));

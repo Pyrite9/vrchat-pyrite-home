@@ -99,7 +99,8 @@ public static class PyriteBedroomPlayTest
                 var m = cover ? cover.GetComponent<Renderer>().sharedMaterial : null;
                 log += "blanket isOn " + on + " cover " + (cover ? cover.GetComponent<Renderer>().enabled.ToString() : "?") + " fold active " + (fold != null) + " _Drop " + (m ? m.GetFloat("_Drop").ToString("F2") : "?") + " _SegCount " + (m ? m.GetFloat("_SegCount").ToString("F0") : "?") + "\n";
                 if (sack != null) sack.SendCustomEvent("_interact");
-                var st = GameObject.Find("TentBedroom/Beds/Lie_2").GetComponent<VRC.SDK3.Components.VRCStation>();
+                var lieGo = GameObject.Find("TentBedroom/Beds/Lie_2");   // 2026-10-01 눕기 Station 제거됨 → 없으면 건너뜀
+                var st = lieGo ? lieGo.GetComponent<VRC.SDK3.Components.VRCStation>() : null;
                 if (st != null) st.ExitStation(Networking.LocalPlayer);
                 stage = 4;
             }
