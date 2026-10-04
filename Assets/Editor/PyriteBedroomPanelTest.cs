@@ -74,9 +74,6 @@ public static class PyriteBedroomPanelTest
     static Transform P() { var r = SceneManager.GetActiveScene().GetRootGameObjects().FirstOrDefault(g => g.name == "TentBedroom"); return r ? r.transform.Find("BedroomPanel") : null; }
     static UdonBehaviour UB() { var p = P(); return p ? p.GetComponent<UdonBehaviour>() : null; }
     static T C<T>(string path) where T : Component { var p = P(); var t = p ? p.Find(path) : null; return t ? t.GetComponent<T>() : null; }
-    // 10-05 슬라이더 폐기: 단계 값(sleepPct · naturePct)을 직접 넣고 ApplyLevels
-    static void Pct(string name, int v) { var u = UB(); u.SetProgramVariable(name, v); u.SendCustomEvent("ApplyLevels"); }
-    static float BarX(string path) { var p = P(); var t = p ? p.Find(path) : null; return t ? t.localScale.x : -1f; }
     static string Txt(string path) { var t = C<TextMeshProUGUI>(path); return t ? t.text : "?"; }
     static string LightsStr() { var r = P().parent.Find("Lights"); return r ? string.Join(", ", r.GetComponentsInChildren<Light>(true).Select(l => l.intensity.ToString("F3"))) : "?"; }
     static float Dim() { var m = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/M_Backdrop.mat"); return m ? m.GetFloat("_Dim") : -1f; }
@@ -106,17 +103,12 @@ public static class PyriteBedroomPanelTest
                     Check("아이콘 → 패널 열림", pc.activeSelf, "panel " + pc.activeSelf);
                     stage = 2; return;
                 case 2:
-                    Pct("sleepPct", 90);
-                    ub.SendCustomEvent("SleepUp"); ub.SendCustomEvent("Release");
-                    ub.SendCustomEvent("SleepUp"); ub.SendCustomEvent("Release");
-                    ub.SendCustomEvent("SleepUp"); ub.SendCustomEvent("Release");
-                    Check("수면 + 세 번 (90 → 100 에서 멈춤) · 막대 1.0", Txt("PanelCanvas/SleepValue") == "100%" && Mathf.Abs(BarX("PanelCanvas/SleepStep/Fill") - 1f) < 0.001f, "표시 " + Txt("PanelCanvas/SleepValue") + ", 막대 " + BarX("PanelCanvas/SleepStep/Fill").ToString("F2"));
+                    var sl = C<Slider>("PanelCanvas/SleepSlider");
+                    sl.value = 1f;
                     Check("수면 100%", Dim() < 0.41f && Txt("PanelCanvas/SleepValue") == "100%", "광원 " + LightsStr() + ", _Dim " + Dim().ToString("F2") + ", 표시 " + Txt("PanelCanvas/SleepValue"));
-                    Pct("sleepPct", 55);
-                    ub.SendCustomEvent("SleepDown"); ub.SendCustomEvent("Release");
+                    sl.value = 0.5f;
                     L("  수면 50%: 광원 " + LightsStr() + ", _Dim " + Dim().ToString("F2") + ", 표시 " + Txt("PanelCanvas/SleepValue"));
-                    Pct("sleepPct", 0);
-                    ub.SendCustomEvent("SleepDown"); ub.SendCustomEvent("Release");
+                    sl.value = 0f;
                     Check("수면 0% 복귀", Mathf.Abs(Dim() - 1f) < 0.01f, "광원 " + LightsStr() + ", _Dim " + Dim().ToString("F2"));
                     var mt = C<Toggle>("PanelCanvas/MirrorToggle");
                     mt.isOn = true;
@@ -169,7 +161,7 @@ public static class PyriteBedroomPanelTest
                 case 8:
                     if (t < 0.3f) return;
                     Check("정오·수면 0% → 낮 몫 35%", Mathf.Abs(RenderSettings.ambientSkyColor.r - (0.028f + 0.592f * 0.35f)) < 0.003f, "sky " + RenderSettings.ambientSkyColor + " 반사 " + RenderSettings.reflectionIntensity.ToString("F3") + ", 방 밝기 " + Shot());
-                    Pct("sleepPct", 84);
+                    C<Slider>("PanelCanvas/SleepSlider").value = 0.84f;
                     t0 = Time.realtimeSinceStartup; stage = 9; return;
                 case 9:
                     if (t < 0.3f) return;
@@ -183,9 +175,9 @@ public static class PyriteBedroomPanelTest
                     L("  21시·수면 84%: sky " + RenderSettings.ambientSkyColor + ", 방 밝기 " + Shot());
                     Check("21시·수면 84% 창 → 1→0.4 의 84% (그대로)", Mathf.Abs(Dim() - 0.496f) < 0.01f, "_Dim " + Dim().ToString("F3"));
                     Check("21시 자연 소리 50%: 풀벌레 0.19 · 물 0.21", Mathf.Abs(Vol("BR_N_Crickets_A") - 0.19f) < 0.01f && Mathf.Abs(Vol("BR_Water_ShoreN") - 0.21f) < 0.01f, NatStr());
-                    Pct("naturePct", 95); ub.SendCustomEvent("NatureUp"); ub.SendCustomEvent("Release");
+                    C<Slider>("PanelCanvas/NatureSlider").value = 1f;
                     Check("자연 소리 100% 표시", Txt("PanelCanvas/NatureValue") == "100%", Txt("PanelCanvas/NatureValue"));
-                    Pct("sleepPct", 0);
+                    C<Slider>("PanelCanvas/SleepSlider").value = 0f;
                     L("  21시·수면 0%: 방 밝기 " + Shot());
                     Hour(12f);
                     t0 = Time.realtimeSinceStartup; stage = 11; return;
