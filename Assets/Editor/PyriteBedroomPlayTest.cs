@@ -73,7 +73,7 @@ public static class PyriteBedroomPlayTest
             }
             else if (stage == 1 && t > 8)
             {
-                log += "after TentDoor → " + Pos() + "  (기대 (1997.60, 0.02, 1.30) yaw 90)\n";
+                log += "after TentDoor → " + Pos() + "  (기대 = 침실 원점 + (-2.40, 0.02, 1.30), yaw 90. 10-05 원점 (0, 1200, 0))\n";
                 var lie = UB("TentBedroom", "Beds/Lie_2");
                 log += "Lie_2 udon " + (lie != null) + "\n";
                 if (lie != null) lie.SendCustomEvent("_interact");
