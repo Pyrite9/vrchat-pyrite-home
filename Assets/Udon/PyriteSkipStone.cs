@@ -8,10 +8,15 @@
 //  수면(WaterWalk 콜라이더)에 닿을 때: 수평 속도 minSpeed 이상 + 입사각 maxAngle 이하면 튀고(속도 82%), 아니면 가라앉는다(콜라이더 끔 → 2.5초 뒤 쟁반으로)
 //  물보라·물결 고리·호수 파문. 던진 사람(주인)은 충돌로, 다른 사람은 수면 통과로 물보라를 낸다
 //  멀리 놓인 채 30초 가만있으면 쟁반으로 돌아온다
+//  보는 사람 쪽 궤적 (2026-10-05): 물리는 주인만 계산하고 다른 사람은 VRCObjectSync 위치를 이어 그린 것만 봐서, 튀는 순간(한 프레임)이 묻혀 돌이 수면 위에서 꺾여 보였다(물보라도 마지막에만)
+//   → 주인이 던질 때(NetThrow)·튈 때마다(NetSkip)·가라앉을 때(NetSink)·다른 데 부딪힐 때(NetEnd) 위치·속도를 보낸다. 보는 쪽은 그 사이 포물선만 계산해 자식 Mesh 를 그 자리에 그린다(루트는 동기화 그대로)
+//   매 튐마다 주인 값으로 다시 맞추므로 오차가 쌓이지 않는다. 이벤트가 2 초 안 오면 동기화 위치로 돌아간다
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PyriteSkipStone : UdonSharpBehaviour
@@ -51,6 +56,23 @@ public class PyriteSkipStone : UdonSharpBehaviour
     private VRC_Pickup.PickupHand hand;
     private float throwPend = -1f;        // 손 바꾸기 판별: 놓은 뒤 이만큼 기다렸다 던진다 (다시 잡히면 취소)
     private Vector3 throwPos;
+    // 보는 쪽 궤적
+    public bool dbgRemote;                // 에디터 시험: 주인도 보는 쪽 계산을 같이 돌린다 (Mesh 는 계산 위치, 루트는 물리)
+    public Vector3 dbgPos;
+    public Vector3 dbgVel;
+    public float dbgMaxGap;               // 시험 결과: 계산 위치와 물리 위치의 최대 거리
+    public float dbgMinY;                 // 시험 결과: 계산 위치의 가장 낮은 높이
+    public int dbgSkips;                  // 시험 결과: 받은 튐 수
+    public bool dbgSimOn;
+    private Transform vis;
+    private Vector3 visPos0;
+    private Quaternion visRot0;
+    private bool rsim;
+    private Vector3 rp;
+    private Vector3 rv;
+    private float rIdle;
+    private float rFloor;
+    private bool flying;                  // 주인: 던진 뒤 아직 물 말고 다른 데 안 부딪힘
 
     private void Start()
     {
@@ -59,6 +81,8 @@ public class PyriteSkipStone : UdonSharpBehaviour
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         pickup = (VRCPickup)GetComponent(typeof(VRCPickup));
         prevY = transform.position.y;
+        vis = transform.Find("Mesh");
+        if (vis != null) { visPos0 = vis.localPosition; visRot0 = vis.localRotation; }
         VRCPlayerApi lp = Networking.LocalPlayer;
         vrLocal = Utilities.IsValid(lp) && lp.IsUserInVR();
         if (pickup != null && vrLocal) pickup.AutoHold = VRC_Pickup.AutoHoldMode.No;
@@ -66,6 +90,7 @@ public class PyriteSkipStone : UdonSharpBehaviour
 
     public override void OnPickup()
     {
+        EndSim(); flying = false;
         held = true; skips = 0; sinking = false; if (col != null) col.enabled = true; if (rb != null) rb.drag = 0.05f;
         vrHeld = vrLocal && pickup != null;
         if (vrHeld) { hand = pickup.currentHand; holdStart = Time.time; hapT = 0f; }
@@ -106,6 +131,7 @@ public class PyriteSkipStone : UdonSharpBehaviour
         if (throwPend > 0f) return;
         throwPend = -1f;
         Launch();                    // 손에서 놓은 자리 그대로 발사
+        SendThrow();
         throwFrames = 2;             // VRChat 이 놓은 직후 손 속도를 다시 넣을 수 있어 두 프레임 더 덮어쓴다
         VRCPlayerApi lp = Networking.LocalPlayer;
         if (Utilities.IsValid(lp)) lp.PlayHapticEventInHand(hand, 0.08f, 0.6f, 180f);
@@ -150,6 +176,7 @@ public class PyriteSkipStone : UdonSharpBehaviour
         pickup.Drop();
         transform.position = p;
         Launch();
+        SendThrow();
         if (sync != null) sync.FlagDiscontinuity();
         throwFrames = 2;   // Drop 직후 VRChat 이 손 속도를 다시 넣을 수 있어 두 프레임 더 덮어쓴다
     }
@@ -163,7 +190,12 @@ public class PyriteSkipStone : UdonSharpBehaviour
 
     private void OnCollisionEnter(Collision c)
     {
-        if (!Networking.IsOwner(gameObject) || sinking || held || c == null || c.collider != waterCollider) return;
+        if (!Networking.IsOwner(gameObject) || sinking || held || c == null) return;
+        if (c.collider != waterCollider)
+        {
+            if (flying) { flying = false; SendCustomNetworkEvent(NetworkEventTarget.Others, nameof(NetEnd)); if (dbgRemote) EndSim(); }
+            return;
+        }
         Vector3 v = -c.relativeVelocity;
         float h = Mathf.Sqrt(v.x * v.x + v.z * v.z);
         float vy = Mathf.Abs(v.y);
@@ -175,6 +207,8 @@ public class PyriteSkipStone : UdonSharpBehaviour
             rb.velocity = new Vector3(v.x * 0.82f, Mathf.Max(vy * 0.45f, 0.8f + h * 0.05f), v.z * 0.82f);
             rb.angularVelocity = new Vector3(0f, 25f, 0f);
             Splash(p, 0.6f);
+            SendCustomNetworkEvent(NetworkEventTarget.Others, nameof(NetSkip), p, rb.velocity);
+            if (dbgRemote) { dbgSkips++; StartSim(p, rb.velocity, p.y); }
         }
         else
         {
@@ -182,6 +216,9 @@ public class PyriteSkipStone : UdonSharpBehaviour
             sinking = true; sinkT = 0f;
             if (col != null) col.enabled = false;
             if (rb != null) rb.drag = 4f;
+            flying = false;
+            SendCustomNetworkEvent(NetworkEventTarget.Others, nameof(NetSink), p);
+            if (dbgRemote) EndSim();
         }
     }
 
@@ -191,11 +228,7 @@ public class PyriteSkipStone : UdonSharpBehaviour
         if (throwFrames > 0 && rb != null) { throwFrames--; Launch(); }
         if (vrHeld && held) ChargeHaptics();
         float y = transform.position.y;
-        if (!Networking.IsOwner(gameObject))
-        {
-            if (prevY > surfaceY + 0.03f && y <= surfaceY + 0.03f && OverWater()) Splash(transform.position, 0.7f);
-        }
-        else if (rb != null)
+        if (Networking.IsOwner(gameObject) && rb != null)
         {
             if (sinking)
             {
@@ -212,21 +245,120 @@ public class PyriteSkipStone : UdonSharpBehaviour
         prevY = y;
     }
 
-    private bool OverWater()
+    private bool OverWater(Vector3 p)
     {
         if (waterCollider == null) return false;
         Bounds b = waterCollider.bounds;
-        Vector3 p = transform.position;
         return p.x > b.min.x && p.x < b.max.x && p.z > b.min.z && p.z < b.max.z;
     }
 
     private void Respawn()
     {
-        sinking = false; skips = 0; idleT = 0f;
+        sinking = false; skips = 0; idleT = 0f; flying = false;
         if (col != null) col.enabled = true;
         if (rb != null) { rb.drag = 0.05f; rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
         if (home != null) transform.SetPositionAndRotation(home.position, home.rotation);
         if (sync != null) sync.FlagDiscontinuity();
+    }
+
+    // ── 보는 쪽 궤적 ──
+    private void SendThrow()
+    {
+        flying = true;
+        SendCustomNetworkEvent(NetworkEventTarget.Others, nameof(NetThrow), transform.position, throwVel);
+        if (dbgRemote) { dbgSkips = 0; dbgMaxGap = 0f; dbgMinY = 99f; StartSim(transform.position, throwVel, WaterTop()); }
+    }
+
+    private float WaterTop()
+    {
+        if (waterCollider == null) return surfaceY;
+        return waterCollider.bounds.max.y + 0.01f;       // 돌 상자 반 높이
+    }
+
+    [NetworkCallable]
+    public void NetThrow(Vector3 p, Vector3 v)
+    {
+        if (Networking.IsOwner(gameObject)) return;
+        StartSim(p, v, WaterTop());
+    }
+
+    [NetworkCallable]
+    public void NetSkip(Vector3 p, Vector3 v)
+    {
+        if (Networking.IsOwner(gameObject)) return;
+        Splash(p, 0.6f);
+        StartSim(p, v, p.y);
+    }
+
+    [NetworkCallable]
+    public void NetSink(Vector3 p)
+    {
+        if (Networking.IsOwner(gameObject)) return;
+        Splash(p, 1f);
+        EndSim();
+    }
+
+    [NetworkCallable]
+    public void NetEnd()
+    {
+        if (Networking.IsOwner(gameObject)) return;
+        EndSim();
+    }
+
+    private void StartSim(Vector3 p, Vector3 v, float floorY)
+    {
+        if (vis == null) return;
+        rsim = true; rp = p; rv = v; rIdle = 0f; rFloor = floorY; dbgSimOn = true;
+    }
+
+    private void EndSim()
+    {
+        if (!rsim) return;
+        rsim = false; dbgSimOn = false;
+        if (vis != null) { vis.localPosition = visPos0; vis.localRotation = visRot0; }
+    }
+
+    // 동기화가 루트를 옮긴 뒤에 Mesh 만 계산 위치로 (포물선 + 공기 저항 0.05, 주인 리지드바디와 같은 값)
+    public override void PostLateUpdate()
+    {
+        if (!rsim || vis == null) return;
+        float dt = Time.deltaTime;
+        rIdle += dt;
+        if (rIdle > 2f) { EndSim(); return; }
+        rv.y -= 9.81f * dt;
+        rv *= 1f - 0.05f * dt;
+        rp += rv * dt;
+        if (rp.y < rFloor && OverWater(rp))
+        {
+            rp.y = rFloor;                               // 다음 튐 소식이 늦으면 수면에 붙어 미끄러지며 기다린다
+            if (rv.y < 0f) rv.y = 0f;
+        }
+        vis.position = rp;
+        vis.rotation = Quaternion.Euler(0f, Time.time * 1400f, 0f);
+        if (dbgRemote)
+        {
+            float gap = Vector3.Distance(rp, transform.position);
+            if (gap > dbgMaxGap) dbgMaxGap = gap;
+            if (rp.y < dbgMinY) dbgMinY = rp.y;
+        }
+    }
+
+    // 에디터 시험용 (ClientSim): dbgPos 에서 dbgVel 로 던진다
+    public void DebugThrow()
+    {
+        if (rb == null) return;
+        if (pickup != null && pickup.IsHeld) pickup.Drop();
+        held = false; sinking = false; skips = 0;
+        if (col != null) col.enabled = true;
+        rb.drag = 0.05f;
+        rb.isKinematic = false;
+        rb.position = dbgPos;            // 보간 리지드바디는 transform 만 옮기면 옛 자리로 덮인다
+        transform.position = dbgPos;
+        throwVel = dbgVel;
+        Launch();
+        SendThrow();
+        if (sync != null) sync.FlagDiscontinuity();
+        throwFrames = 2;
     }
 
     private void Splash(Vector3 p, float s)
