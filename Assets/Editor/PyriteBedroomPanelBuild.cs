@@ -33,6 +33,7 @@ public static class PyriteBedroomPanelBuild
     const float TV_W = 2.0f, TV_Y = 1.20f, TV_Z = -0.90f, TV_GAP = 0.06f;   // 21:23 관리자: 침대 왼쪽(입구 쪽, −X 벽), 수직
     const float PW = 900f, PH = 812f, PX = 0.001f;          // 09-30 빈백 줄 +72 px          // 패널 캔버스 px, 1 px = 1 mm
     const float PANEL_Y = 0.896f, ICON_Y = 0.80f, ICON_X = 0.60f, WALL_GAP = 0.07f;   // 21:58 자연 소리 줄 +120 px → 0.86, 09-30 빈백 줄 +72 px → 0.896 (아래 끝 0.49 그대로, 위 끝 1.30 < 폴라로이드 1.34)          // 20:48 관리자: 통째로 내려서 침대 조금 위 (패널 아래 끝 0.49 m, 매트 윗면 ~0.36 m). 아이콘은 패널 오른쪽
+    const float ICON_HIT = 170f;   // 아이콘 판정 한 변(px = mm). 두 아이콘 세로 간격 0.17 m 와 같아 서로 닿음
     const float MIR_W = 2.4f, MIR_Z = -0.6f, MIR_Y0 = 0.15f, MIR_Y1 = 1.75f, MIR_GAP = 0.06f;   // 20:48 관리자: 수직으로, HQ(전체 반사)
     static readonly Color W = new Color(0.96f, 0.96f, 0.95f, 1f);
     static readonly Color W2 = new Color(0.96f, 0.96f, 0.95f, 0.55f);
@@ -107,15 +108,19 @@ public static class PyriteBedroomPanelBuild
         sb.AppendLine("머리맡 벽 기울기 " + (Mathf.Atan2(up.z, up.y) * Mathf.Rad2Deg).ToString("F1") + "° (위가 방 쪽)");
 
         // 아이콘
-        var icon = MakeCanvas(rootGo.transform, "IconCanvas", 140, 140, WallPt(ICON_X, ICON_Y, 0.07f, 0f), rot);
-        var iconImg = Img(icon, "Moon", 0, 0, 140, 140, W, sMoon); iconImg.raycastTarget = true;
-        var iconBtn = iconImg.gameObject.AddComponent<Button>(); iconBtn.targetGraphic = iconImg; iconBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+        // 10-05: 판정 = 캔버스 전체 ICON_HIT(170 mm, 두 아이콘 간격과 같음), 그림은 가운데 140 mm. 침실이 상공(0,1200,0)이라 포인터가 세로로 떨려 가장자리 클릭이 빠짐 → 그림보다 판정을 크게
+        float iconPad = (ICON_HIT - 140f) * 0.5f;
+        var icon = MakeCanvas(rootGo.transform, "IconCanvas", ICON_HIT, ICON_HIT, WallPt(ICON_X, ICON_Y, ICON_HIT * PX * 0.5f, 0f), rot);
+        var iconHit = Img(icon, "Hit", 0, 0, ICON_HIT, ICON_HIT, new Color(1f, 1f, 1f, 0f), null); iconHit.raycastTarget = true;
+        var iconImg = Img(icon, "Moon", iconPad, iconPad, 140, 140, W, sMoon);
+        var iconBtn = iconHit.gameObject.AddComponent<Button>(); iconBtn.targetGraphic = iconImg; iconBtn.navigation = new Navigation { mode = Navigation.Mode.None };
         var cb = iconBtn.colors; cb.highlightedColor = new Color(1, 1, 1, 0.8f); cb.pressedColor = new Color(1, 1, 1, 0.6f); iconBtn.colors = cb;
 
         // 동영상 아이콘 (달 아이콘 위)
-        var vicon = MakeCanvas(rootGo.transform, "VideoIconCanvas", 140, 140, WallPt(ICON_X, ICON_Y + 0.17f, 0.07f, 0f), rot);
-        var vImg = Img(vicon, "Video", 0, 0, 140, 140, W, sVideo); vImg.raycastTarget = true;
-        var vBtn = vImg.gameObject.AddComponent<Button>(); vBtn.targetGraphic = vImg; vBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var vicon = MakeCanvas(rootGo.transform, "VideoIconCanvas", ICON_HIT, ICON_HIT, WallPt(ICON_X, ICON_Y + 0.17f, ICON_HIT * PX * 0.5f, 0f), rot);
+        var vHit = Img(vicon, "Hit", 0, 0, ICON_HIT, ICON_HIT, new Color(1f, 1f, 1f, 0f), null); vHit.raycastTarget = true;
+        var vImg = Img(vicon, "Video", iconPad, iconPad, 140, 140, W, sVideo);
+        var vBtn = vHit.gameObject.AddComponent<Button>(); vBtn.targetGraphic = vImg; vBtn.navigation = new Navigation { mode = Navigation.Mode.None };
         var vcb = vBtn.colors; vcb.highlightedColor = new Color(1, 1, 1, 0.8f); vcb.pressedColor = new Color(1, 1, 1, 0.6f); vBtn.colors = vcb;
 
         // 패널
@@ -127,11 +132,11 @@ public static class PyriteBedroomPanelBuild
 
         Txt(pc, "SleepLabel", 40, 116, 500, 48, "SLEEP MODE", 30, W, TextAlignmentOptions.MidlineLeft, 6f);
         var sleepVal = Txt(pc, "SleepValue", PW - 240, 116, 200, 48, "0%", 30, W, TextAlignmentOptions.MidlineRight);
-        var sleep = Sld(pc, "SleepSlider", 40, 172, PW - 80);
+        var sleep = Sld(pc, "SleepSlider", 40, 162, PW - 80);
 
         Txt(pc, "NatureLabel", 40, 236, 500, 48, "NATURE SOUNDS", 30, W, TextAlignmentOptions.MidlineLeft, 6f);
         var natureVal = Txt(pc, "NatureValue", PW - 240, 236, 200, 48, "50%", 30, W, TextAlignmentOptions.MidlineRight);
-        var nature = Sld(pc, "NatureSlider", 40, 292, PW - 80); nature.value = 0.5f;
+        var nature = Sld(pc, "NatureSlider", 40, 282, PW - 80); nature.value = 0.5f;
         var (mirT, _) = Tgl(pc, "MirrorToggle", 40, 356, 400, "MIRROR");
         // 빈백 개수 (09-30): BEANBAGS  [−] n / 6 [+]  [RESET]
         const float DY = 72f;
@@ -482,15 +487,16 @@ public static class PyriteBedroomPanelBuild
 
     static Slider Sld(Transform parent, string name, float x, float y, float w)
     {
-        const float hh = 44f;
+        const float hh = 64f;   // 10-05: 판정 띠 44 → 64 px(위아래 +10). 보이는 모양(트랙 12, 핸들 36)은 그대로, 띠 어디를 눌러도 잡힘
         var r = Rect(parent, name, x, y, w, hh);
-        var track = Img(r, "Track", 0, 16, w, 12, W, sOutline); track.raycastTarget = true;
-        var fillArea = Rect(r, "Fill Area", 3, 19, w - 6, 6);
+        var hit = Img(r, "Hit", 0, 0, w, hh, new Color(1f, 1f, 1f, 0f), null); hit.raycastTarget = true;
+        var track = Img(r, "Track", 0, 26, w, 12, W, sOutline); track.raycastTarget = true;
+        var fillArea = Rect(r, "Fill Area", 3, 29, w - 6, 6);
         var fill = Img(fillArea, "Fill", 0, 0, 0, 6, W, sFill);
         var fr = fill.rectTransform; fr.anchorMin = new Vector2(0, 0); fr.anchorMax = new Vector2(0, 1); fr.pivot = new Vector2(0.5f, 0.5f); fr.sizeDelta = Vector2.zero; fr.anchoredPosition = Vector2.zero;
         var handleArea = Rect(r, "Handle Slide Area", 18, 0, w - 36, hh);
         var handle = Img(handleArea, "Handle", 0, 0, 36, 0, W, sDot); handle.raycastTarget = true;
-        var hr = handle.rectTransform; hr.anchorMin = new Vector2(0, 0); hr.anchorMax = new Vector2(0, 1); hr.pivot = new Vector2(0.5f, 0.5f); hr.sizeDelta = new Vector2(36f, -8f); hr.anchoredPosition = Vector2.zero;
+        var hr = handle.rectTransform; hr.anchorMin = new Vector2(0, 0); hr.anchorMax = new Vector2(0, 1); hr.pivot = new Vector2(0.5f, 0.5f); hr.sizeDelta = new Vector2(36f, -(hh - 36f)); hr.anchoredPosition = Vector2.zero;
         var s = r.gameObject.AddComponent<Slider>();
         s.fillRect = fr; s.handleRect = hr; s.targetGraphic = handle; s.direction = Slider.Direction.LeftToRight;
         s.minValue = 0f; s.maxValue = 1f; s.wholeNumbers = false; s.value = 0f;
