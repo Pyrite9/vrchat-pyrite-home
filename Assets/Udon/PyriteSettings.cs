@@ -81,6 +81,8 @@ public class PyriteSettings : UdonSharpBehaviour
     public TextMeshProUGUI chairCountText;
     public TextMeshProUGUI matCountText;
     public PyriteBeer[] beers;            // 캠프 맥주 (2026-09-30, BeerCooler)
+    public Toggle drunkToggle;            // 취기 효과 켬/끔 (2026-10-05, 기본 켬, 개인 설정)
+    public PyriteDrunk drunk;
     private int page = 0;
 
     private bool updating = false;
@@ -189,6 +191,7 @@ public class PyriteSettings : UdonSharpBehaviour
             if (lightShadowsToggle != null && shadowLights != null && shadowLights.Length > 0 && shadowLights[0] != null) lightShadowsToggle.isOn = shadowLights[0].shadows != LightShadows.None;
             if (nightFlowersSlider != null) nightFlowersSlider.value = cycle.flowerGlow;
             GlowLabel();
+            if (drunkToggle != null && drunk != null) drunkToggle.isOn = drunk.allow;
         }
         updating = false;
     }
@@ -324,7 +327,16 @@ public class PyriteSettings : UdonSharpBehaviour
         MarkDirty();
     }
 
+    // ── 취기 효과 (맥주) ──
+    public void OnDrunk()
+    {
+        if (updating || drunkToggle == null || drunk == null) return;
+        drunk.SetAllow(drunkToggle.isOn);
+        MarkDirty();
+    }
+
     // ── 개인 설정 저장 (PlayerData) ──
+    private const string K_TIPSY = "pl_tipsy";
     private const string K_BRIGHT = "pl_bright", K_BLOOM = "pl_bloom", K_LAKE = "pl_lake", K_SOUND = "pl_sound",
         K_FLOWER = "pl_flowerDist", K_FIREFLY = "pl_fireflies", K_SUNSH = "pl_sunShadows", K_LIGHTSH = "pl_lightShadows", K_LANG = "pl_lang",
         K_GLOW = "pl_nightGlow";
@@ -349,6 +361,7 @@ public class PyriteSettings : UdonSharpBehaviour
         if (shadowsToggle != null) PlayerData.SetBool(K_SUNSH, shadowsToggle.isOn);
         if (lightShadowsToggle != null) PlayerData.SetBool(K_LIGHTSH, lightShadowsToggle.isOn);
         if (nightFlowersSlider != null) PlayerData.SetFloat(K_GLOW, nightFlowersSlider.value);
+        if (drunkToggle != null) PlayerData.SetBool(K_TIPSY, drunkToggle.isOn);
         PlayerData.SetInt(K_LANG, lang);
     }
 
@@ -366,6 +379,7 @@ public class PyriteSettings : UdonSharpBehaviour
         if (shadowsToggle != null && PlayerData.HasKey(player, K_SUNSH)) { updating = true; shadowsToggle.isOn = PlayerData.GetBool(player, K_SUNSH); updating = false; OnShadows(); }
         if (lightShadowsToggle != null && PlayerData.HasKey(player, K_LIGHTSH)) { updating = true; lightShadowsToggle.isOn = PlayerData.GetBool(player, K_LIGHTSH); updating = false; OnLightShadows(); }
         if (nightFlowersSlider != null && PlayerData.HasKey(player, K_GLOW)) { updating = true; nightFlowersSlider.value = PlayerData.GetFloat(player, K_GLOW); updating = false; OnNightFlowers(); }
+        if (drunkToggle != null && PlayerData.HasKey(player, K_TIPSY)) { updating = true; drunkToggle.isOn = PlayerData.GetBool(player, K_TIPSY); updating = false; OnDrunk(); }
         if (PlayerData.HasKey(player, K_LANG)) { lang = PlayerData.GetInt(player, K_LANG); ApplyLang(); }
         restored = true;   // 이 뒤로 바꾸는 것만 저장 (불러오기 자체는 저장 안 함)
     }

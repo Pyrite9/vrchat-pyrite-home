@@ -220,6 +220,7 @@ public static class PyriteBeerBuild
             var b = UdonSharpUndo.AddComponent<PyriteBeer>(go);
             b.state = bs; b.visual = vis; b.home = h; b.lid = lid; b.glassFull = gf; b.glassEmpty = ge; b.cap = cap;
             b.capFly = frb; b.foam = foam; b.liquid = liq.GetComponent<MeshRenderer>();
+            b.drunk = Object.FindObjectOfType<PyriteDrunk>(true);   // 취기 효과 (Z57a). 없으면 null — Z57a 가 다시 연결
             bs.beer = b;
             UdonSharpEditorUtility.CopyProxyToUdon(bs); EditorUtility.SetDirty(bs);
             UdonSharpEditorUtility.CopyProxyToUdon(b); EditorUtility.SetDirty(b);

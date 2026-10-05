@@ -193,17 +193,19 @@ public static class PyriteSettingsUI
         // ── 2쪽 (2026-09-27): 캠프 · QvPen ──
         var cCamp = Card("CardCamp", 0, 0, "campHead", content2);
         // 2026-09-30 맥주 줄 추가: 줄 y 86/164/244 → 80/146/212, 모두 제자리 290 (칸 높이 370 안)
-        L(Txt(cCamp, "ChairLabel", 32, 80, 250, 60, "", 30, WHITE), S["chairs"]);
-        Btn(cCamp, "ChairMinus", 290, 80, 62, 60, "-", "ChairMinus");
-        var chairCnt = Txt(cCamp, "ChairCount", 352, 80, 106, 60, "3 / 10", 28, GOLD, TextAlignmentOptions.Center);
-        Btn(cCamp, "ChairPlus", 459, 80, 62, 60, "+", "ChairPlus");
-        L(Txt(cCamp, "MatLabel", 32, 146, 250, 60, "", 30, WHITE), S["mats"]);
-        Btn(cCamp, "MatMinus", 290, 146, 62, 60, "-", "MatMinus");
-        var matCnt = Txt(cCamp, "MatCount", 352, 146, 106, 60, "1 / 6", 28, GOLD, TextAlignmentOptions.Center);
-        Btn(cCamp, "MatPlus", 459, 146, 62, 60, "+", "MatPlus");
-        L(Txt(cCamp, "BeerLabel", 32, 212, 250, 60, "", 30, WHITE), S["beer"]);
-        var (_, _, beerL) = Btn(cCamp, "BeerRefill", 290, 212, 231, 60, "", "BeerRefill"); L(beerL, S["beerRefill"]);
-        var (_, _, backL) = Btn(cCamp, "PropsBack", 32, 290, 489, 60, "", "PropsBack"); L(backL, S["propsBack"]);
+        // 2026-10-05 취기 효과 토글 줄 추가: 줄 y 80/146/212 (높이 60) → 76/130/184 (높이 50) + 토글 236 + 모두 제자리 298 (칸 높이 370 안)
+        L(Txt(cCamp, "ChairLabel", 32, 76, 250, 50, "", 30, WHITE), S["chairs"]);
+        Btn(cCamp, "ChairMinus", 290, 76, 62, 50, "-", "ChairMinus");
+        var chairCnt = Txt(cCamp, "ChairCount", 352, 76, 106, 50, "3 / 10", 28, GOLD, TextAlignmentOptions.Center);
+        Btn(cCamp, "ChairPlus", 459, 76, 62, 50, "+", "ChairPlus");
+        L(Txt(cCamp, "MatLabel", 32, 130, 250, 50, "", 30, WHITE), S["mats"]);
+        Btn(cCamp, "MatMinus", 290, 130, 62, 50, "-", "MatMinus");
+        var matCnt = Txt(cCamp, "MatCount", 352, 130, 106, 50, "1 / 6", 28, GOLD, TextAlignmentOptions.Center);
+        Btn(cCamp, "MatPlus", 459, 130, 62, 50, "+", "MatPlus");
+        L(Txt(cCamp, "BeerLabel", 32, 184, 250, 50, "", 30, WHITE), S["beer"]);
+        var (_, _, beerL) = Btn(cCamp, "BeerRefill", 290, 184, 231, 50, "", "BeerRefill"); L(beerL, S["beerRefill"]);
+        var (tipsyT, tipsyL) = Tgl(cCamp, "Tipsy", 32, 236, 489, true, "OnDrunk"); L(tipsyL, S["tipsy"]);
+        var (_, _, backL) = Btn(cCamp, "PropsBack", 32, 298, 489, 52, "", "PropsBack"); L(backL, S["propsBack"]);
 
         var cPen = Card("CardQvPen", 1, 0, "penHead", content2);
         var (_, _, penL) = Btn(cPen, "SummonPen", 32, 86, 489, 62, "", "SummonPen"); L(penL, S["penBring"]);
@@ -314,6 +316,8 @@ public static class PyriteSettingsUI
         st.pages = new[] { content.gameObject, content2.gameObject }; st.prevButton = prevB.gameObject; st.nextButton = nextB.gameObject; st.pageText = pageText;
         st.pool = Object.FindObjectOfType<PyriteCampPool>(true); st.chairCountText = chairCnt; st.matCountText = matCnt;
         st.beers = Object.FindObjectsOfType<PyriteBeer>(true).OrderBy(b => b.name).ToArray();
+        st.drunkToggle = tipsyT; st.drunk = Object.FindObjectOfType<PyriteDrunk>(true);
+        sb.AppendLine("drunk fx: " + (st.drunk != null ? "연결 (allow " + st.drunk.allow + ")" : "!! DrunkFX 없음 — Z57a 먼저 (취기 토글이 동작 안 함)"));
         sb.AppendLine("beers: " + st.beers.Length + (st.beers.Length == 0 ? " — !! BeerCooler 없음 (Z53b 먼저, 맥주 채우기 버튼이 동작 안 함)" : ""));
         if (st.pool == null) sb.AppendLine("!! CampPool 없음 — Z43b 먼저 (2쪽 버튼이 동작 안 함)");
         else sb.AppendLine(string.Format("pool: chairs {0} mats {1} pens {2} erasers {3}", st.pool.chairs.Length, st.pool.mats.Length, st.pool.pens.Length, st.pool.erasers.Length));
@@ -477,6 +481,7 @@ public static class PyriteSettingsUI
         ["propsBack"] = ("Put everything back", "모두 제자리로"),
         ["beer"] = ("Beer", "맥주"),
         ["beerRefill"] = ("Refill all", "모두 채우기"),
+        ["tipsy"] = ("Tipsy effect", "취기 효과"),
         ["penHead"] = ("QVPEN", "QvPen"),
         ["penBring"] = ("Bring a pen", "펜 가져오기"),
         ["eraserBring"] = ("Bring an eraser", "지우개 가져오기"),

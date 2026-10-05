@@ -27,6 +27,7 @@ public class PyriteBeer : UdonSharpBehaviour
     public float mouthDist = 0.14f;
     public float sipCooldown = 1.1f;
     public float idleReturn = 60f;
+    public PyriteDrunk drunk;             // 취기 효과 (2026-10-05, DrunkFX) — 마신 본인에게만. 없으면 무시
     public Vector3 boxHalf = new Vector3(0.22f, 0.6f, 0.33f);   // 박스 위 놓기 판정 (박스 로컬, y 는 바닥에서 위로)
 
     private VRCPickup pk;
@@ -62,6 +63,7 @@ public class PyriteBeer : UdonSharpBehaviour
         if (!state.opened) { state.Open(); sipCool = 0.8f; return; }
         if (state.sips <= 0 || sipCool > 0f) return;
         state.Sip();
+        if (drunk != null) drunk.AddSip();
         sipCool = 0.35f;
     }
 
@@ -104,6 +106,7 @@ public class PyriteBeer : UdonSharpBehaviour
         if (Vector3.Angle(transform.up, Vector3.up) < sipTilt) return;
         if (!Networking.IsOwner(state.gameObject)) Networking.SetOwner(lp, state.gameObject);
         state.Sip();
+        if (drunk != null) drunk.AddSip();
         sipCool = sipCooldown;
     }
 
