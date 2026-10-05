@@ -744,7 +744,7 @@ public static class PyriteBedroomV3
     static void BuildBackdrop(Transform bd)
     {
         var s = GameObject.CreatePrimitive(PrimitiveType.Sphere); Object.DestroyImmediate(s.GetComponent<Collider>());
-        s.name = "BackdropSphere"; s.transform.SetParent(bd, false); s.transform.localScale = Vector3.one * 800f;
+        s.name = "BackdropSphere"; s.transform.SetParent(bd, false); s.transform.localScale = Vector3.one * PyriteBedroomMove.BACKDROP_SCALE;   /* 10-06: 800 → 40. 침실이 호수 밑이라 반지름 400 m 구 안쪽에 월드가 통째로 들어와 창으로 비쳤다. 색은 시선 방향만 쓰므로 크기와 무관 */
         var m = MatShader("M_Backdrop", Shader.Find("Pyrite/Backdrop"));
         var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(PANO);
         m.SetTexture("_Pano", tex); if (!m.HasProperty("_Yaw") || m.GetFloat("_Yaw") == 0) m.SetFloat("_Yaw", 180f);

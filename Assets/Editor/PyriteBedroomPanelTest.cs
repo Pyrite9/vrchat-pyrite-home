@@ -78,6 +78,8 @@ public static class PyriteBedroomPanelTest
     static string LightsStr() { var r = P().parent.Find("Lights"); return r ? string.Join(", ", r.GetComponentsInChildren<Light>(true).Select(l => l.intensity.ToString("F3"))) : "?"; }
     static float Dim() { var m = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bedroom/M_Backdrop.mat"); return m ? m.GetFloat("_Dim") : -1f; }
 
+    static string WMute() { return string.Join(", ", Resources.FindObjectsOfTypeAll<AudioSource>().Where(a => a.gameObject.scene.IsValid() && a.name == "AMB_Water_Center").Select(a => a.mute ? "mute" : "on")); }   // 10-06 호수 밑: 침실 안에서만 음소거
+
     static void Tick()
     {
         if (!EditorApplication.isPlaying)
@@ -99,6 +101,7 @@ public static class PyriteBedroomPanelTest
                     if (ub == null) { L("!! BedroomPanel UdonBehaviour 없음"); stage = 98; return; }
                     var pc = P().Find("PanelCanvas").gameObject;
                     Check("시작 상태", !pc.activeSelf && !P().Find("Mirror").gameObject.activeSelf, "panel " + pc.activeSelf + ", 시계 '" + Txt("PanelCanvas/Clock") + "', 광원 " + LightsStr() + ", _Dim " + Dim().ToString("F2"));
+                    Check("캠프(시작) → AMB_Water_Center 켜짐", WMute() == "on", WMute());
                     ub.SendCustomEvent("OnIcon");
                     Check("아이콘 → 패널 열림", pc.activeSelf, "panel " + pc.activeSelf);
                     stage = 2; return;
@@ -156,6 +159,7 @@ public static class PyriteBedroomPanelTest
                 case 7:
                     if (t < 2f) return;
                     L("  침실 입장: 위치 " + VRC.SDKBase.Networking.LocalPlayer.GetPosition());
+                    Check("침실 안 → AMB_Water_Center 음소거", WMute() == "mute", WMute());
                     Hour(12f);
                     t0 = Time.realtimeSinceStartup; stage = 8; return;
                 case 8:
@@ -188,6 +192,7 @@ public static class PyriteBedroomPanelTest
                     t0 = Time.realtimeSinceStartup; stage = 12; return;
                 case 12:
                     if (t < 2f) return;
+                    Check("침실 나가면 AMB_Water_Center 음소거 해제", WMute() == "on", WMute());
                     Check("침실 나가면 자연 소리 0", Vol("BR_N_Crickets_A") == 0f && Vol("BR_Water_ShoreN") == 0f, NatStr());
                     Check("침실 나가면 DayCycle 값 복원", Mathf.Abs(RenderSettings.ambientSkyColor.r - 0.62f) < 0.001f && Mathf.Abs(RenderSettings.reflectionIntensity - 1f) < 0.001f, "위치 " + VRC.SDKBase.Networking.LocalPlayer.GetPosition() + " sky " + RenderSettings.ambientSkyColor + " 반사 " + RenderSettings.reflectionIntensity.ToString("F3"));
                     DC().SetProgramVariable("hourAtSync", oHour); DC().SetProgramVariable("autoFlow", oAuto); DC().SendCustomEvent("_onDeserialization");

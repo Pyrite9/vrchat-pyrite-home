@@ -192,6 +192,7 @@ public static class PyriteBedroomPanelBuild
         pb.stringMat = o.Find("Mood/StringLights") ? AssetDatabase.LoadAssetAtPath<Material>(PyriteBedroomMood.DIR + "M_StringBulb.mat") : null;
         pb.starMax = PyriteBedroomMood.STAR_MAX; pb.stringEmit = PyriteBedroomMood.STRING_EMIT;
         { var bp = o.GetComponentInChildren<PyriteBeanbagPool>(true); pb.bagPool = bp; pb.bagValue = bagVal; sb.AppendLine("빈백 풀 " + (bp ? "연결 (" + bp.bags.Length + "개)" : "없음 (Z52i 전)")); }
+        pb.muteInRoom = PyriteBedroomMove.ReachingAudio(o, sb);   // 침실에 닿는 월드 3D 소리 (10-06 호수 밑) — 침실 안에서 음소거
         PyriteBedside.WirePanel(o, pb);   // 탁상시계 · 별 구 (Z51r) — 있으면 연결 (CopyProxyToUdon 포함)
 
         // 이벤트 연결 (U# 가 붙은 뒤)

@@ -3,6 +3,7 @@
 //  수면 모드 0~1: 침실 광원 기준 밝기 × (1 → 0.05), 창밖(M_Backdrop _Dim) × (1 → 0.4)
 //  거울: 오른쪽 벽 전신거울 켜기/끄기
 //  침실 환경광: 방(부모) 반경 안에 있으면 PostLateUpdate 에서 DayCycle 이 쓴 환경광(Trilight)·반사 세기의 "밤보다 밝은 몫"을 dayAmbient × (1 − 수면) 만 남김. 나가면 DayCycle 값 복원
+//  월드 소리: 방 반경 안에 있는 동안 muteInRoom 음소거(mute 만 건드림 — 볼륨은 DayCycle 몫), 나가면 해제
 //  빈백: − n/6 + · RESET → PyriteBeanbagPool (모두에게 동기화). 개수 글자는 0.5 s 마다 새로 읽음 (다른 사람이 바꿔도 맞게)
 //  알람: AM/PM·시·분 화살표 (누르고 있으면 0.45 s 뒤부터 반복, 1.5 s 뒤 더 빠르게), 켜짐이면 PC 시계로 그 분이 되면 울림. STOP 또는 아이콘으로 끔. 5분 뒤 자동으로 끔
 using System;
@@ -56,6 +57,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
     public Color stringEmit = new Color(2.2f, 1.54f, 0.79f, 1f);
     public PyriteBeanbagPool bagPool;       // 빈백 개수 (Z52i)
     public TextMeshProUGUI bagValue;
+    public AudioSource[] muteInRoom;       // 침실 안에 있는 동안 음소거할 월드 3D 소리 (10-06 침실이 호수 밑이라 AMB_Water_Center 가 닿음). Z55d / Z50a 가 채움
     public float minWindowDay = 0.13f;     // 낮 수면 100% 창 밝기 (Z50e: 창 카메라 정오 99~105 vs 밤 33 → ×0.13 ≈ 밤 ×0.4)
 
     private bool inRoom;
@@ -291,6 +293,7 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
                 RenderSettings.ambientGroundColor = dGr;
                 RenderSettings.reflectionIntensity = dRefl;
                 SetNature(0f, 0f);   // 2D 라 침실 밖에서도 들리므로 끔
+                MuteWorld(false);
             }
             return;
         }
@@ -322,7 +325,14 @@ public class PyriteBedroomPanel : UdonSharpBehaviour
             starLight.transform.Rotate(0f, 0f, 1.5f * Time.deltaTime, Space.Self);
         }
         if (stringMat != null) stringMat.SetColor("_EmissionColor", stringEmit * Mathf.Lerp(1f, 0.3f, sl));
+        if (!inRoom) MuteWorld(true);
         inRoom = true;
+    }
+
+    private void MuteWorld(bool m)
+    {
+        if (muteInRoom == null) return;
+        for (int i = 0; i < muteInRoom.Length; i++) if (muteInRoom[i] != null) muteInRoom[i].mute = m;
     }
 
     private bool Same(Color a, Color b)

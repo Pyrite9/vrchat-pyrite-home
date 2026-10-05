@@ -1,6 +1,6 @@
 // PyriteBedroomBuild.cs — 텐트 침실 2단계: 빈 돔 + 텔레포트 왕복
 // Tools ▸ Pyrite3 ▸ Z49b. Bedroom Shell Build  /  Z49c. Bedroom Revert  /  Z49d. Bedroom Renders
-//  루트 TentBedroom (0, 1200, 0) [10-05 이전 (2000, 0, 0)] — 직사각 돔 텐트(바닥 6.8×5.6 m 초타원 n=6, 꼭대기 3.3 m), 바닥, 대각 X자 폴 2개,
+//  루트 TentBedroom (0, -40, -14) 호수 밑 [10-05 (0, 1200, 0), 그 이전 (2000, 0, 0)] — 직사각 돔 텐트(바닥 6.8×5.6 m 초타원 n=6, 꼭대기 3.3 m), 바닥, 대각 X자 폴 2개,
 //    입구 천막(−X 짧은 벽, 귀환), Spawn(입구 안쪽, +X 를 봄). 앞 = +Z 긴 벽(창 자리), 뒤 = −Z 긴 벽(매트 머리)
 //  v1(원형 지름 6 m, 15:36)은 관리자 "너무 동그랗다" → v2 직사각 (15:53)
 //  루트 TentDoor — 캠프 텐트 camp01_tent_BRN 자리에 트리거 BoxCollider + PyriteTeleportDoor (기존 텐트 오브젝트는 건드리지 않음: 네트워크 ID 함정)
@@ -19,7 +19,7 @@ using UnityEngine.SceneManagement;
 
 public static class PyriteBedroomBuild
 {
-    public static readonly Vector3 ORIGIN = new Vector3(0f, 1200f, 0f);   // 10-05: (2000, 0, 0) → 상공. X 가 크면 머리맡 패널(가로축 = 월드 X) 포인터가 13.8 mm 떨림(Z55a). 옮기기/되돌리기 = Z55b / Z55c
+    public static readonly Vector3 ORIGIN = new Vector3(0f, -40f, -14f);   // 10-06: 상공 (0, 1200, 0) → 호수 밑. Y 가 크면 포인터 세로 떨림 2.6~10 mm + VRChat 메뉴 이상(관리자). 옮기기 = Z55d. 10-05: (2000, 0, 0) → 상공. X 가 크면 머리맡 패널(가로축 = 월드 X) 포인터가 13.8 mm 떨림(Z55a). 옮기기/되돌리기 = Z55b / Z55c
     public const float A = 3.4f;       // 바닥 반폭 x (6.8 m)
     public const float B = 2.8f;       // 바닥 반폭 z (5.6 m)
     public const float H = 3.3f;       // 꼭대기 높이
